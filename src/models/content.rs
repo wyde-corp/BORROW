@@ -32,6 +32,62 @@ pub enum LessonSection {
     Steps { items: Vec<String> },
     /// A list of paragraphs rendered as separate blocks.
     Paragraphs { items: Vec<String> },
+    /// A code panel with inline inputs the learner fills in. Each blank is
+    /// checked on its own, so a partially-complete answer still gives feedback.
+    GapFill {
+        intro: String,
+        #[serde(default = "default_language")]
+        language: String,
+        code: String,
+        blanks: Vec<GapBlank>,
+        #[serde(default)]
+        after: String,
+    },
+    /// A snippet walked through one step at a time. Each step highlights the
+    /// lines it is talking about, so the learner drives the explanation instead
+    /// of reading a finished one.
+    StepThrough {
+        title: String,
+        #[serde(default = "default_language")]
+        language: String,
+        code: String,
+        steps: Vec<Step>,
+    },
+    /// Predict what a program does, then run the real compiler and compare.
+    GuessRun {
+        prompt: String,
+        #[serde(default = "default_language")]
+        language: String,
+        code: String,
+        options: Vec<String>,
+        correct: usize,
+        explanation: String,
+    },
+}
+
+/// One fillable blank in a [`LessonSection::GapFill`].
+///
+/// The answer travels to the browser in a data attribute rather than being
+/// graded by the server: per-blank instant feedback would otherwise need a
+/// round trip per keystroke, and this is a local learning tool, not an exam.
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct GapBlank {
+    pub id: String,
+    pub answer: String,
+    #[serde(default)]
+    pub hint: String,
+}
+
+/// One step in a [`LessonSection::StepThrough`]. `lines` are 1-based line
+/// numbers the step highlights.
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct Step {
+    pub lines: Vec<usize>,
+    pub note: String,
+}
+
+fn default_language() -> String {
+    "rust".to_string()
 }
 
 /// Whether a code panel is valid, deliberately broken, or a correction.

@@ -2814,3 +2814,190 @@ button[disabled] {
         margin-left: 0;
     }
 }
+
+/* ── Interactive lesson widgets ───────────────────────────────────────
+   Fill-the-gaps, step-through, and guess-then-run. Each is a self-contained
+   <figure> so a lesson can mix them freely. The shared shell is deliberately
+   plain; the interest is in the parts below it. */
+
+.widget {
+    margin: 1.75rem 0;
+    padding: 1.25rem;
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: var(--radius-lg);
+}
+
+.widget figcaption {
+    display: block;
+    color: var(--text);
+    font-weight: 700;
+    line-height: 1.5;
+    margin-bottom: 0.875rem;
+}
+
+.widget-code {
+    margin-bottom: 0.875rem;
+}
+
+.widget-badge {
+    margin-left: auto;
+    color: var(--accent);
+    font-size: 0.6875rem;
+    letter-spacing: 1.5px;
+}
+
+.widget-actions {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+    flex-wrap: wrap;
+}
+
+.widget-status {
+    color: var(--text-muted);
+    font-size: 0.8125rem;
+}
+
+.widget-after {
+    margin-top: 0.75rem;
+    color: var(--text-muted);
+}
+
+.widget-fallback {
+    margin-top: 0.875rem;
+    color: var(--text-muted);
+    font-size: 0.875rem;
+}
+
+.widget-fallback summary {
+    cursor: pointer;
+    color: var(--accent-secondary);
+}
+
+/* ── fill the gaps ─────────────────────────────────────────────────── */
+
+.gap-input {
+    display: inline-block;
+    min-width: 5ch;
+    padding: 0 0.35rem;
+    margin: 0 0.1rem;
+    font-family: inherit;
+    font-size: inherit;
+    color: var(--accent-secondary);
+    background: rgba(242, 193, 78, 0.12);
+    border: none;
+    border-bottom: 2px solid var(--accent-secondary);
+    border-radius: 2px 2px 0 0;
+    text-align: center;
+}
+
+.gap-input:focus {
+    outline: 2px solid var(--accent);
+    outline-offset: 1px;
+}
+
+.gap-input.gap-correct {
+    color: var(--success);
+    background: rgba(57, 255, 182, 0.12);
+    border-bottom-color: var(--success);
+}
+
+.gap-input.gap-wrong {
+    color: var(--accent);
+    background: rgba(255, 107, 53, 0.12);
+    border-bottom-color: var(--accent);
+}
+
+.gap-answers {
+    margin-top: 0.5rem;
+    padding-left: 1.25rem;
+}
+
+.gap-answers code {
+    color: var(--accent-secondary);
+}
+
+/* ── step through ──────────────────────────────────────────────────── */
+
+.st-line {
+    display: inline;
+}
+
+.st-line.active {
+    background: rgba(242, 193, 78, 0.16);
+    box-shadow: inset 2px 0 0 var(--accent-secondary);
+}
+
+.st-controls {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+    margin-bottom: 0.75rem;
+}
+
+/* The author `display: flex` above would otherwise beat the `hidden`
+   attribute, which lives in the user-agent sheet. */
+.st-controls[hidden] {
+    display: none;
+}
+
+.st-counter {
+    flex: 1;
+    text-align: center;
+    color: var(--text-muted);
+    font-size: 0.8125rem;
+    letter-spacing: 0.5px;
+}
+
+.st-note {
+    margin: 0;
+    padding: 0.75rem;
+    background: var(--background);
+    border-left: 3px solid var(--accent-secondary);
+    border-radius: var(--radius-sm);
+    line-height: 1.6;
+}
+
+.st-fallback {
+    margin: 0.75rem 0 0;
+    padding-left: 1.25rem;
+    color: var(--text-muted);
+    display: flex;
+    flex-direction: column;
+    gap: 0.375rem;
+}
+
+.st-ref {
+    color: var(--accent);
+    font-size: 0.75rem;
+    letter-spacing: 1px;
+}
+
+/* ── guess, then run ───────────────────────────────────────────────── */
+
+.guess-options {
+    margin-bottom: 0.875rem;
+}
+
+.guess-result {
+    margin-top: 0.875rem;
+}
+
+.guess-verdict {
+    font-weight: 700;
+}
+
+.guess-verdict.correct {
+    color: var(--success);
+}
+
+.guess-verdict.wrong {
+    color: var(--accent);
+}
+
+.guess-explanation {
+    margin-top: 0.375rem;
+    color: var(--text-muted);
+    line-height: 1.6;
+}

@@ -26,13 +26,6 @@ macro_rules! placeholder_module {
 }
 
 placeholder_module!(
-    structs_enums,
-    "structs-and-enums",
-    "Structs & Enums",
-    "Define custom data types with structs and enums."
-);
-
-placeholder_module!(
     collections,
     "collections",
     "Collections",

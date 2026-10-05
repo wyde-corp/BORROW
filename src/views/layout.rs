@@ -22,6 +22,7 @@ pub fn render_page(title: &str, content: &str) -> String {
     <link rel="stylesheet" href="/static/style.css">
     <script src="/static/app.js" defer></script>
     <script src="/static/editor.js" defer></script>
+    <script src="/static/interactive.js" defer></script>
 </head>
 <body>
 {content}

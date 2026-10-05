@@ -1,5 +1,6 @@
 use super::layout::escape;
-use crate::models::CodeStatus;
+use crate::models::{CodeStatus, GapBlank, Step};
+use std::sync::atomic::{AtomicUsize, Ordering};
 
 pub fn nav_link(label: &str, href: &str, active: bool) -> String {
     let class = if active { " class=\"active\"" } else { "" };
@@ -260,6 +261,222 @@ fn snippet_attribute(code: &str) -> String {
     let json = serde_json::to_string(code).unwrap_or_else(|_| "\"\"".to_string());
 
     escape(&json)
+}
+
+/// Any serializable value as an escaped JSON attribute value. Same reasoning as
+/// [`snippet_attribute`], generalised for the interactive widgets whose state is
+/// a small object rather than a bare string.
+fn json_attribute<T: serde::Serialize + ?Sized>(value: &T) -> String {
+    let json = serde_json::to_string(value).unwrap_or_else(|_| "null".to_string());
+
+    escape(&json)
+}
+
+/// Hands out unique radio-group names. Two `guess_run` widgets on one page must
+/// not share a radio group, or selecting an option in one clears the other.
+static WIDGET_COUNTER: AtomicUsize = AtomicUsize::new(0);
+
+/// A code panel with inline inputs, one per `____` marker, checked per blank.
+pub fn gap_fill_block(
+    intro: &str,
+    language: &str,
+    code: &str,
+    blanks: &[GapBlank],
+    after: &str,
+) -> String {
+    let parts: Vec<&str> = code.split("____").collect();
+    let mut body = String::new();
+
+    for (i, part) in parts.iter().enumerate() {
+        body.push_str(&escape_html(part));
+
+        if i + 1 == parts.len() {
+            continue;
+        }
+
+        match blanks.get(i) {
+            Some(blank) => {
+                // Size the field to its answer so the gap reads as "this long",
+                // rather than a uniform box that hides how much is missing.
+                let width = blank.answer.chars().count().max(6);
+                body.push_str(&format!(
+                    r##"<input class="gap-input" type="text" data-gap data-blank-id="{id}" data-answer="{answer}" data-hint="{hint}" size="{width}" autocomplete="off" autocapitalize="off" spellcheck="false" aria-label="blank {n}">"##,
+                    id = escape(&blank.id),
+                    answer = escape(&blank.answer),
+                    hint = escape(&blank.hint),
+                    width = width,
+                    n = i + 1
+                ));
+            }
+            None => body.push_str("____"),
+        }
+    }
+
+    let answers: String = blanks
+        .iter()
+        .map(|b| {
+            let hint = if b.hint.trim().is_empty() {
+                String::new()
+            } else {
+                format!(" — {}", escape(&b.hint))
+            };
+            format!("<li><code>{}</code>{}</li>", escape(&b.answer), hint)
+        })
+        .collect();
+
+    let after = if after.trim().is_empty() {
+        String::new()
+    } else {
+        format!(
+            r##"<p class="widget-after">{}</p>"##,
+            escape_html(after)
+        )
+    };
+
+    format!(
+        r##"<figure class="widget gap-fill-widget" data-gap-fill>
+    <figcaption class="widget-intro">{intro}</figcaption>
+    <div class="code-block widget-code">
+        <div class="code-header"><span class="code-lang">{lang}</span><span class="widget-badge">FILL THE GAPS</span></div>
+        <pre><code>{body}</code></pre>
+    </div>
+    <div class="widget-actions">
+        <button type="button" class="btn btn-primary" data-gap-check>CHECK</button>
+        <button type="button" class="btn btn-ghost" data-gap-reset>RESET</button>
+        <span class="widget-status" data-gap-status role="status" aria-live="polite"></span>
+    </div>
+    <details class="widget-fallback">
+        <summary>Show answers</summary>
+        <ul class="gap-answers">{answers}</ul>
+    </details>
+    {after}
+</figure>"##,
+        intro = escape(intro),
+        lang = escape(language).to_uppercase(),
+        body = body,
+        answers = answers,
+        after = after
+    )
+}
+
+/// A snippet stepped through one line-group at a time.
+pub fn step_through_block(
+    title: &str,
+    language: &str,
+    code: &str,
+    steps: &[Step],
+) -> String {
+    let lines: String = code
+        .lines()
+        .enumerate()
+        .map(|(i, line)| {
+            format!(
+                r##"<span class="st-line" data-line="{}">{}</span>"##,
+                i + 1,
+                escape_html(line)
+            )
+        })
+        .collect::<Vec<_>>()
+        .join("\n");
+
+    let fallback: String = steps
+        .iter()
+        .map(|s| {
+            let refs: String = s
+                .lines
+                .iter()
+                .map(|n| n.to_string())
+                .collect::<Vec<_>>()
+                .join(", ");
+            format!(
+                r##"<li><span class="st-ref">line {}</span> {}</li>"##,
+                escape(&refs),
+                escape(&s.note)
+            )
+        })
+        .collect();
+
+    format!(
+        r##"<figure class="widget step-through" data-step-through data-steps="{steps}">
+    <figcaption class="widget-title">{title}</figcaption>
+    <div class="code-block widget-code">
+        <div class="code-header"><span class="code-lang">{lang}</span><span class="widget-badge">STEP THROUGH</span></div>
+        <pre><code>{lines}</code></pre>
+    </div>
+    <div class="st-controls" hidden>
+        <button type="button" class="btn btn-ghost" data-st-prev aria-label="Previous step">← PREV</button>
+        <span class="st-counter" data-st-counter role="status" aria-live="polite"></span>
+        <button type="button" class="btn btn-ghost" data-st-next aria-label="Next step">NEXT →</button>
+    </div>
+    <p class="st-note" data-st-note hidden></p>
+    <ol class="st-fallback">{fallback}</ol>
+</figure>"##,
+        title = escape(title),
+        lang = escape(language).to_uppercase(),
+        lines = lines,
+        steps = json_attribute(steps),
+        fallback = fallback
+    )
+}
+
+/// Predict what a program does, then run it and compare.
+pub fn guess_run_block(
+    prompt: &str,
+    language: &str,
+    code: &str,
+    options: &[String],
+    correct: usize,
+    explanation: &str,
+) -> String {
+    let group = format!("guess-{}", WIDGET_COUNTER.fetch_add(1, Ordering::Relaxed));
+
+    let rows: String = options
+        .iter()
+        .enumerate()
+        .map(|(i, text)| {
+            format!(
+                r##"<label class="option guess-option">
+    <input type="radio" name="{group}" value="{i}">
+    <span class="option-text">{text}</span>
+</label>"##,
+                group = group,
+                i = i,
+                text = escape(text)
+            )
+        })
+        .collect();
+
+    let config = json_attribute(&serde_json::json!({
+        "code": code,
+        "correct": correct,
+        "explanation": explanation,
+    }));
+
+    format!(
+        r##"<figure class="widget guess-run" data-guess-run data-config="{config}">
+    <figcaption class="widget-title">{prompt}</figcaption>
+    <div class="code-block widget-code">
+        <div class="code-header"><span class="code-lang">{lang}</span><span class="widget-badge">GUESS, THEN RUN</span></div>
+        <pre><code>{code}</code></pre>
+    </div>
+    <fieldset class="options guess-options"><legend>What will happen?</legend>{rows}</fieldset>
+    <div class="widget-actions">
+        <button type="button" class="btn btn-primary" data-guess-submit disabled>GUESS, THEN RUN</button>
+        <span class="widget-status" data-guess-status role="status" aria-live="polite"></span>
+    </div>
+    <div class="guess-result console" data-guess-result role="status" hidden></div>
+    <details class="widget-fallback">
+        <summary>Reveal the answer</summary>
+        <p>{explanation}</p>
+    </details>
+</figure>"##,
+        prompt = escape(prompt),
+        lang = escape(language).to_uppercase(),
+        code = escape_html(code),
+        rows = rows,
+        explanation = escape(explanation),
+        config = config
+    )
 }
 
 #[cfg(test)]

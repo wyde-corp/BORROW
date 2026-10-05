@@ -1247,6 +1247,16 @@ async fn sweep_every_seeded_fragment() {
         };
 
         for (i, section) in sections.iter().enumerate() {
+            // The interactive widgets carry a `code` field too, but it is not a
+            // plain panel: a `gap_fill` has `____` markers where the learner
+            // types, and a `step_through` may show a fragment whose surrounding
+            // declarations live in another panel. They are checked by their own
+            // render tests, not by compiling every snippet as a crate.
+            let kind = section.get("type").and_then(|t| t.as_str()).unwrap_or("");
+            if matches!(kind, "gap_fill" | "step_through" | "guess_run") {
+                continue;
+            }
+
             let is_rust = section.get("language").and_then(|l| l.as_str()) == Some("rust");
             let Some(code) = section.get("code").and_then(|c| c.as_str()) else {
                 continue;

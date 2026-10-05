@@ -22,7 +22,7 @@ pub async fn init() -> Result<SqlitePool> {
 
     sqlx::migrate!("./migrations").run(&pool).await?;
 
-    seed::run_if_empty(&pool).await?;
+    seed::ensure_content(&pool).await?;
 
     Ok(pool)
 }

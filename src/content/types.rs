@@ -474,3 +474,64 @@ pub fn checklist(title: &str, items: &[&str]) -> serde_json::Value {
         "items": items,
     })
 }
+
+/// A code panel with inline inputs the learner fills in.
+///
+/// `blanks` are `(id, answer, hint)` in the order the `____` markers appear in
+/// `code`. The learner can check each blank on its own.
+pub fn gap_fill(intro: &str, code: &str, blanks: &[(&str, &str, &str)]) -> serde_json::Value {
+    let blanks: Vec<serde_json::Value> = blanks
+        .iter()
+        .map(|(id, answer, hint)| {
+            json!({ "id": id, "answer": answer, "hint": hint })
+        })
+        .collect();
+
+    json!({
+        "type": "gap_fill",
+        "intro": intro,
+        "language": "rust",
+        "code": code,
+        "blanks": blanks,
+    })
+}
+
+/// A snippet walked through one step at a time.
+///
+/// `steps` are `(lines, note)`, where `lines` are 1-based line numbers the step
+/// highlights.
+pub fn step_through(title: &str, code: &str, steps: &[(&[usize], &str)]) -> serde_json::Value {
+    let steps: Vec<serde_json::Value> = steps
+        .iter()
+        .map(|(lines, note)| json!({ "lines": lines, "note": note }))
+        .collect();
+
+    json!({
+        "type": "step_through",
+        "title": title,
+        "language": "rust",
+        "code": code,
+        "steps": steps,
+    })
+}
+
+/// Predict what a program does, then run the real compiler and compare.
+///
+/// `correct` is the index of the right option in `options`.
+pub fn guess_run(
+    prompt: &str,
+    code: &str,
+    options: &[&str],
+    correct: usize,
+    explanation: &str,
+) -> serde_json::Value {
+    json!({
+        "type": "guess_run",
+        "prompt": prompt,
+        "language": "rust",
+        "code": code,
+        "options": options,
+        "correct": correct,
+        "explanation": explanation,
+    })
+}

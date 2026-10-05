@@ -443,7 +443,7 @@ fn format_explanation(markdownish: &str) -> String {
 pub fn render_section(section: &LessonSection) -> String {
     use super::components::{
         breakdown, broken_code_block, callout, checklist, code_block, corrected_code_block, diagram,
-        steps_block, table,
+        gap_fill_block, guess_run_block, step_through_block, steps_block, table,
     };
 
     match section {
@@ -476,6 +476,27 @@ pub fn render_section(section: &LessonSection) -> String {
             })
             .collect::<Vec<_>>()
             .join("\n"),
+        LessonSection::GapFill {
+            intro,
+            language,
+            code,
+            blanks,
+            after,
+        } => gap_fill_block(intro, language, code, blanks, after),
+        LessonSection::StepThrough {
+            title,
+            language,
+            code,
+            steps,
+        } => step_through_block(title, language, code, steps),
+        LessonSection::GuessRun {
+            prompt,
+            language,
+            code,
+            options,
+            correct,
+            explanation,
+        } => guess_run_block(prompt, language, code, options, *correct, explanation),
     }
 }
 
@@ -490,5 +511,134 @@ pub fn tone_for(title: &str) -> CalloutTone {
         CalloutTone::Project
     } else {
         CalloutTone::Idea
+    }
+}
+
+#[cfg(test)]
+mod widget_tests {
+    use super::render_section;
+    use crate::models::{GapBlank, LessonSection, Step};
+
+    #[test]
+    fn gap_fill_renders_one_input_per_marker() {
+        let section = LessonSection::GapFill {
+            intro: "Fill in the field types.".into(),
+            language: "rust".into(),
+            code: "struct Topping {\n    name: ____,\n    extra_cost: ____,\n}".into(),
+            blanks: vec![
+                GapBlank {
+                    id: "b1".into(),
+                    answer: "String".into(),
+                    hint: "owned text".into(),
+                },
+                GapBlank {
+                    id: "b2".into(),
+                    answer: "u32".into(),
+                    hint: "whole number".into(),
+                },
+            ],
+            after: String::new(),
+        };
+
+        let html = render_section(&section);
+
+        assert!(html.contains("data-gap-fill"));
+        assert_eq!(html.matches("data-gap data-blank-id").count(), 2);
+        assert!(html.contains("data-answer=\"String\""));
+        assert!(html.contains("Show answers"), "no-JS fallback must be present");
+    }
+
+    /// A `____` with no matching blank must stay visible rather than silently
+    /// disappear — a content typo should look wrong, not lose a placeholder.
+    #[test]
+    fn gap_fill_leaves_an_unmatched_marker_visible() {
+        let section = LessonSection::GapFill {
+            intro: String::new(),
+            language: "rust".into(),
+            code: "let x = ____; let y = ____;".into(),
+            blanks: vec![GapBlank {
+                id: "b1".into(),
+                answer: "1".into(),
+                hint: String::new(),
+            }],
+            after: String::new(),
+        };
+
+        let html = render_section(&section);
+
+        assert_eq!(html.matches("data-gap data-blank-id").count(), 1);
+        assert!(html.contains("____"), "the unmatched marker must remain");
+    }
+
+    #[test]
+    fn step_through_renders_controls_and_a_no_js_fallback() {
+        let section = LessonSection::StepThrough {
+            title: "Building a pizza".into(),
+            language: "rust".into(),
+            code: "let p = Pizza::new(Size::Medium);".into(),
+            steps: vec![
+                Step {
+                    lines: vec![1],
+                    note: "new runs".into(),
+                },
+                Step {
+                    lines: vec![1],
+                    note: "size stored".into(),
+                },
+            ],
+        };
+
+        let html = render_section(&section);
+
+        assert!(html.contains("data-step-through"));
+        assert!(html.contains("data-st-prev") && html.contains("data-st-next"));
+        assert!(html.contains("st-fallback"), "no-JS fallback must be present");
+        assert!(html.contains("data-line=\"1\""));
+    }
+
+    #[test]
+    fn guess_run_renders_options_a_run_button_and_a_fallback() {
+        let section = LessonSection::GuessRun {
+            prompt: "What will this print?".into(),
+            language: "rust".into(),
+            code: "fn main() { println!(\"hi\"); }".into(),
+            options: vec!["hi".into(), "nothing".into()],
+            correct: 0,
+            explanation: "println! writes to stdout.".into(),
+        };
+
+        let html = render_section(&section);
+
+        assert!(html.contains("data-guess-run"));
+        assert!(html.contains("GUESS, THEN RUN"));
+        assert!(html.contains("data-config"));
+        assert!(html.contains("Reveal the answer"), "no-JS fallback must be present");
+    }
+
+    /// Two widgets on one page must not share a radio group, or selecting an
+    /// option in the second clears the first.
+    #[test]
+    fn two_guess_run_widgets_use_different_radio_groups() {
+        let section = LessonSection::GuessRun {
+            prompt: "?".into(),
+            language: "rust".into(),
+            code: "fn main() {}".into(),
+            options: vec!["a".into(), "b".into()],
+            correct: 0,
+            explanation: "because".into(),
+        };
+
+        let group = |html: &str| {
+            html.split("name=\"")
+                .nth(1)
+                .and_then(|s| s.split('"').next())
+                .map(str::to_string)
+                .unwrap()
+        };
+
+        let first = render_section(&section);
+        let second = render_section(&section);
+
+        assert_ne!(group(&first), group(&second));
     }
 }
