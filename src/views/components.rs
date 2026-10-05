@@ -1,5 +1,5 @@
 use super::layout::escape;
-use crate::models::{CodeStatus, DispatchStep, GapBlank, Step};
+use crate::models::{CodeStatus, DispatchStep, GapBlank, PipelineStep, Step};
 use std::sync::atomic::{AtomicUsize, Ordering};
 
 pub fn nav_link(label: &str, href: &str, active: bool) -> String {
@@ -549,6 +549,76 @@ pub fn dispatch_block(
         </div>
     </div>
     <ol class="dsp-fallback">{fallback}</ol>
+</figure>"##,
+        title = escape(title),
+        lang = escape(language).to_uppercase(),
+        lines = lines,
+        steps = json_attribute(steps),
+        fallback = fallback
+    )
+}
+
+/// A pipeline of adapters, shown first as lazy and then driven by a consumer.
+///
+/// The phase badge (LAZY/EAGER) is the whole lesson: the adapters are described
+/// first and do nothing, until a consumer pulls elements through. With no
+/// script the fallback list carries the same two phases.
+pub fn pipeline_block(
+    title: &str,
+    language: &str,
+    code: &str,
+    steps: &[PipelineStep],
+) -> String {
+    let lines: String = code
+        .lines()
+        .enumerate()
+        .map(|(i, line)| {
+            format!(
+                r##"<span class="pipe-line" data-line="{}">{}</span>"##,
+                i + 1,
+                escape_html(line)
+            )
+        })
+        .collect::<Vec<_>>()
+        .join("\n");
+
+    let fallback: String = steps
+        .iter()
+        .map(|s| {
+            let refs: String = s
+                .lines
+                .iter()
+                .map(|n| n.to_string())
+                .collect::<Vec<_>>()
+                .join(", ");
+            format!(
+                r##"<li>
+    <span class="pipe-phase-tag pipe-tag-{phase}">{phase}</span>
+    <span class="pipe-ref">line {refs}</span>
+    <p class="pipe-fb">{note}</p>
+</li>"##,
+                phase = escape(&s.phase),
+                refs = escape(&refs),
+                note = escape(&s.note)
+            )
+        })
+        .collect();
+
+    format!(
+        r##"<figure class="widget pipeline" data-pipeline data-steps="{steps}">
+    <figcaption class="widget-title">{title}</figcaption>
+    <div class="code-block widget-code">
+        <div class="code-header"><span class="code-lang">{lang}</span><span class="widget-badge">LAZY → EAGER</span></div>
+        <pre><code>{lines}</code></pre>
+    </div>
+    <div class="pipe-controls" hidden>
+        <span class="pipe-phase" data-pipe-phase>LAZY</span>
+        <button type="button" class="btn btn-ghost" data-pipe-prev aria-label="Previous step">← PREV</button>
+        <span class="pipe-counter" data-pipe-counter role="status" aria-live="polite"></span>
+        <button type="button" class="btn btn-ghost" data-pipe-next aria-label="Next step">NEXT →</button>
+    </div>
+    <p class="pipe-note" data-pipe-note hidden></p>
+    <ol class="pipe-fallback">{fallback}</ol>
 </figure>"##,
         title = escape(title),
         lang = escape(language).to_uppercase(),

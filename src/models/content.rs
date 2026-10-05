@@ -71,6 +71,14 @@ pub enum LessonSection {
         code: String,
         steps: Vec<DispatchStep>,
     },
+    /// A pipeline shown first as lazy adapters, then driven by a consumer.
+    Pipeline {
+        title: String,
+        #[serde(default = "default_language")]
+        language: String,
+        code: String,
+        steps: Vec<PipelineStep>,
+    },
 }
 
 /// One fillable blank in a [`LessonSection::GapFill`].
@@ -102,6 +110,16 @@ pub struct DispatchStep {
     pub lines: Vec<usize>,
     pub static_note: String,
     pub dynamic_note: String,
+}
+
+/// One step in a [`LessonSection::Pipeline`]. `phase` is `"lazy"` or `"eager"`,
+/// which drives the badge: the adapters describe work first and only run once a
+/// consumer pulls.
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct PipelineStep {
+    pub lines: Vec<usize>,
+    pub phase: String,
+    pub note: String,
 }
 
 fn default_language() -> String {

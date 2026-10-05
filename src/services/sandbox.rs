@@ -1271,7 +1271,10 @@ async fn sweep_every_seeded_fragment() {
             // declarations live in another panel. They are checked by their own
             // render tests, not by compiling every snippet as a crate.
             let kind = section.get("type").and_then(|t| t.as_str()).unwrap_or("");
-            if matches!(kind, "gap_fill" | "step_through" | "guess_run" | "dispatch") {
+            if matches!(
+                kind,
+                "gap_fill" | "step_through" | "guess_run" | "dispatch" | "pipeline"
+            ) {
                 continue;
             }
 

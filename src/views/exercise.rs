@@ -443,7 +443,8 @@ fn format_explanation(markdownish: &str) -> String {
 pub fn render_section(section: &LessonSection) -> String {
     use super::components::{
         breakdown, broken_code_block, callout, checklist, code_block, corrected_code_block, diagram,
-        dispatch_block, gap_fill_block, guess_run_block, step_through_block, steps_block, table,
+        dispatch_block, gap_fill_block, guess_run_block, pipeline_block, step_through_block,
+        steps_block, table,
     };
 
     match section {
@@ -503,6 +504,12 @@ pub fn render_section(section: &LessonSection) -> String {
             code,
             steps,
         } => dispatch_block(title, language, code, steps),
+        LessonSection::Pipeline {
+            title,
+            language,
+            code,
+            steps,
+        } => pipeline_block(title, language, code, steps),
     }
 }
 
@@ -523,7 +530,7 @@ pub fn tone_for(title: &str) -> CalloutTone {
 #[cfg(test)]
 mod widget_tests {
     use super::render_section;
-    use crate::models::{DispatchStep, GapBlank, LessonSection, Step};
+    use crate::models::{DispatchStep, GapBlank, LessonSection, PipelineStep, Step};
 
     #[test]
     fn gap_fill_renders_one_input_per_marker() {
@@ -640,6 +647,27 @@ mod widget_tests {
         assert!(html.contains("data-dsp-static") && html.contains("data-dsp-dynamic"));
         assert!(html.contains("dsp-fallback"), "no-JS fallback must be present");
         assert!(html.contains("dsp-line"));
+    }
+
+    #[test]
+    fn pipeline_renders_a_phase_badge_and_a_no_js_fallback() {
+        let section = LessonSection::Pipeline {
+            title: "Nothing runs until collect".into(),
+            language: "rust".into(),
+            code: "let v: Vec<_> = xs.iter().filter(|x| **x > 1).collect();".into(),
+            steps: vec![PipelineStep {
+                lines: vec![1],
+                phase: "lazy".into(),
+                note: "filter is set up".into(),
+            }],
+        };
+
+        let html = render_section(&section);
+
+        assert!(html.contains("data-pipeline"));
+        assert!(html.contains("data-pipe-phase"));
+        assert!(html.contains("pipe-fallback"), "no-JS fallback must be present");
+        assert!(html.contains("pipe-line"));
     }
 
     /// Two widgets on one page must not share a radio group, or selecting an

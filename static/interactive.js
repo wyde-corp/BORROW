@@ -12,6 +12,7 @@ document.addEventListener("DOMContentLoaded", () => {
   document.querySelectorAll("[data-step-through]").forEach(initStepThrough);
   document.querySelectorAll("[data-guess-run]").forEach(initGuessRun);
   document.querySelectorAll("[data-dispatch]").forEach(initDispatch);
+  document.querySelectorAll("[data-pipeline]").forEach(initPipeline);
 });
 
 // ── fill the gaps ───────────────────────────────────────────────────────
@@ -244,6 +245,79 @@ function initDispatch(root) {
 
   if (fallback) fallback.hidden = true;
   controls.hidden = false;
+  render();
+}
+
+// ── pipeline (lazy/eager) ───────────────────────────────────────────────
+//
+// One code panel, a phase badge, and a step control. The first steps are the
+// lazy phase — the adapters described but idle — and the later steps are the
+// eager phase, when a consumer pulls elements through. The badge changes with
+// the step, which is the whole point of the widget.
+
+function initPipeline(root) {
+  const steps = JSON.parse(root.dataset.steps || "[]");
+  if (!steps.length) return;
+
+  const lines = Array.from(root.querySelectorAll(".pipe-line"));
+  const controls = root.querySelector(".pipe-controls");
+  const phase = root.querySelector("[data-pipe-phase]");
+  const counter = root.querySelector("[data-pipe-counter]");
+  const note = root.querySelector("[data-pipe-note]");
+  const fallback = root.querySelector(".pipe-fallback");
+  const prev = root.querySelector("[data-pipe-prev]");
+  const next = root.querySelector("[data-pipe-next]");
+  if (!controls || !phase || !counter || !note || !prev || !next) return;
+
+  let index = 0;
+
+  function render() {
+    const step = steps[index];
+    const active = new Set(step.lines);
+    const state = String(step.phase || "lazy").toLowerCase();
+
+    lines.forEach((line) => {
+      line.classList.toggle("active", active.has(Number(line.dataset.line)));
+    });
+
+    phase.textContent = state.toUpperCase();
+    phase.classList.toggle("eager", state === "eager");
+    phase.classList.toggle("lazy", state !== "eager");
+
+    counter.textContent = `Step ${index + 1} of ${steps.length}`;
+    note.textContent = step.note;
+    prev.disabled = index === 0;
+    next.disabled = index === steps.length - 1;
+  }
+
+  prev.addEventListener("click", () => {
+    if (index > 0) {
+      index -= 1;
+      render();
+    }
+  });
+
+  next.addEventListener("click", () => {
+    if (index < steps.length - 1) {
+      index += 1;
+      render();
+    }
+  });
+
+  root.addEventListener("keydown", (event) => {
+    if (event.key === "ArrowLeft" && index > 0) {
+      index -= 1;
+      render();
+    }
+    if (event.key === "ArrowRight" && index < steps.length - 1) {
+      index += 1;
+      render();
+    }
+  });
+
+  if (fallback) fallback.hidden = true;
+  controls.hidden = false;
+  note.hidden = false;
   render();
 }
 

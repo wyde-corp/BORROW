@@ -3098,3 +3098,95 @@ button[disabled] {
         grid-template-columns: 1fr;
     }
 }
+
+/* ── pipeline (lazy/eager) ───────────────────────────────────────────── */
+
+.pipe-line {
+    display: inline;
+}
+
+.pipe-line.active {
+    background: rgba(166, 108, 255, 0.16);
+    box-shadow: inset 2px 0 0 var(--rare);
+}
+
+.pipe-controls {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+    margin-bottom: 0.75rem;
+}
+
+.pipe-controls[hidden] {
+    display: none;
+}
+
+.pipe-phase {
+    font-size: 0.6875rem;
+    letter-spacing: 1.5px;
+    padding: 0.25rem 0.5rem;
+    border: 1px solid var(--border);
+    border-radius: var(--radius-sm);
+    color: var(--text-muted);
+}
+
+.pipe-phase.lazy {
+    color: var(--accent-secondary);
+    border-color: var(--accent-secondary);
+}
+
+.pipe-phase.eager {
+    color: var(--success);
+    border-color: var(--success);
+}
+
+.pipe-counter {
+    flex: 1;
+    text-align: center;
+    color: var(--text-muted);
+    font-size: 0.8125rem;
+    letter-spacing: 0.5px;
+}
+
+.pipe-note {
+    margin: 0;
+    padding: 0.75rem;
+    background: var(--background);
+    border-left: 3px solid var(--rare);
+    border-radius: var(--radius-sm);
+    line-height: 1.6;
+}
+
+.pipe-fallback {
+    margin: 0.75rem 0 0;
+    padding-left: 1.25rem;
+    color: var(--text-muted);
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
+}
+
+.pipe-phase-tag {
+    display: inline-block;
+    font-size: 0.6875rem;
+    letter-spacing: 1px;
+    margin-right: 0.5rem;
+}
+
+.pipe-tag-lazy {
+    color: var(--accent-secondary);
+}
+
+.pipe-tag-eager {
+    color: var(--success);
+}
+
+.pipe-ref {
+    color: var(--accent);
+    font-size: 0.75rem;
+    letter-spacing: 1px;
+}
+
+.pipe-fb {
+    margin: 0.25rem 0 0;
+}

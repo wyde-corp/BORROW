@@ -564,3 +564,28 @@ pub fn dispatch(
         "steps": steps,
     })
 }
+
+/// A pipeline shown first as lazy adapters, then driven by a consumer.
+///
+/// `steps` are `(lines, phase, note)`, where `phase` is `"lazy"` or `"eager"`
+/// and `lines` are 1-based line numbers the step highlights.
+pub fn pipeline(
+    title: &str,
+    code: &str,
+    steps: &[(&[usize], &str, &str)],
+) -> serde_json::Value {
+    let steps: Vec<serde_json::Value> = steps
+        .iter()
+        .map(|(lines, phase, note)| {
+            json!({ "lines": lines, "phase": phase, "note": note })
+        })
+        .collect();
+
+    json!({
+        "type": "pipeline",
+        "title": title,
+        "language": "rust",
+        "code": code,
+        "steps": steps,
+    })
+}

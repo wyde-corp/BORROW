@@ -1,10 +1,10 @@
 pub mod borrowing;
 pub mod collections;
 pub mod control_flow;
-mod curriculum;
 pub mod functions;
 pub mod generics_traits;
 pub mod getting_started;
+pub mod iterators;
 pub mod ownership;
 pub mod option_result;
 pub mod structs_enums;
@@ -12,8 +12,6 @@ mod types;
 #[cfg(test)]
 mod tests;
 pub mod variables_and_types;
-
-pub use curriculum::iterators;
 
 pub use types::SeedModule;
 
@@ -38,7 +36,7 @@ pub fn all() -> Vec<ModuleSeed> {
         collections::content(),
         option_result::content(),
         generics_traits::content(),
-        iterators(),
+        iterators::content(),
     ];
 
     seeds.into_iter().flat_map(|m| m.into_seeds()).collect()
