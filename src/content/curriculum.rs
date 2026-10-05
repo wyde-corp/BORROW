@@ -26,13 +26,6 @@ macro_rules! placeholder_module {
 }
 
 placeholder_module!(
-    collections,
-    "collections",
-    "Collections",
-    "Work with vectors, hash maps, and other collection types."
-);
-
-placeholder_module!(
     option_result,
     "option-and-result",
     "Option & Result",

@@ -1,4 +1,5 @@
 pub mod borrowing;
+pub mod collections;
 pub mod control_flow;
 mod curriculum;
 pub mod functions;
@@ -10,7 +11,7 @@ mod types;
 mod tests;
 pub mod variables_and_types;
 
-pub use curriculum::{collections, generics_traits, iterators, option_result};
+pub use curriculum::{generics_traits, iterators, option_result};
 
 pub use types::SeedModule;
 
@@ -32,7 +33,7 @@ pub fn all() -> Vec<ModuleSeed> {
         ownership::content(),
         borrowing::content(),
         structs_enums::content(),
-        collections(),
+        collections::content(),
         option_result(),
         generics_traits(),
         iterators(),
