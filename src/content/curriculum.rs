@@ -1,0 +1,61 @@
+use super::types::{SeedModule, SeedProject};
+
+macro_rules! placeholder_module {
+    ($fn_name:ident, $slug:literal, $title:literal, $description:literal) => {
+        pub fn $fn_name() -> SeedModule {
+            SeedModule::new(
+                $slug,
+                $title,
+                $description,
+                vec![],
+                vec![],
+                vec![SeedProject {
+                    title: "Coming soon".to_string(),
+                    description: "This project will be added when the module content is written.".to_string(),
+                    difficulty: super::types::Difficulty::Beginner,
+                    estimated_time: "—".to_string(),
+                    requirements: vec![],
+                    concepts: vec![],
+                    constraints: vec![],
+                    example_interaction: String::new(),
+                    stretch_goals: vec![],
+                }],
+            )
+        }
+    };
+}
+
+placeholder_module!(
+    structs_enums,
+    "structs-and-enums",
+    "Structs & Enums",
+    "Define custom data types with structs and enums."
+);
+
+placeholder_module!(
+    collections,
+    "collections",
+    "Collections",
+    "Work with vectors, hash maps, and other collection types."
+);
+
+placeholder_module!(
+    option_result,
+    "option-and-result",
+    "Option & Result",
+    "Handle absence and errors with Option and Result types."
+);
+
+placeholder_module!(
+    generics_traits,
+    "generics-and-traits",
+    "Generics & Traits",
+    "Write reusable code with generics and define shared behavior with traits."
+);
+
+placeholder_module!(
+    iterators,
+    "iterators",
+    "Iterators",
+    "Process sequences of data with Rust's iterator pattern."
+);

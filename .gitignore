@@ -1,1 +1,9 @@
 /target
+
+# Local SQLite database and its write-ahead log
+/borrow.db
+/borrow.db-shm
+/borrow.db-wal
+
+# Compiled playground helper binary
+/fragment
