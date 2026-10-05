@@ -1,5 +1,5 @@
 use super::layout::escape;
-use crate::models::{CodeStatus, GapBlank, Step};
+use crate::models::{CodeStatus, DispatchStep, GapBlank, Step};
 use std::sync::atomic::{AtomicUsize, Ordering};
 
 pub fn nav_link(label: &str, href: &str, active: bool) -> String {
@@ -476,6 +476,85 @@ pub fn guess_run_block(
         rows = rows,
         explanation = escape(explanation),
         config = config
+    )
+}
+
+/// Static versus dynamic dispatch over the same call, advanced in tandem.
+///
+/// Two columns narrate the same steps under each dispatch form; the learner
+/// steps both at once and sees where they diverge. The columns are rendered
+/// server-side, so with no script the fallback list still tells the whole
+/// story.
+pub fn dispatch_block(
+    title: &str,
+    language: &str,
+    code: &str,
+    steps: &[DispatchStep],
+) -> String {
+    let lines: String = code
+        .lines()
+        .enumerate()
+        .map(|(i, line)| {
+            format!(
+                r##"<span class="dsp-line" data-line="{}">{}</span>"##,
+                i + 1,
+                escape_html(line)
+            )
+        })
+        .collect::<Vec<_>>()
+        .join("\n");
+
+    let fallback: String = steps
+        .iter()
+        .map(|s| {
+            let refs: String = s
+                .lines
+                .iter()
+                .map(|n| n.to_string())
+                .collect::<Vec<_>>()
+                .join(", ");
+            format!(
+                r##"<li>
+    <span class="dsp-ref">line {refs}</span>
+    <p class="dsp-fb dsp-fb-static"><strong>static:</strong> {static_note}</p>
+    <p class="dsp-fb dsp-fb-dynamic"><strong>dynamic:</strong> {dynamic_note}</p>
+</li>"##,
+                refs = escape(&refs),
+                static_note = escape(&s.static_note),
+                dynamic_note = escape(&s.dynamic_note)
+            )
+        })
+        .collect();
+
+    format!(
+        r##"<figure class="widget dispatch" data-dispatch data-steps="{steps}">
+    <figcaption class="widget-title">{title}</figcaption>
+    <div class="code-block widget-code">
+        <div class="code-header"><span class="code-lang">{lang}</span><span class="widget-badge">STATIC vs DYNAMIC</span></div>
+        <pre><code>{lines}</code></pre>
+    </div>
+    <div class="dsp-controls" hidden>
+        <button type="button" class="btn btn-ghost" data-dsp-prev aria-label="Previous step">← PREV</button>
+        <span class="dsp-counter" data-dsp-counter role="status" aria-live="polite"></span>
+        <button type="button" class="btn btn-ghost" data-dsp-next aria-label="Next step">NEXT →</button>
+    </div>
+    <div class="dsp-columns">
+        <div class="dsp-col dsp-static">
+            <h4 class="dsp-heading">STATIC DISPATCH · generics</h4>
+            <p class="dsp-note" data-dsp-static></p>
+        </div>
+        <div class="dsp-col dsp-dynamic">
+            <h4 class="dsp-heading">DYNAMIC DISPATCH · dyn Trait</h4>
+            <p class="dsp-note" data-dsp-dynamic></p>
+        </div>
+    </div>
+    <ol class="dsp-fallback">{fallback}</ol>
+</figure>"##,
+        title = escape(title),
+        lang = escape(language).to_uppercase(),
+        lines = lines,
+        steps = json_attribute(steps),
+        fallback = fallback
     )
 }
 

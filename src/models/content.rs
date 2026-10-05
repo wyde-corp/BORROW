@@ -63,6 +63,14 @@ pub enum LessonSection {
         correct: usize,
         explanation: String,
     },
+    /// Static versus dynamic dispatch over the same call, advanced in tandem.
+    Dispatch {
+        title: String,
+        #[serde(default = "default_language")]
+        language: String,
+        code: String,
+        steps: Vec<DispatchStep>,
+    },
 }
 
 /// One fillable blank in a [`LessonSection::GapFill`].
@@ -84,6 +92,16 @@ pub struct GapBlank {
 pub struct Step {
     pub lines: Vec<usize>,
     pub note: String,
+}
+
+/// One step in a [`LessonSection::Dispatch`]. `lines` are 1-based line numbers
+/// the step highlights, and the two notes narrate the same step under static
+/// and dynamic dispatch.
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct DispatchStep {
+    pub lines: Vec<usize>,
+    pub static_note: String,
+    pub dynamic_note: String,
 }
 
 fn default_language() -> String {

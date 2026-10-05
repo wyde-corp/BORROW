@@ -3001,3 +3001,100 @@ button[disabled] {
     color: var(--text-muted);
     line-height: 1.6;
 }
+
+/* ── dispatch visualiser ─────────────────────────────────────────────── */
+
+.dsp-line {
+    display: inline;
+}
+
+.dsp-line.active {
+    background: rgba(92, 200, 255, 0.16);
+    box-shadow: inset 2px 0 0 var(--info);
+}
+
+.dsp-controls {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+    margin-bottom: 0.75rem;
+}
+
+.dsp-controls[hidden] {
+    display: none;
+}
+
+.dsp-counter {
+    flex: 1;
+    text-align: center;
+    color: var(--text-muted);
+    font-size: 0.8125rem;
+    letter-spacing: 0.5px;
+}
+
+.dsp-columns {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 0.875rem;
+}
+
+.dsp-col {
+    padding: 0.75rem;
+    border: 1px solid var(--border);
+    border-radius: var(--radius-sm);
+    background: var(--background);
+}
+
+.dsp-static {
+    border-left: 3px solid var(--success);
+}
+
+.dsp-dynamic {
+    border-left: 3px solid var(--info);
+}
+
+.dsp-heading {
+    margin: 0 0 0.5rem;
+    font-size: 0.6875rem;
+    letter-spacing: 1.5px;
+    color: var(--text-muted);
+}
+
+.dsp-note {
+    margin: 0;
+    line-height: 1.6;
+    min-height: 3.2em;
+}
+
+.dsp-fallback {
+    margin: 0.75rem 0 0;
+    padding-left: 1.25rem;
+    color: var(--text-muted);
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
+}
+
+.dsp-ref {
+    color: var(--accent);
+    font-size: 0.75rem;
+    letter-spacing: 1px;
+}
+
+.dsp-fb {
+    margin: 0.25rem 0 0;
+}
+
+.dsp-fb-static strong {
+    color: var(--success);
+}
+
+.dsp-fb-dynamic strong {
+    color: var(--info);
+}
+
+@media (max-width: 640px) {
+    .dsp-columns {
+        grid-template-columns: 1fr;
+    }
+}

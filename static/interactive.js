@@ -11,6 +11,7 @@ document.addEventListener("DOMContentLoaded", () => {
   document.querySelectorAll("[data-gap-fill]").forEach(initGapFill);
   document.querySelectorAll("[data-step-through]").forEach(initStepThrough);
   document.querySelectorAll("[data-guess-run]").forEach(initGuessRun);
+  document.querySelectorAll("[data-dispatch]").forEach(initDispatch);
 });
 
 // ── fill the gaps ───────────────────────────────────────────────────────
@@ -176,6 +177,73 @@ function initStepThrough(root) {
   if (fallback) fallback.hidden = true;
   controls.hidden = false;
   note.hidden = false;
+  render();
+}
+
+// ── dispatch visualiser ─────────────────────────────────────────────────
+//
+// One code panel, two columns, one step control. Each step advances both the
+// static and the dynamic narration together, so the learner sees the two
+// dispatch forms diverge at the same points.
+
+function initDispatch(root) {
+  const steps = JSON.parse(root.dataset.steps || "[]");
+  if (!steps.length) return;
+
+  const lines = Array.from(root.querySelectorAll(".dsp-line"));
+  const controls = root.querySelector(".dsp-controls");
+  const counter = root.querySelector("[data-dsp-counter]");
+  const staticNote = root.querySelector("[data-dsp-static]");
+  const dynamicNote = root.querySelector("[data-dsp-dynamic]");
+  const fallback = root.querySelector(".dsp-fallback");
+  const prev = root.querySelector("[data-dsp-prev]");
+  const next = root.querySelector("[data-dsp-next]");
+  if (!controls || !counter || !staticNote || !dynamicNote || !prev || !next) return;
+
+  let index = 0;
+
+  function render() {
+    const step = steps[index];
+    const active = new Set(step.lines);
+
+    lines.forEach((line) => {
+      line.classList.toggle("active", active.has(Number(line.dataset.line)));
+    });
+
+    counter.textContent = `Step ${index + 1} of ${steps.length}`;
+    staticNote.textContent = step.static_note;
+    dynamicNote.textContent = step.dynamic_note;
+    prev.disabled = index === 0;
+    next.disabled = index === steps.length - 1;
+  }
+
+  prev.addEventListener("click", () => {
+    if (index > 0) {
+      index -= 1;
+      render();
+    }
+  });
+
+  next.addEventListener("click", () => {
+    if (index < steps.length - 1) {
+      index += 1;
+      render();
+    }
+  });
+
+  root.addEventListener("keydown", (event) => {
+    if (event.key === "ArrowLeft" && index > 0) {
+      index -= 1;
+      render();
+    }
+    if (event.key === "ArrowRight" && index < steps.length - 1) {
+      index += 1;
+      render();
+    }
+  });
+
+  if (fallback) fallback.hidden = true;
+  controls.hidden = false;
   render();
 }
 

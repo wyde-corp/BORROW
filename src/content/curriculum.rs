@@ -26,13 +26,6 @@ macro_rules! placeholder_module {
 }
 
 placeholder_module!(
-    generics_traits,
-    "generics-and-traits",
-    "Generics & Traits",
-    "Write reusable code with generics and define shared behavior with traits."
-);
-
-placeholder_module!(
     iterators,
     "iterators",
     "Iterators",

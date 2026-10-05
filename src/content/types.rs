@@ -535,3 +535,32 @@ pub fn guess_run(
         "explanation": explanation,
     })
 }
+
+/// Static versus dynamic dispatch over the same call, advanced in tandem.
+///
+/// `steps` are `(lines, static_note, dynamic_note)`, where `lines` are 1-based
+/// line numbers the step highlights.
+pub fn dispatch(
+    title: &str,
+    code: &str,
+    steps: &[(&[usize], &str, &str)],
+) -> serde_json::Value {
+    let steps: Vec<serde_json::Value> = steps
+        .iter()
+        .map(|(lines, static_note, dynamic_note)| {
+            json!({
+                "lines": lines,
+                "static_note": static_note,
+                "dynamic_note": dynamic_note,
+            })
+        })
+        .collect();
+
+    json!({
+        "type": "dispatch",
+        "title": title,
+        "language": "rust",
+        "code": code,
+        "steps": steps,
+    })
+}

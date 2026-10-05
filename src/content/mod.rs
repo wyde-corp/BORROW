@@ -3,6 +3,7 @@ pub mod collections;
 pub mod control_flow;
 mod curriculum;
 pub mod functions;
+pub mod generics_traits;
 pub mod getting_started;
 pub mod ownership;
 pub mod option_result;
@@ -12,7 +13,7 @@ mod types;
 mod tests;
 pub mod variables_and_types;
 
-pub use curriculum::{generics_traits, iterators};
+pub use curriculum::iterators;
 
 pub use types::SeedModule;
 
@@ -36,7 +37,7 @@ pub fn all() -> Vec<ModuleSeed> {
         structs_enums::content(),
         collections::content(),
         option_result::content(),
-        generics_traits(),
+        generics_traits::content(),
         iterators(),
     ];
 
