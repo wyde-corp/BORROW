@@ -766,7 +766,9 @@ fn is_top_level_items(code: &str) -> bool {
         "fn ", "pub fn ", "struct ", "enum ", "impl", "use ", "trait ", "const ", "static ",
     ];
 
-    ITEM_STARTS.iter().any(|p| first.starts_with(p))
+    // An attribute belongs to the item that follows it, so a fragment opening
+    // with `#[derive(Debug)]` is a set of items, not statements.
+    first.starts_with("#[") || ITEM_STARTS.iter().any(|p| first.starts_with(p))
 }
 
 /// Pulls leading `struct`/`enum` declarations out of a statement fragment.
@@ -817,7 +819,8 @@ fn split_declarations(code: &str) -> (String, String) {
 }
 
 fn is_declaration_start(trimmed: &str) -> bool {
-    trimmed.starts_with("struct ")
+    trimmed.starts_with("#[")
+        || trimmed.starts_with("struct ")
         || trimmed.starts_with("enum ")
         || trimmed.starts_with("pub struct ")
         || trimmed.starts_with("pub enum ")
@@ -1111,6 +1114,21 @@ mod prepare_tests {
         );
         assert_eq!(prepared.line_offset, 0, "main goes at the end, so nothing shifts");
         assert!(run(&prepared.code).status == Status::Ok, "should compile");
+    }
+
+    /// A fragment that opens with an attribute is still a set of items. The
+    /// wrapper used to treat `#[derive(Debug)]` as a statement, leaving it out
+    /// of the declaration and producing a program that does not compile.
+    #[test]
+    fn a_derived_item_fragment_stays_at_the_top_level() {
+        let prepared = prepare_for_run("#[derive(Debug)]\nenum TodoError {\n    NotFound(u32),\n}");
+
+        assert_eq!(prepared.line_offset, 0, "nothing should move");
+        assert!(
+            run(&prepared.code).status == Status::Ok,
+            "a derived enum fragment should compile, got: {}",
+            prepared.code
+        );
     }
 
     #[test]

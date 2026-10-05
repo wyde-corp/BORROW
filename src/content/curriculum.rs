@@ -26,13 +26,6 @@ macro_rules! placeholder_module {
 }
 
 placeholder_module!(
-    option_result,
-    "option-and-result",
-    "Option & Result",
-    "Handle absence and errors with Option and Result types."
-);
-
-placeholder_module!(
     generics_traits,
     "generics-and-traits",
     "Generics & Traits",

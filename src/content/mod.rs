@@ -5,13 +5,14 @@ mod curriculum;
 pub mod functions;
 pub mod getting_started;
 pub mod ownership;
+pub mod option_result;
 pub mod structs_enums;
 mod types;
 #[cfg(test)]
 mod tests;
 pub mod variables_and_types;
 
-pub use curriculum::{generics_traits, iterators, option_result};
+pub use curriculum::{generics_traits, iterators};
 
 pub use types::SeedModule;
 
@@ -34,7 +35,7 @@ pub fn all() -> Vec<ModuleSeed> {
         borrowing::content(),
         structs_enums::content(),
         collections::content(),
-        option_result(),
+        option_result::content(),
         generics_traits(),
         iterators(),
     ];
