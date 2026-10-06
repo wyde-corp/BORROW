@@ -20,7 +20,7 @@ pub fn lessons() -> Vec<SeedLesson> {
 
 fn why_ownership_exists() -> SeedLesson {
     SeedLesson::new(
-        "Why Ownership Exists",
+        "What is Ownership",
         vec![
             labelled(
                 "CONCEPT",

@@ -1,11 +1,13 @@
 //! Module 02 — Variables & Types
 //!
 //! Teaches how Rust represents information: bindings, mutability, inference,
-//! annotations, scalars, compounds, and conversions.
+//! annotations, text, scalars, compounds, and conversions. Written against
+//! `CONTENT_STYLE.md`.
 
 use super::types::{
-    callout, code, diagram, paragraphs, steps, table, Difficulty, ExerciseKind, SeedExercise,
-    SeedLesson, SeedModule, SeedProject,
+    breakdown, broken, broken_text, callout, checklist, code, diagram, fixed, gap_fill, guess_run,
+    labelled, paragraphs, step_through, steps, table, text_block, Difficulty, ExerciseKind,
+    SeedExercise, SeedLesson, SeedModule, SeedProject,
 };
 
 pub fn content() -> SeedModule {
@@ -29,6 +31,7 @@ fn lessons() -> Vec<SeedLesson> {
         lesson_why_immutable(),
         lesson_type_inference(),
         lesson_type_annotations(),
+        lesson_text_str(),
         lesson_integer_types(),
         lesson_integer_literals(),
         lesson_signed_unsigned(),
@@ -56,49 +59,56 @@ fn lesson_what_is_a_variable() -> SeedLesson {
         vec![
             labelled(
                 "CONCEPT",
-                "Before variables existed, programs were just numbers floating around with nothing to say \
-                 what they meant. `100 > 50` tells you almost nothing. `score > 50` tells you a story. \
-                 A variable is simply a name attached to a value, so that later code can refer to that \
-                 value by something meaningful.",
+                "`100 > 50` tells you almost nothing. `score > 50` tells you a story. A variable is a name \
+                 attached to a value so later code can refer to that value by something meaningful — not to \
+                 save typing, but so the code says what it means.",
             ),
-            diagram(
-                "value:\n25",
-                "value:\n  25          ← the thing itself\n\nname:\n  age          ← the label you use to reach it",
+            text_block(
+                "Two things you will see in almost every example. `fn main()` is where a Rust program \
+                 starts — read it as \"run this\"; functions get their own module later. `println!` prints a \
+                 line, and `{}` inside the quotes is a placeholder for a value.",
             ),
             code(
                 "rust",
-                "fn main() {\n    let username = \"Gus\";\n    let score = 100;\n    let logged_in = true;\n\n    println!(\"{} has a score of {}\", username, score);\n    println!(\"Logged in: {}\", logged_in);\n}",
+                r#"fn main() {
+    let score = 100;
+    let username = "Gus";
+
+    println!("{} scored {}", username, score);
+}"#,
+            ),
+            gap_fill(
+                "Give this value a name so the print works. Fill in the missing name.",
+                "fn main() {\n    let ____ = 100;\n    println!(\"score: {score}\");\n}",
+                &[("n1", "score", "The name used inside the braces of the print.")],
             ),
             labelled(
                 "EXPLANATION",
-                "Rust is about to ask you a question that JavaScript would probably just shrug at. \
-                 Before you can name a value, you have to say how to store it. `let` creates a \
-                 binding — a name tied to a value. The name is `username`. The value is `\"Gus\"`. \
-                 Rust records the value's type at this moment, and it never forgets.",
+                "`let` creates a **binding**: a name tied to a value. In `let score = 100;`, `score` is the \
+                 name and `100` is the value. Every value also has a **type** — what kind of data it is. \
+                 `100` is a whole number, `\"Gus\"` is text (a **string slice**, written `&str`), and `true` \
+                 is a boolean. The next few lessons make types precise; for now, notice that `let` records \
+                 the kind of thing you handed it, and Rust never forgets it.",
             ),
-            code(
-                "rust",
-                "let score = 100;\n\n// With a name, this reads as intent:\nif score > 50 {\n    println!(\"Nice run\");\n}\n\n// Without one, it reads as arithmetic noise:\nif 100 > 50 {\n    println!(\"Nice run\");\n}",
-            ),
-            text_block(
-                "This is the whole reason variables exist. Not to save typing. To make the code say what it means. \
-                 Six months from now, `score > 50` is a gift. `100 > 50` is a riddle.",
-            ),
-            callout(
-                "Practice — Try this now",
-                "Declare three variables: a `username` (a string), a `score` (a whole number), and \
-                 `logged_in` (true or false). Print all three on separate lines. Then change the score \
-                 to a different number and print it again. Run with `cargo run`.",
-            ),
-            code(
-                "rust",
-                "fn main() {\n    let username = \"Gus\";\n    let score = 100;\n    let logged_in = true;\n\n    println!(\"user: {}\", username);\n    println!(\"score: {}\", score);\n    println!(\"logged in: {}\", logged_in);\n}",
+            guess_run(
+                "The name is used before it is declared. Predict what the compiler does.",
+                "fn main() {\n    println!(\"{score}\");\n    let score = 100;\n}",
+                &[
+                    "It prints 100 — Rust looks ahead",
+                    "It does not compile — `score` is used before it is declared",
+                    "It prints an empty line",
+                ],
+                1,
+                "A name must be bound before it is used. Rust reads top to bottom here, so the `println!` \
+                 has no `score` to find. The error names the undeclared value and suggests the \
+                 declaration you forgot — which is the whole reason a variable has to be introduced with \
+                 `let` first.",
             ),
             callout(
-                "Mini challenge",
-                "Write four lines that store your own name, your favourite number, whether you have a \
-                 cat, and your favourite programming language. Print them in a single formatted line \
-                 using one `println!`. Format it however you like — this one is yours.",
+                "Why names matter",
+                "To the compiler, `100` and `score` are nearly the same thing. The difference is entirely \
+                 for the reader. Six months from now, `score > 50` is a gift; `100 > 50` is a riddle. \
+                 That is the trade variables make.",
             ),
         ],
     )
@@ -110,43 +120,42 @@ fn lesson_immutable_by_default() -> SeedLesson {
         vec![
             labelled(
                 "CONCEPT",
-                "In Rust, a plain `let` binding is immutable. Once it holds a value, that value is frozen. \
-                 You can read it forever. You cannot change it. This surprises almost everyone on day one, \
-                 and it is not an oversight.",
+                "In Rust a plain `let` binding is immutable. Once it holds a value, that value is frozen: \
+                 you can read it as often as you like, but you cannot change it. This surprises almost \
+                 everyone on day one — and it is deliberate.",
             ),
-            code(
-                "rust",
-                "fn main() {\n    let score = 100;\n\n    score = 200;  // ← this does not compile\n}",
-            ),
+            broken("fn main() {\n    let score = 100;\n\n    score = 200;\n}"),
             labelled(
                 "EXPLANATION",
-                "Rust refuses with something close to:",
+                "The compiler stops on the second assignment. Read what it says: `cannot assign twice to \
+                 immutable variable`. It is not scolding you. It is telling you that a plain `let` \
+                 promised this value would not change, and this line breaks that promise.",
             ),
-            code(
-                "text",
+            broken_text(
                 "error[E0384]: cannot assign twice to immutable variable `score`\n --> src/main.rs:4:5\n  |\n4 |     score = 200;\n  |     ^^^^^^^ cannot assign twice to immutable variable",
             ),
             text_block(
-                "Read that error carefully. It is not scolding you. It is telling you exactly what it thinks \
-                 you meant, and what it is willing to do instead. `E0384` is Rust being precise about a \
-                 decision it needs you to make explicitly.",
+                "That promise is useful. If a value cannot change, then reading it later tells you \
+                 something reliable: it is exactly what it said it was. The compiler gets to trust it, \
+                 and so do you. Immutability is information, not red tape.",
+            ),
+            guess_run(
+                "This binding is never reassigned. Predict whether it compiles.",
+                "fn main() {\n    let score = 100;\n    println!(\"{score}\");\n}",
+                &[
+                    "It compiles — `let` without `mut` is fine as long as you never reassign",
+                    "It does not compile — `let` always needs `mut`",
+                ],
+                0,
+                "`let` is the normal case; `mut` is the exception you add only when you intend to change \
+                 the value. Reading an immutable binding is perfectly fine — the restriction is on \
+                 changing it.",
             ),
             callout(
                 "Yes, Rust wants to know whether this changes",
-                "No, it isn't being nosy. This information actually matters — the compiler now knows whether \
-                 to trust the value or to keep checking it. That is the whole trade.",
-            ),
-            callout(
-                "Practice — Try this now",
-                "Write `let score = 100;` then try `score = 200;`. Run it. Read the error all the way \
-                 through, including the line number. Then fix it by adding `mut` and run it again. Keep \
-                 both versions around so you can compare them.",
-            ),
-            callout(
-                "Mini challenge",
-                "Predict the error before you run it: what will Rust say if you try to change a variable \
-                 that was declared with `let` and no `mut`? Write your prediction down, then check. \
-                 Getting a compiler error right *before* you see it is a real skill.",
+                "No, it is not being nosy. Knowing a value cannot change lets the compiler trust it and \
+                 lets a reader rely on it. That is the whole trade, and it pays off in every later \
+                 module.",
             ),
         ],
     )
@@ -158,51 +167,46 @@ fn lesson_mut() -> SeedLesson {
         vec![
             labelled(
                 "CONCEPT",
-                "Some values genuinely change. A player's health drops. A timer counts down. A score climbs. \
-                 For these, Rust wants you to say so out loud with `mut`. It is a small word that carries \
-                 real information: *this binding is intentionally allowed to change.*",
+                "Some values genuinely change: a player's health drops, a timer counts down, a score \
+                 climbs. For those, Rust asks you to say so out loud with `mut`. It is a small word \
+                 carrying real information — this binding is intentionally allowed to change.",
             ),
             code(
                 "rust",
-                "fn main() {\n    let mut health = 100;\n\n    health -= 10;\n    health -= 20;\n\n    println!(\"Health: {}\", health);  // 70\n}",
+                r#"fn main() {
+    let mut health = 100;
+
+    health -= 10;
+    health -= 20;
+
+    println!("Health: {health}");
+}"#,
             ),
             labelled(
                 "EXPLANATION",
-                "`let mut` does two things. It creates the binding, same as `let`. It also marks that binding \
-                 as reassignable. After that, `health = health - 10` is allowed, and so is the shorthand \
-                 `health -= 10`. Mutability attaches to the *binding*, not to the value. That distinction \
-                 will matter enormously in the ownership module, so plant the seed now.",
+                "`let mut` does what `let` does and adds one permission: this binding may be reassigned. \
+                 That lets you write `health = health - 10`, or the shorthand `health -= 10` — the same \
+                 line with the operation moved in front of the `=`. Mutability attaches to the \
+                 **binding**, not to the value. That distinction will matter a lot once you reach \
+                 ownership, so it is worth planting now.",
             ),
             table(
                 &["Binding", "Can it be reassigned?"],
                 &[
-                    &["let x = 5;", "No. Frozen at 5."],
-                    &["let mut x = 5;", "Yes. x becomes 6, 7, or anything else."],
+                    &["`let x = 5;`", "No — frozen at 5."],
+                    &["`let mut x = 5;`", "Yes — x can become 6, 7, or anything of the same type."],
                 ],
             ),
-            text_block(
-                "You can change this variable, but Rust wants you to say so first. Honestly, fair.",
-            ),
-            code(
-                "rust",
-                "fn main() {\n    // A countdown timer\n    let mut seconds = 3;\n\n    seconds -= 1;\n    seconds -= 1;\n    println!(\"{} seconds left\", seconds);  // 1\n\n    // Bank balance\n    let mut balance = 250.50;\n    balance += 100.0;\n    println!(\"Balance: {}\", balance);  // 350.5\n\n    // Attempts remaining\n    let mut attempts = 3;\n    attempts -= 1;\n    println!(\"attempts: {}\", attempts);  // 2\n}",
+            gap_fill(
+                "The value changes, so the binding needs permission. Fill in the missing keyword.",
+                "let ____ seconds = 3;\nseconds -= 1;\nprintln!(\"{seconds}\");",
+                &[("m1", "mut", "The word that allows reassignment.")],
             ),
             callout(
-                "Practice — Try this now",
-                "Write a `let mut` counter starting at 0. Increment it five times, printing the value after \
-                 each increment. Then create a `let mut` for player health at 100, subtract 30 twice, and \
-                 print what is left.",
-            ),
-            code(
-                "rust",
-                "fn main() {\n    let mut count = 0;\n\n    count += 1;\n    println!(\"{}\", count);\n    count += 1;\n    println!(\"{}\", count);\n    count += 1;\n    println!(\"{}\", count);\n    count += 1;\n    println!(\"{}\", count);\n    count += 1;\n    println!(\"{}\", count);\n\n    let mut health = 100;\n    health -= 30;\n    health -= 30;\n    println!(\"health: {}\", health);  // 40\n}",
-            ),
-            callout(
-                "Mini challenge",
-                "Write a fuel gauge. Start at a full tank of 50.0. Burn fuel in three steps: 12.5, then \
-                 8.25, then 4.0. Print the remaining fuel after each burn, and print a warning when it \
-                 drops below 10.0. (You will need an `if` for the warning — if you have not met one yet, \
-                 just print a fixed warning on the last line and come back to it.)",
+                "`mut` is not a switch for everything",
+                "It marks one binding as changeable. It does not make the value a different kind of \
+                 thing, and it does not let you change the binding's type — you meet that boundary \
+                 shortly, under shadowing.",
             ),
         ],
     )
@@ -214,48 +218,67 @@ fn lesson_why_immutable() -> SeedLesson {
         vec![
             labelled(
                 "CONCEPT",
-                "Why would a language make you opt in to change? It seems bureaucratic until you notice \
-                 what it buys you. If a value cannot silently change, then reading it later tells you \
-                 something reliable: it is exactly what it said it was.",
+                "Why make you opt in to change? It looks bureaucratic until you notice what it buys. If a \
+                 value cannot silently change, then reading it later tells you something reliable: it is \
+                 exactly what it said it was.",
             ),
-            code(
-                "rust",
-                "fn calculate_bonus(user_count: u32) -> u32 {\n    let user_count = user_count * 2;\n    user_count\n}\n\nfn main() {\n    let user_count = 100;\n    let bonus = calculate_bonus(user_count);\n\n    println!(\"users: {}\", user_count);      // still 100\n    println!(\"bonus: {}\", bonus);\n}",
+            step_through(
+                "An immutable value, read far from where it is set",
+                r#"let user_count = 100;
+
+let bonus = {
+    let doubled = user_count * 2;
+    doubled + 50
+};
+
+println!("users: {user_count}");"#,
+                &[
+                    (&[1][..], "`user_count` owns 100 and is immutable."),
+                    (&[3][..], "A block reads `user_count` to build `bonus`."),
+                    (&[4][..], "The block can read the value but cannot change it."),
+                    (&[7][..], "So this line is guaranteed to print 100. Nothing could have changed it."),
+                ],
             ),
             labelled(
                 "EXPLANATION",
-                "`calculate_bonus` cannot touch your `user_count`. It is not that it chooses not to — it \
-                 *cannot*. When you read `user_count` on line 13, you know it is 100, because nothing in \
-                 the whole program was able to change it behind your back.",
-            ),
-            diagram(
-                "reading the source",
-                "let user_count = 100;\n  ↑\n  immutable — trust this value\n\nlet mut user_count = 100;\n  ↑\n  mutable — assume it can change\n     and check before you rely on it",
-            ),
-            text_block(
-                "Now read this line of code:",
+                "The value is read in two places, and because it is immutable, both reads agree. That is \
+                 the whole argument for the default. A plain `let` is a promise the compiler enforces: \
+                 this value does not move. You can therefore reason about it without hunting through the \
+                 program for whoever might have changed it.",
             ),
             code(
                 "rust",
-                "let tax_rate = 0.2;\n// tax_rate cannot change anywhere in this program\n\nlet mut cart_total = 0.0;\n// cart_total will change as items are added",
+                r#"fn main() {
+    let tax_rate = 0.2;        // a promise: this never changes
+    let mut cart_total = 0.0;  // in motion: this will change
+
+    cart_total += 10.0;
+    cart_total += 5.0;
+
+    println!("tax: {}", cart_total * tax_rate);
+}"#,
             ),
             text_block(
-                "Same word `let`. Completely different contract with the reader. The first one is a promise. \
-                 The second one is an admission that things are in motion.",
+                "Same keyword, two different contracts with the reader. The first is a promise; the \
+                 second is an admission that things are in motion. Both are useful — and saying which \
+                 you mean is the point.",
+            ),
+            guess_run(
+                "A block tries to change a value declared without `mut`. Predict what happens.",
+                "fn main() {\n    let total = 0;\n\n    let result = {\n        total = total + 5;\n        total\n    };\n\n    println!(\"{result}\");\n}",
+                &[
+                    "It compiles and prints 5",
+                    "It does not compile — `total` is immutable, even inside the block",
+                ],
+                1,
+                "A block does not grant new powers. `total` was declared without `mut`, so nothing — not \
+                 even a nested block — may reassign it. The fix is `let mut total = 0;`. This is exactly \
+                 the reliability the immutable default buys.",
             ),
             callout(
-                "Practice — Try this now",
-                "Write a function `double(value: i32) -> i32` that takes a number and returns it doubled. \
-                 Call it with a variable and print both the argument and the result. Then try to change the \
-                 argument inside the function. Read what the compiler says and explain it in your own words.",
-            ),
-            callout(
-                "Mini challenge",
-                "Write three functions, each taking a parameter, and each using that parameter to compute \
-                 a result. Between them, demonstrate that the parameters never change. Then add a fourth \
-                 function that takes a `&mut` style intent — actually, just add a function that *does* change \
-                 a local variable it owns, and compare the two experiences. Write one sentence about the \
-                 difference.",
+                "Try it",
+                "Declare one immutable binding and one mutable binding for the same kind of data, and \
+                 write a comment on each saying which contract you meant.",
             ),
         ],
     )
@@ -267,39 +290,55 @@ fn lesson_type_inference() -> SeedLesson {
         vec![
             labelled(
                 "CONCEPT",
-                "You did not tell Rust what type `age` is. You did not tell it what type `price` is. It knows \
-                 anyway. This is type inference — Rust works out the type from the value and the surrounding \
-                 context, and it does this before your program runs.",
+                "You never told Rust the type of `age`. You never told it the type of `price`. It knows \
+                 anyway. This is **type inference**: Rust works out the type from the value and the \
+                 surrounding context, before your program runs.",
             ),
             code(
                 "rust",
-                "fn main() {\n    let age = 25;        // inferred: i32\n    let name = \"Gus\";     // inferred: &str\n    let active = true;     // inferred: bool\n    let price = 19.99;     // inferred: f64\n}",
+                r#"fn main() {
+    let age = 25;        // i32
+    let name = "Gus";     // &str
+    let active = true;     // bool
+    let price = 19.99;     // f64
+
+    println!("{age} {name} {active} {price}");
+}"#,
             ),
             labelled(
                 "EXPLANATION",
-                "Rust looks at the literal and decides. `25` is a whole number, so `i32`. `19.99` has a \
-                 decimal point, so `f64`. `\"Gus\"` is text, so `&str`. `true` is a boolean, so `bool`. The \
-                 compiler then locks that type in for the rest of the binding's life.",
+                "Rust reads the literal and decides. A whole number is `i32`. A number with a decimal \
+                 point is `f64`. Text in double quotes is `&str` — a string slice, the type for text; \
+                 the lesson after next gives it the attention it deserves. `true` is a `bool`. Having \
+                 inferred the type once, Rust locks it in for the life of the binding.",
+            ),
+            gap_fill(
+                "Write the type Rust infers for each value.",
+                "let a = 42;       // ____\nlet b = 42.0;     // ____\nlet c = 'a';      // ____\nlet d = \"a\";      // ____\nlet e = true;     // ____",
+                &[
+                    ("t1", "i32", "Whole numbers default to 32-bit signed."),
+                    ("t2", "f64", "A decimal point makes it a 64-bit float."),
+                    ("t3", "char", "Single quotes hold one character."),
+                    ("t4", "&str", "Double quotes hold a string slice."),
+                    ("t5", "bool", "`true` and `false` are booleans."),
+                ],
+            ),
+            guess_run(
+                "Rust inferred a type for `count`, then a different type is assigned. Predict what happens.",
+                "fn main() {\n    let count = 5;\n    count = \"now a string\";\n}",
+                &[
+                    "It compiles — Rust re-infers the type",
+                    "It does not compile — the type was already decided",
+                ],
+                1,
+                "`count` was inferred as `i32` from `5`, and a binding's type does not change. Assigning \
+                 a `&str` is a mismatched-types error. To hold a different type you would need a new \
+                 binding — that is shadowing, later in this module.",
             ),
             callout(
-                "You don't have to tell Rust everything. But Rust still needs to know.",
-                "That sentence is the whole idea. Inference saves you the typing, not the thinking. Rust \
-                 still knows exactly what type each value is, and it will still hold you to it.",
-            ),
-            code(
-                "rust",
-                "fn main() {\n    // Each of these has a definite type, even though you never wrote it down\n    let count = 5;\n    let ratio = 0.5;\n    let label = \"hp\";\n    let alive = false;\n\n    // count: i32, ratio: f64, label: &str, alive: bool\n}",
-            ),
-            callout(
-                "Practice — Try this now",
-                "Declare six variables without any type annotations: a whole number, a negative whole \
-                 number, a decimal, a string, a character, and a boolean. Run `cargo run`. Then deliberately \
-                 break one — try `count = \"now a string\"` — and read what the compiler says about the type \
-                 it expected versus the type it found.",
-            ),
-            callout(
-                "Mini challenge",
-                "What type will Rust infer for each of these?\n\n1. `let x = 42;`\n2. `let x = 42.0;`\n3. `let x = 'a';`\n4. `let x = \"a\";`\n5. `let x = true;`\n\nWrite your answers down first, then verify each one with a deliberate type error.",
+                "Inference saves typing, not thinking",
+                "Rust still knows the exact type of every value and still holds you to it. Inference \
+                 spares you the annotation, not the decision.",
             ),
         ],
     )
@@ -312,47 +351,117 @@ fn lesson_type_annotations() -> SeedLesson {
             labelled(
                 "CONCEPT",
                 "Sometimes you want to be explicit. `let age: i32 = 25;` puts the type right there in the \
-                 source. This is a *type annotation*. It is optional, and Rust does not want you adding it \
-                 everywhere. But there are real situations where it earns its place.",
+                 source. This is a **type annotation**. It is optional, and Rust does not want it \
+                 everywhere — but there are real places it earns its keep.",
             ),
             code(
                 "rust",
-                "fn main() {\n    let age: i32 = 25;\n    let score: u16 = 100;\n    let price: f64 = 19.99;\n    let username: &str = \"Gus\";\n    let active: bool = true;\n\n    println!(\"{} {} {} {} {}\", age, score, price, username, active);\n}",
+                r#"fn main() {
+    let age: i32 = 25;
+    let score: u16 = 100;
+    let price: f64 = 19.99;
+    let username: &str = "Gus";
+    let active: bool = true;
+
+    println!("{age} {score} {price} {username} {active}");
+}"#,
             ),
             labelled(
                 "EXPLANATION",
-                "The `: i32` between the name and the `=` is the annotation. It tells Rust: *when this value \
-                 has no type of its own, make it an i32.* When the literal already implies a type, the \
-                 annotation is a claim Rust will check. That check is the value — if you annotate `: u8` and \
-                 write `300`, Rust stops you.",
+                "The `: i32` between the name and the `=` is the annotation. It states what type the \
+                 binding should have, and Rust checks the value against it. That check is the value: \
+                 annotate `: u8` and write `300`, and Rust stops you rather than silently wrapping.",
             ),
             steps(&[
-                "Readability — a reader sees the type without inferring it",
-                "Intent — `let price: f64` signals 'money, decimals matter'",
-                "Ambiguity — when a bare value could be several types",
-                "Empty collections — `let items: Vec<i32> = Vec::new();` needs the type",
-                "Function boundaries — clear signatures for callers",
+                "Readability — the reader sees the type without inferring it.",
+                "Intent — `let price: f64` says \"money, decimals matter\".",
+                "Ambiguity — a bare value could be several types.",
+                "Empty collections — a list created with nothing in it has no element type to infer.",
+                "Function boundaries — clear signatures for callers (later module).",
             ]),
+            gap_fill(
+                "Add the missing annotation so this empty list knows what it holds. Fill in the type.",
+                "let scores: ____ = Vec::new();\nprintln!(\"{}\", scores.len());",
+                &[("v1", "Vec<i32>", "A growable list whose elements are i32.")],
+            ),
+            text_block(
+                "`Vec` is a growable list — you meet it fully in Module 08. For now read `Vec<i32>` as \
+                 \"a list of whole numbers\". The empty-list case is the classic reason an annotation is \
+                 required.",
+            ),
             callout(
-                "When NOT to annotate",
-                "If Rust already knows perfectly well what the type is, adding an annotation is just noise. \
-                 `let count: i32 = 5;` tells a reader nothing they couldn't infer. Annotate for clarity, not out of habit.",
+                "When not to annotate",
+                "If Rust already knows the type, an annotation is noise. `let count: i32 = 5;` tells a \
+                 reader nothing they could not infer. Annotate for clarity or necessity, not by habit.",
+            ),
+        ],
+    )
+}
+
+fn lesson_text_str() -> SeedLesson {
+    SeedLesson::new(
+        "Text: `&str`",
+        vec![
+            labelled(
+                "CONCEPT",
+                "You have been writing text since the first example — `\"Gus\"`, `\"hello\"` — without \
+                 being told what it is. This lesson fixes that. Text in double quotes is a **string \
+                 slice**, written `&str`. It is the type for a run of characters: one letter, a word, a \
+                 whole paragraph.",
             ),
             code(
                 "rust",
-                "fn main() {\n    // Useful: a bare 0 could be many types\n    let mut total = 0;\n    total += 5;  // works, but total is i32 because of the literal\n\n    // Useful: a vector needs the element type\n    // let empty = Vec::new();  // ← error: type annotations needed\n    let empty: Vec<i32> = Vec::new();\n    println!(\"{} items, total {}\", empty.len(), total);\n}",
+                r#"fn main() {
+    let greeting = "hello";
+    let name = "Gus";
+    let empty = "";
+
+    println!("{greeting}, {name}!");
+    println!("empty is {} characters", empty.len());
+}"#,
+            ),
+            labelled(
+                "EXPLANATION",
+                "A `&str` can hold any number of characters, including none. The `&` means it is a view \
+                 into text rather than something that owns its own copy; for now, the practical rule is \
+                 simply that **double quotes make text**. You can ask for its length with `.len()` — a \
+                 dotted call is a **method**, a function attached to a value, and methods appear \
+                 throughout the language.",
+            ),
+            table(
+                &["You write", "Type", "Holds"],
+                &[
+                    &["`'A'`", "`char`", "exactly one character"],
+                    &["`\"A\"`", "`&str`", "one character — or many"],
+                    &["`\"\"`", "`&str`", "no characters at all"],
+                ],
+            ),
+            guess_run(
+                "A character type is given text in double quotes. Predict what happens.",
+                "fn main() {\n    let letter: char = \"R\";\n    println!(\"{letter}\");\n}",
+                &[
+                    "It compiles and prints R",
+                    "It does not compile — a `char` is one character in single quotes",
+                ],
+                1,
+                "`\"R\"` is a `&str`; `'R'` is a `char`. They look alike and are different types, and the \
+                 compiler will say `expected char, found &str`. This is the single most common quotes \
+                 mistake for beginners, and now you know which quote means what.",
+            ),
+            gap_fill(
+                "Write the type of each value. Choose `char` or `&str`.",
+                "let a = 'x';     // ____\nlet b = \"x\";     // ____\nlet c = \"hello\"; // ____",
+                &[
+                    ("s1", "char", "Single quotes: one character."),
+                    ("s2", "&str", "Double quotes: a string slice."),
+                    ("s3", "&str", "Still a string slice, regardless of length."),
+                ],
             ),
             callout(
-                "Practice — Try this now",
-                "Take the variables you wrote in the last practice step and add explicit annotations to all \
-                 of them. Then change one annotation to a type that cannot hold the value — `let age: u8 = 25;` \
-                 is fine, but `let age: u8 = 300;` is not. Read the error.",
-            ),
-            callout(
-                "Mini challenge",
-                "Rust cannot infer the type of an empty collection. Write `let scores = Vec::new();` and \
-                 read the error. Then fix it with an annotation that works. Finally, try to write the \
-                 annotation in a way that is too vague, like `: Vec` with no element type, and see what Rust says.",
+                "There is also an owned string",
+                "You will meet `String` soon — text that owns its own copy and can grow. For now, `&str` \
+                 is enough: every literal you write is one, and every lesson before strings-proper uses \
+                 them.",
             ),
         ],
     )
@@ -364,64 +473,56 @@ fn lesson_integer_types() -> SeedLesson {
         vec![
             labelled(
                 "CONCEPT",
-                "Rust has a whole family of integer types. They are not interchangeable. When you write \
-                 `25`, Rust picks `i32` for you. When you write `25` somewhere that demands a `u8`, it checks \
-                 whether 25 actually fits.",
+                "Rust has a whole family of integer types, and they are not interchangeable. When you \
+                 write `25`, Rust picks `i32` for you. When `25` appears somewhere that demands a `u8`, it \
+                 checks whether 25 actually fits.",
             ),
             table(
                 &["Type", "Meaning", "Range (roughly)"],
                 &[
                     &["i8", "signed 8-bit", "-128 to 127"],
                     &["i16", "signed 16-bit", "-32,768 to 32,767"],
-                    &["i32", "signed 32-bit", "-2.1B to 2.1B"],
-                    &["i64", "signed 64-bit", "-9.2Q to 9.2Q"],
-                    &["i128", "signed 128-bit", "very large"],
+                    &["i32", "signed 32-bit", "-2.1 billion to 2.1 billion"],
+                    &["i64", "signed 64-bit", "-9.2 quintillion to 9.2 quintillion"],
+                    &["i128", "signed 128-bit", "far larger than you will need"],
                     &["isize", "signed, pointer-sized", "depends on your machine"],
                     &["u8", "unsigned 8-bit", "0 to 255"],
                     &["u16", "unsigned 16-bit", "0 to 65,535"],
-                    &["u32", "unsigned 32-bit", "0 to 4.2B"],
-                    &["u64", "unsigned 64-bit", "0 to 18.4Q"],
-                    &["u128", "unsigned 128-bit", "very large"],
+                    &["u32", "unsigned 32-bit", "0 to 4.2 billion"],
+                    &["u64", "unsigned 64-bit", "0 to 18.4 quintillion"],
+                    &["u128", "unsigned 128-bit", "far larger than you will need"],
                     &["usize", "unsigned, pointer-sized", "depends on your machine"],
                 ],
             ),
             labelled(
                 "EXPLANATION",
-                "The letter before the number is the important part.",
+                "The letter and the number each say something. The letter is the signedness: `i` can be \
+                 negative, `u` cannot. The number is the **bit width** — how much storage the type uses. \
+                 One bit is a single on/off switch, so 8 bits give 2⁸ = 256 distinct values.",
             ),
             diagram(
                 "reading the name",
                 "i32\n│ │\n│ └── 32 bits of storage\n└──── i = signed (can be negative)\n\nu8\n│ │\n│ └── 8 bits of storage\n└──── u = unsigned (zero and up only)",
             ),
             text_block(
-                "For ordinary whole numbers with no other context, Rust infers `i32`. That covers a genuinely \
-                 enormous range — about two billion in each direction — so it is a safe default. You reach \
-                 for the smaller and larger types when you have a reason: matching a file format, staying \
-                 inside a hardware range, or working with values that genuinely might exceed i32.",
+                "For ordinary whole numbers with no other context, Rust infers `i32`. That covers about \
+                 two billion in each direction, so it is a safe default. You reach for the smaller and \
+                 larger types when you have a reason: matching a file format, staying inside a hardware \
+                 range, or holding values that genuinely might exceed `i32`.",
             ),
-            code(
-                "rust",
-                "fn main() {\n    let small: u8 = 255;\n    let medium: u16 = 65_535;\n    let normal = 42;         // i32 by inference\n    let big: u64 = 18_446_744_073_709_551_615;\n\n    println!(\"{} {} {} {}\", small, medium, normal, big);\n}",
+            gap_fill(
+                "Name the type. Choose from `i8`, `u8`, `i32`, or `u64`.",
+                "let level: ____ = 100;        // 1 to 100, never negative\nlet big: ____ = 9_000_000_000_000; // far beyond i32",
+                &[
+                    ("l1", "u8", "A small non-negative number."),
+                    ("l2", "u64", "A number larger than i32 can hold."),
+                ],
             ),
             callout(
                 "Types have limits",
-                "This matters more than it sounds. A `u8` can hold at most 255. Try to store 256 in one and \
-                 Rust will stop you. Later, when you work with ranges and conversions, you will meet the word \
-                 *overflow*. For now just carry the habit: when you pick a type, pick it on purpose.",
-            ),
-            callout(
-                "Practice — Try this now",
-                "Declare one variable of each type: `i8`, `u8`, `i32`, `u32`, `i64`, `u64`, `f64`, `bool`, \
-                 and `char`. Print them all. Then deliberately overflow one: write `let x: u8 = 256;` and \
-                 read what Rust tells you about the maximum value.",
-            ),
-            code(
-                "rust",
-                "fn main() {\n    let a: i8 = -100;\n    let b: u8 = 200;\n    let c: i32 = 2_000_000_000;\n    let d: u32 = 4_000_000_000;\n    let e: i64 = 9_000_000_000_000_000_000;\n    let f: u64 = 18_000_000_000_000_000_000;\n    let g: f64 = 3.14159;\n    let h: bool = true;\n    let i: char = 'R';\n\n    println!(\"{} {} {} {} {} {} {} {} {}\", a, b, c, d, e, f, g, h, i);\n}",
-            ),
-            callout(
-                "Mini challenge",
-                "You are building a game. Pick a type for each and justify it in a comment:\n\n1. A player's level (1 to 100)\n2. Their health points (0 to 100)\n3. A world seed (up to 2 billion)\n4. Total milliseconds of playtime (can exceed 2 billion)\n5. A percentage from 0 to 100",
+                "This matters more than it sounds. A `u8` holds at most 255, and try to store 256 in one \
+                 and Rust will stop you. Later, working with ranges and conversions, you will meet the \
+                 word *overflow*. For now carry the habit: when you pick a type, pick it on purpose.",
             ),
         ],
     )
@@ -433,13 +534,20 @@ fn lesson_integer_literals() -> SeedLesson {
         vec![
             labelled(
                 "CONCEPT",
-                "Rust lets you write whole numbers in four different notations. You are not required to use \
-                 them, but you will meet all four eventually — and once you know what they are, they stop \
+                "Rust lets you write whole numbers in four notations. You are not required to use them, \
+                 but you will meet all four eventually — and once you know what they are, they stop \
                  looking strange.",
             ),
             code(
                 "rust",
-                "fn main() {\n    let decimal = 1_000_000;\n    let hex = 0xff;          // 255\n    let binary = 0b1010;     // 10\n    let octal = 0o755;       // 493\n\n    println!(\"{} {} {} {}\", decimal, hex, binary, octal);\n}",
+                r#"fn main() {
+    let decimal = 1_000_000;
+    let hex = 0xff;          // 255
+    let binary = 0b1010;     // 10
+    let octal = 0o755;       // 493
+
+    println!("{decimal} {hex} {binary} {octal}");
+}"#,
             ),
             table(
                 &["Notation", "How it starts", "Example", "Value"],
@@ -452,32 +560,23 @@ fn lesson_integer_literals() -> SeedLesson {
             ),
             labelled(
                 "EXPLANATION",
-                "The underscores are the part worth caring about. `1000000` is perfectly valid Rust, but \
-                 counting the zeros is a waste of your one remaining brain cell at 2am. `1_000_000` is the \
-                 same number, and you can read it at a glance. Rust ignores the underscores entirely — \
-                 they exist purely for humans.",
+                "The underscores are the part worth caring about. `1000000` is valid Rust, but counting \
+                 the zeros wastes your attention. `1_000_000` is the same number and reads at a glance. \
+                 Rust ignores the underscores entirely — they exist purely for humans.",
             ),
-            code(
-                "rust",
-                "fn main() {\n    // Same number, written four ways\n    let a = 255;\n    let b = 0xff;\n    let c = 0b1111_1111;\n    let d = 0o377;\n\n    // Underscores work anywhere, even in the middle of the prefix\n    let e = 0xFF_FF;\n    let f = 1_2_3_4;\n\n    println!(\"{} {} {} {} {} {}\", a, b, c, d, e, f);\n}",
+            gap_fill(
+                "Write `255` in binary and in hexadecimal. Fill in the two literals.",
+                "let binary = ____;      // 255\nlet hex = ____;         // 255",
+                &[
+                    ("b1", "0b1111_1111", "Binary starts with `0b`."),
+                    ("h1", "0xff", "Hexadecimal starts with `0x`."),
+                ],
             ),
             callout(
-                "Where you'll actually see these",
+                "Where you will actually see these",
                 "Hex in colours (`0xFF_6B_35` is BORROW_'s burnt orange) and memory addresses. Binary when \
-                 you are reasoning about individual bits. Octal for file permissions (`0o755`) on Linux and macOS. \
-                 Decimal the other 95% of the time.",
-            ),
-            callout(
-                "Practice — Try this now",
-                "Write `255` in all four notations, one per variable, and print all four. Then write \
-                 `1_048_576` (one million in binary-friendly form) using underscores. Finally, convert \
-                 `0o755` to decimal by hand, then verify with `println!`.",
-            ),
-            callout(
-                "Mini challenge",
-                "A file permission is written as `0o755`. Work out what each digit means: 7 for owner, 5 for \
-                 group, 5 for others. If you know how permission numbers work, explain why 7 means 'rwx' and \
-                 why 5 means 'r-x'. Then write `0o644` and explain it the same way.",
+                 you are reasoning about individual bits. Octal for file permissions (`0o755`) on Linux \
+                 and macOS. Decimal the other ninety-five percent of the time.",
             ),
         ],
     )
@@ -489,52 +588,41 @@ fn lesson_signed_unsigned() -> SeedLesson {
         vec![
             labelled(
                 "CONCEPT",
-                "A signed integer can be negative. An unsigned integer cannot. That is genuinely the whole \
-                 difference — but the *consequences* of that difference ripple outward in ways that surprise \
-                 people regularly.",
+                "A signed integer can be negative. An unsigned integer cannot. That is the whole \
+                 difference — but its consequences ripple outward in ways that surprise people \
+                 regularly.",
             ),
             code(
                 "rust",
-                "fn main() {\n    let temperature: i32 = -10;  // signed — fine\n    let age: u32 = 25;           // unsigned — fine\n\n    let below_zero: i8 = -5;     // fine\n    let almost_zero: u8 = 0;     // also fine\n}",
+                r#"fn main() {
+    let temperature: i32 = -10;  // signed — fine
+    let age: u32 = 25;           // unsigned — fine
+    let delta: i8 = -5;          // fine
+    let count: u8 = 0;           // also fine
+
+    println!("{temperature} {age} {delta} {count}");
+}"#,
             ),
             labelled(
                 "EXPLANATION",
-                "Signed types spend half their range on negatives. `i8` goes from -128 to 127 — 256 total \
-                 values, half of them negative. `u8` goes from 0 to 255 — 256 total values, none of them \
-                 negative. Same storage. Different territory.",
+                "Signed types spend half their range on negatives. `i8` runs from -128 to 127 — 256 values, \
+                 half of them negative. `u8` runs from 0 to 255 — 256 values, none negative. Same storage, \
+                 different territory.",
             ),
-            code(
-                "rust",
-                "fn main() {\n    let age: u32 = -1;  // ← this does not compile\n}",
-            ),
-            code(
-                "text",
+            broken("fn main() {\n    let age: u32 = -1;\n}"),
+            broken_text(
                 "error[E0308]: mismatched types\n  --> src/main.rs:3:20\n   |\n3  |     let age: u32 = -1;\n   |                    ^^   expected `u32`, found integer `{integer}`",
             ),
             text_block(
-                "Now think about whether that's a *type* problem or a *sense* problem. Age of -1 is not a \
-                 thing. Rust is not just enforcing a rule here — it is agreeing with you that the value is \
-                 nonsense. This is a case where the type system is doing exactly what you would want.",
+                "Think about whether that is a *type* problem or a *sense* problem. An age of -1 is not a \
+                 thing, and Rust is not merely enforcing a rule — it is agreeing with you that the value \
+                 is nonsense. This is the type system doing exactly what you would want.",
             ),
             callout(
-                "Reach for unsigned when the answer is genuinely 'never negative'",
-                "Array lengths, byte counts, ages, counts of items, channel numbers, port numbers. Reaching \
-                 for signed when the value might dip below zero is equally sensible. The mistake is picking \
-                 `u32` for everything because 'numbers are usually positive, right?'",
-            ),
-            code(
-                "rust",
-                "fn main() {\n    // Unsigned makes sense: these are never negative\n    let items: usize = 5;        // count of things\n    let byte: u8 = 255;           // a raw byte value\n    let port: u16 = 8080;          // network port\n\n    // Signed makes sense: these can dip below zero\n    let temp: i16 = -40;           // temperature\n    let delta: i32 = -1;           // a change, up or down\n}",
-            ),
-            callout(
-                "Practice — Try this now",
-                "Try `let age: u32 = -1;` and read the error. Then try `let count: i32 = 5;` and notice it \
-                 works fine. Finally, try subtracting past zero on an unsigned type: `let mut n: u8 = 0; n = n - 1;` \
-                 and read what happens. That last one is a good preview of underflow.",
-            ),
-            callout(
-                "Mini challenge",
-                "Decide signed or unsigned for each, and write one sentence of justification:\n\n1. A countdown timer that goes below zero\n2. The number of items in a shopping cart\n3. A temperature in Celsius\n4. A file size in bytes\n5. A score that can go up or down by 5",
+                "Reach for unsigned when the answer is never negative",
+                "Array lengths, byte counts, ages, port numbers. Reach for signed when the value might dip \
+                 below zero. The mistake is picking `u32` for everything because \"numbers are usually \
+                 positive, right?\"",
             ),
         ],
     )
@@ -546,51 +634,52 @@ fn lesson_floats() -> SeedLesson {
         vec![
             labelled(
                 "CONCEPT",
-                "Not every number is a whole number. Rust has two float types: `f32` (32 bits) and `f64` \
-                 (64 bits). When you write a decimal with no other context, Rust gives you `f64`.",
+                "Not every number is whole. Rust has two float types: `f32` (32 bits) and `f64` (64 bits). \
+                 Write a decimal with no other context and Rust gives you `f64`.",
             ),
             code(
                 "rust",
-                "fn main() {\n    let price = 19.99;              // f64 by inference\n    let precise: f64 = 19.99;     // explicitly 64-bit\n    let smaller: f32 = 19.99;     // explicitly 32-bit\n\n    println!(\"{} {} {}\", price, precise, smaller);\n}",
+                r#"fn main() {
+    let price = 19.99;              // f64 by inference
+    let precise: f64 = 19.99;       // explicitly 64-bit
+    let smaller: f32 = 19.99;       // explicitly 32-bit
+
+    println!("{price} {precise} {smaller}");
+}"#,
             ),
             labelled(
                 "EXPLANATION",
-                "Floats store a *decimal approximation* of your number, not the exact value. Most of the time \
-                 that is invisible. It becomes visible when you do a lot of arithmetic with values that \
-                 cannot be represented exactly — a recurring theme in anything involving money.",
+                "Floats store an *approximation* of your number, not the exact value. Most of the time \
+                 that is invisible; it becomes visible with arithmetic on values that have no exact \
+                 binary form. Run the example below and read the first line: `0.1 + 0.2` does not come \
+                 out to `0.3`.",
             ),
             code(
                 "rust",
-                "fn main() {\n    let a = 0.1;\n    let b = 0.2;\n    println!(\"a + b = {}\", a + b);      // 0.30000000000000004\n\n    let c: f32 = 0.1;\n    let d: f32 = 0.2;\n    println!(\"c + d = {}\", c + d);      // 0.30000004\n\n    println!(\"a + b == 0.3\");              // false\n}",
+                r#"fn main() {
+    let a = 0.1;
+    let b = 0.2;
+
+    println!("a + b = {}", a + b);          // 0.30000000000000004
+    println!("equal to 0.3: {}", a + b == 0.3);  // false
+}"#,
             ),
             text_block(
                 "That is not a Rust bug. `0.1` has no exact binary representation, in any language with a \
                  binary float type. The value you asked for, the value stored, and the value printed are \
-                 three closely related but distinct things. `f32` makes it worse because it has fewer bits to \
-                 work with.",
+                 three related but distinct things. `f32` is worse, because it has fewer bits to work \
+                 with.",
+            ),
+            callout(
+                "Formatting a float",
+                "`{:.2}` prints a float with exactly two decimal places — `{:.2}` on `3.5` gives `3.50`. \
+                 Since floats are approximations, this is how you keep money-looking output tidy.",
             ),
             callout(
                 "Which should I use?",
-                "Default to `f64`. Reach for `f32` when you are storing a large array of numbers where halving \
-                 the memory actually matters. For money specifically, look into a decimal crate later — floats \
-                 are the wrong tool for accounting.",
-            ),
-            callout(
-                "Practice — Try this now",
-                "Compute `0.1 + 0.2` and print it. Compute it again with `f32` values and print that. Then \
-                 try `(0.1 + 0.2) == 0.3` and see what it says. Finally, compute a 15% tip on a bill of \
-                 42.50 and print it.",
-            ),
-            code(
-                "rust",
-                "fn main() {\n    let bill = 42.50;\n    let tip_rate = 0.15;\n    let tip = bill * tip_rate;\n    let total = bill + tip;\n\n    println!(\"Bill:  ${:.2}\", bill);\n    println!(\"Tip:   ${:.2}\", tip);\n    println!(\"Total: ${:.2}\", total);\n}",
-            ),
-            callout(
-                "Mini challenge",
-                "Convert a temperature in Celsius to Fahrenheit. Store the Celsius value in an `f32` and the \
-                 result in an `f64`, and notice whether the printed precision differs. The formula is \
-                 `fahrenheit = celsius * 9.0 / 5.0 + 32.0`. Try it with 100.0 and see why round numbers can \
-                 look unexpected.",
+                "Default to `f64`. Reach for `f32` only in a large array where halving the memory actually \
+                 matters. For money specifically, look up a decimal crate later — floats are the wrong \
+                 tool for accounting.",
             ),
         ],
     )
@@ -602,41 +691,47 @@ fn lesson_booleans() -> SeedLesson {
         vec![
             labelled(
                 "CONCEPT",
-                "Booleans are two values: `true` and `false`. That is the whole type. In Rust they are a \
-                 first-class value you can store in a variable — not just something that appears in an `if`.",
+                "A boolean is two values: `true` and `false`. That is the whole type. In Rust it is a \
+                 first-class value you can store in a variable — not merely something that appears inside \
+                 an `if`.",
             ),
             code(
                 "rust",
-                "fn main() {\n    let logged_in: bool = true;\n    let has_permission: bool = false;\n    let is_admin = true;          // inferred as bool\n\n    println!(\"{} {} {}\", logged_in, has_permission, is_admin);\n}",
+                r#"fn main() {
+    let logged_in: bool = true;
+    let has_permission: bool = false;
+    let is_admin = true;          // inferred as bool
+
+    println!("{logged_in} {has_permission} {is_admin}");
+}"#,
             ),
             labelled(
                 "EXPLANATION",
-                "A `bool` takes one byte of memory and has exactly two possible values. That constraint is \
-                 the point: there is no third option, no `maybe`, no `null`. When a variable holds a bool, you \
-                 know exactly what it is.",
+                "A `bool` takes one byte and has exactly two possible values. That constraint is the \
+                 point: there is no third option, no `maybe`, no `null`. When a variable holds a bool, you \
+                 know exactly what it is — and when you combine booleans with `&&` (and) or `||` (or), the \
+                 result is another bool.",
             ),
-            callout(
-                "Booleans become interesting in control flow",
-                "Right now a bool is just a value sitting in a variable. The moment you use it in an `if` or a \
-                 `while`, it becomes a decision. That is exactly where the next module starts — but the \
-                 groundwork is here now. `if logged_in { }` is a perfectly understandable line even before we \
-                 dig into how `if` works.",
+            gap_fill(
+                "Combine the two flags with a boolean operator. Fill in the operator and the result line.",
+                "let logged_in = true;\nlet has_key = false;\n\nprintln!(\"can play: {}\", logged_in ____ has_key);  // false",
+                &[("o1", "&&", "Both must be true.")],
             ),
             code(
                 "rust",
-                "fn main() {\n    let logged_in = true;\n    let attempts_left = 3;\n    let has_key = false;\n\n    // Reads clearly even before you learn if/else\n    println!(\"Can play: logged in AND has key\");\n    println!(\"Attempts remaining: {}\", attempts_left);\n    println!(\"Logged in: {}\", logged_in);\n    println!(\"Has key: {}\", has_key);\n}",
+                r#"fn main() {
+    let logged_in = true;
+    let has_key = false;
+
+    println!("can play: {}", logged_in && has_key);  // false
+    println!("either:  {}", logged_in || has_key);   // true
+}"#,
             ),
             callout(
-                "Practice — Try this now",
-                "Write three boolean variables that describe a character: `alive`, `has_weapon`, and \
-                 `is_poisoned`. Print them each on its own line with a label. Then try the mistake that catches \
-                 everyone: `let flag = True;` (capital T) and read what the compiler says.",
-            ),
-            callout(
-                "Mini challenge",
-                "Write four booleans describing a coffee order: `has_milk`, `has_sugar`, `is_hot`, \
-                 `is_large`. Print a receipt-style summary. Then write one boolean that captures something \
-                 that is *not* a yes/no question, and think about whether a bool is really the right type for it.",
+                "Booleans become decisions",
+                "Right now a bool is a value sitting in a variable. The moment it meets an `if` or a \
+                 `while`, it becomes a decision — and `if` is exactly where the next module starts. The \
+                 groundwork is here.",
             ),
         ],
     )
@@ -648,50 +743,45 @@ fn lesson_characters() -> SeedLesson {
         vec![
             labelled(
                 "CONCEPT",
-                "A `char` holds exactly one Unicode scalar value. Single quotes. Four bytes. That is all it \
-                 is — and that is a surprising amount for four bytes to hold.",
+                "A `char` holds exactly one character, written in single quotes: `'A'`, `'7'`, `'♥'`. It is \
+                 not a string; it is a single value, and it is always four bytes wide.",
             ),
             code(
                 "rust",
-                "fn main() {\n    let letter: char = 'A';\n    let digit: char = '7';\n    let heart: char = '♥';    // 3 bytes of UTF-8, 1 char\n    let ninja: char = '🥷';    // 4 bytes of UTF-8, 1 char\n\n    println!(\"{} {} {} {}\", letter, digit, heart, ninja);\n}",
+                r#"fn main() {
+    let letter: char = 'A';
+    let digit: char = '7';
+    let heart: char = '♥';
+    let ninja: char = '🥷';
+
+    println!("{letter} {digit} {heart} {ninja}");
+}"#,
             ),
             labelled(
                 "EXPLANATION",
-                "Rust's `char` is **not** an ASCII character. It is a Unicode scalar value, which covers \
-                 essentially every writing system on earth plus a large set of symbols and emoji. The type is \
-                 always four bytes wide, regardless of how many bytes the actual glyph needs.",
+                "Rust's `char` is a Unicode scalar value, which covers essentially every writing system on \
+                 earth plus a large set of symbols and emoji. The type is always four bytes wide, no \
+                 matter how many bytes the glyph itself occupies. Single quotes make a `char`; double \
+                 quotes make a `&str`, which you already met.",
+            ),
+            broken("fn main() {\n    let c: char = \"A\";\n}"),
+            broken_text(
+                "error[E0308]: mismatched types\n  --> src/main.rs:2:18\n   |\n2  |     let c: char = \"A\";\n   |                  ^^^ expected `char`, found `&str`",
+            ),
+            gap_fill(
+                "Each character answers a yes/no question using a method. Fill in the three printed values.",
+                "let c = 'R';\n\nprintln!(\"is alphabetic: {}\", c.is_alphabetic());  // ____\nprintln!(\"is numeric:    {}\", c.is_numeric());     // ____\nprintln!(\"is uppercase:  {}\", c.is_uppercase());   // ____",
+                &[
+                    ("a1", "true", "`R` is a letter."),
+                    ("a2", "false", "`R` is not a digit."),
+                    ("a3", "true", "`R` is uppercase."),
+                ],
             ),
             callout(
-                "'A' versus \"A\" — the difference matters",
-                "`'A'` is a `char` — exactly one Unicode scalar value, written with single quotes. \
-                 `\"A\"` is a `&str` — a string slice, a whole run of text, written with double quotes. \
-                 One letter versus a sequence. Different types, different sizes, different rules. \
-                 We will not get deep into strings yet, but recognise the quotes and know they are not \
-                 interchangeable.",
-            ),
-            code(
-                "rust",
-                "fn main() {\n    let a: char = 'A';    // char — one value\n    let b: &str = \"A\";    // &str — text, could be longer\n\n    // This is a compile error, and it is a good one:\n    // let c: char = \"A\";\n    //   error[E0308]: mismatched types\n    //   expected `char`, found `&str`\n}",
-            ),
-            text_block(
-                "A `char` also carries useful methods. `is_alphabetic()`, `is_numeric()`, `is_uppercase()`, \
-                 `to_ascii_lowercase()` — all of which return `bool`, tying this lesson back to the last one.",
-            ),
-            code(
-                "rust",
-                "fn main() {\n    let c = 'R';\n\n    println!(\"is alphabetic: {}\", c.is_alphabetic());\n    println!(\"is numeric:    {}\", c.is_numeric());\n    println!(\"is uppercase:  {}\", c.is_uppercase());\n    println!(\"lowercase:     {}\", c.to_ascii_lowercase());\n}",
-            ),
-            callout(
-                "Practice — Try this now",
-                "Declare five char variables: your initial, a digit, a symbol, an accented letter, and an \
-                 emoji. Print them with labels. Then write `let x: char = \"R\";` (double quotes by mistake) \
-                 and read the error — it is a great introduction to `expected` versus `found`.",
-            ),
-            callout(
-                "Mini challenge",
-                "Store your three initials as three separate `char` variables. Print them on one line. Then \
-                 try to store them as a single `char` by writing something like `let initials = 'GAB';` and \
-                 read the error. What would be the right type for a string of initials?",
+                "A `char` has useful methods",
+                "`is_alphabetic()`, `is_numeric()`, `is_uppercase()`, `to_ascii_lowercase()` — all return \
+                 values, and several return a `bool`, tying this lesson back to the last one. A dotted \
+                 call like `c.is_alphabetic()` is a method call.",
             ),
         ],
     )
@@ -703,52 +793,45 @@ fn lesson_tuples() -> SeedLesson {
         vec![
             labelled(
                 "CONCEPT",
-                "Sometimes a few values belong together and they are not all the same type. That is a tuple: \
-                 a fixed-size group of values that can each be a different type.",
+                "Sometimes a few values belong together and are not all the same type. That is a tuple: a \
+                 fixed-size group of values that can each have their own type.",
             ),
             code(
                 "rust",
-                "fn main() {\n    let user = (\"Gus\", 25, true);\n\n    println!(\"Name: {}\", user.0);\n    println!(\"Age:  {}\", user.1);\n    println!(\"Active: {}\", user.2);\n}",
+                r#"fn main() {
+    let user = ("Gus", 25, true);
+
+    println!("Name: {}", user.0);
+    println!("Age:  {}", user.1);
+    println!("Active: {}", user.2);
+}"#,
             ),
             labelled(
                 "EXPLANATION",
-                "Each element has its own type, inferred independently. `\"Gus\"` is `&str`, `25` is `i32`, \
-                 `true` is `bool`. Access them by position: `.0`, `.1`, `.2`. Positions start at zero, same \
-                 as arrays. The size is fixed at creation — a tuple cannot grow or shrink.",
+                "Each element has its own type, inferred independently: here `&str`, `i32`, and `bool`. \
+                 Access them by position with `.0`, `.1`, `.2` — positions start at zero. The size is fixed \
+                 at creation; a tuple cannot grow or shrink.",
             ),
-            callout(
-                "Destructuring — the good way to read a tuple",
-                "When you know what is inside, pulling the values out into named variables is far more \
-                 readable than `user.0` and `user.1` scattered through your code. This is called \
-                 destructuring, and it is worth using immediately.",
+            breakdown(
+                "Destructuring a tuple",
+                "let user = (\"Gus\", 25, true);\nlet (name, age, active) = user;\nprintln!(\"{name} is {age}\");",
+                &[
+                    "A tuple of three values is created.",
+                    "The pattern `(name, age, active)` pulls each element out into its own named binding.",
+                    "The named values print — no `.0` or `.1` in sight.",
+                ],
             ),
-            code(
-                "rust",
-                "fn main() {\n    let user = (\"Gus\", 25, true);\n\n    // Positional access — fine for a quick lookup\n    println!(\"{}\", user.0);\n\n    // Destructuring — much better for real code\n    let (name, age, active) = user;\n    println!(\"{} is {} and active: {}\", name, age, active);\n}",
-            ),
-            code(
-                "rust",
-                "fn main() {\n    // Tuples work well for coordinates, RGB values, and small fixed groups\n    let coords = (10, 20);\n    let rgb = (255, 107, 53);   // BORROW_ burnt orange\n    let version = (1, 0, 0);\n\n    let (x, y) = coords;\n    let (r, g, b) = rgb;\n\n    println!(\"x={} y={}\", x, y);\n    println!(\"rgb=({}, {}, {})\", r, g, b);\n}",
+            gap_fill(
+                "Read the second element of the tuple. Fill in the access.",
+                "let pair = (10, 20);\nprintln!(\"{}\", pair____);",
+                &[("p1", ".1", "Tuples use a dot and a number, starting at zero.")],
             ),
             callout(
                 "When to use a tuple",
-                "When a handful of values genuinely travel together and you know the count at compile time. \
-                 Coordinates, colour channels, a version triple, a (x, y) pair. If you find yourself writing \
-                 `tuple.0`, `tuple.1`, `tuple.2`, `tuple.3` and losing track of what each one means, that is \
-                 a sign you want something clearer. That something is `struct`, and it is coming in module 07.",
-            ),
-            callout(
-                "Practice — Try this now",
-                "Create a tuple for a product: (name, price, in_stock). Print each field positionally. Then \
-                 destructure it into three named variables and print them again. Add a fourth field — a stock \
-                 count as a `u32`.",
-            ),
-            callout(
-                "Mini challenge",
-                "Write a tuple for a point in 2D space as two `f64` values. Destructure it and print both \
-                 coordinates. Then write a tuple for a 3D point with three `f64` values and do the same. \
-                 Finally, try to make a tuple where two elements have deliberately different types you think \
-                 should match, and see what happens.",
+                "When a handful of values genuinely travel together and you know the count at compile \
+                 time: coordinates, colour channels, a version triple. If you find yourself writing \
+                 `.0`, `.1`, `.2`, `.3` and losing track of what each one means, that is a sign you want \
+                 something clearer. That something is a `struct`, and it arrives in Module 07.",
             ),
         ],
     )
@@ -760,48 +843,50 @@ fn lesson_arrays() -> SeedLesson {
         vec![
             labelled(
                 "CONCEPT",
-                "An array holds a fixed number of values, all of the same type, in order. Fixed means fixed. \
-                 `[i32; 5]` is not a suggestion — it is four values worth of information about the size.",
+                "An array holds a fixed number of values, all of the same type, in order. Fixed means \
+                 fixed: `[i32; 5]` is not a suggestion, it is the type.",
             ),
             code(
                 "rust",
-                "fn main() {\n    let numbers = [1, 2, 3, 4, 5];\n\n    println!(\"{}\", numbers[0]);  // 1\n    println!(\"{}\", numbers[1]);  // 2\n    println!(\"{}\", numbers[4]);  // 5\n}",
+                r#"fn main() {
+    let numbers = [1, 2, 3, 4, 5];
+
+    println!("{}", numbers[0]);  // 1
+    println!("{}", numbers[4]);  // 5
+}"#,
             ),
             labelled(
                 "EXPLANATION",
-                "Two rules. Every element is the same type. The count is part of the type. That is why Rust \
-                 wants you to write the type when you do not have literal values to count.",
+                "Two rules: every element is the same type, and the count is part of the type itself. \
+                 Indexing starts at **zero**, so `numbers[0]` is the first element, not the second — this \
+                 trips up almost everyone, usually exactly once.",
             ),
             callout(
-                "Reading [i32; 5]",
-                "Square brackets mean *array*. Inside is the element type, `i32`. The semicolon separates it \
-                 from the length, `5`. Read it out loud: *array of i32 with 5 elements.* Rust's type \
-                 syntax is dense like this everywhere — `Option<i32>`, `Result<T, E>`, `Vec<String>`. \
-                 Getting fluent with this notation pays off across the whole language.",
+                "Reading `[i32; 5]`",
+                "Square brackets mean *array*. Inside is the element type, `i32`. The semicolon separates \
+                 it from the length, `5`. Read it out loud: *array of `i32` with five elements*. Rust's \
+                 type syntax is dense like this everywhere; getting fluent with it pays off across the \
+                 whole language.",
+            ),
+            gap_fill(
+                "Write the array type and the repeated-value shorthand. Fill in the two blanks.",
+                "let zeros: ____ = [0; 4];\nprintln!(\"{} zeros\", zeros.len());",
+                &[("z1", "[i32; 4]", "Element type, then length, in square brackets.")],
             ),
             code(
                 "rust",
-                "fn main() {\n    // Inferred: array of i32, length 5\n    let numbers = [1, 2, 3, 4, 5];\n\n    // Explicit — same array, said out loud\n    let explicit: [i32; 5] = [1, 2, 3, 4, 5];\n\n    // Useful when every element is the same thing\n    let zeros: [u8; 4] = [0; 4];           // [0, 0, 0, 0]\n    let names: [&str; 3] = [\"a\", \"b\", \"c\"];\n\n    println!(\"{:?}\", zeros);\n    println!(\"{:?}\", names);\n}",
-            ),
-            text_block(
-                "Indexing starts at **zero**. `numbers[0]` is the first element, not the second. This trips up \
-                 almost everyone, usually exactly once, usually at midnight.",
-            ),
-            callout(
-                "Practice — Try this now",
-                "Create an array of five whole numbers. Print each one by index. Then declare the same array \
-                 with an explicit type: `let nums: [i32; 5]`. Finally, try `let wrong: [i32; 4] = [1, 2, 3, 4, 5];` \
-                 and read what Rust says about the length.",
-            ),
-            code(
-                "rust",
-                "fn main() {\n    let numbers = [10, 20, 30, 40, 50];\n\n    for index in 0..5 {\n        println!(\"numbers[{}] = {}\", index, numbers[index]);\n    }\n}",
+                r#"fn main() {
+    let words = ["a", "b", "c"];
+    let zeros: [u8; 4] = [0; 4];
+
+    println!("{words:?}");
+    println!("{zeros:?}");
+}"#,
             ),
             callout(
-                "Mini challenge",
-                "Create a 6-element array of whole numbers. Print the first and last. Then print the sum of all \
-                 six by adding `numbers[0]` through `numbers[5]` explicitly. Finally, write `let a: [i32; 3] = [1, 2, 3];` \
-                 and then `let b: [i32; 3] = a;` and explain what copying an array does.",
+                "`{:?}` prints a whole array",
+                "`{zeros:?}` uses the debug formatter, which prints all the elements: `[0, 0, 0, 0]`. The \
+                 plain `{}` formatter works on a single value; a collection needs `{:?}`.",
             ),
         ],
     )
@@ -813,42 +898,43 @@ fn lesson_constants() -> SeedLesson {
         vec![
             labelled(
                 "CONCEPT",
-                "Some values are fixed for the entire life of a program. The maximum score. The tax rate. \
-                 The name of the app. A `const` says: this value will never change.",
+                "Some values are fixed for the entire life of a program: the maximum score, the tax rate, \
+                 the name of the app. A `const` says: this value will never change, and it is known before \
+                 the program runs.",
             ),
             code(
                 "rust",
-                "const MAX_SCORE: u32 = 100;\nconst APP_NAME: &str = \"BORROW_\";\nconst TAX_RATE: f64 = 0.20;\n\nfn main() {\n    println!(\"{} — max score is {}\", APP_NAME, MAX_SCORE);\n}",
+                r#"const MAX_SCORE: u32 = 100;
+const APP_NAME: &str = "BORROW_";
+const TAX_RATE: f64 = 0.20;
+
+fn main() {
+    println!("{APP_NAME} — max score is {MAX_SCORE} (tax {TAX_RATE})");
+}"#,
             ),
             labelled(
                 "EXPLANATION",
                 "Three things make a constant different from a variable. It uses `const`, not `let`. It \
-                 **requires** a type annotation — no inference here. And it is written in `SCREAMING_SNAKE_CASE` \
-                 by convention, because it reads as a named constant rather than a working value.",
-            ),
-            callout(
-                "Constants are not 'variables that never change'",
-                "They serve a different purpose. A constant is a named fact about your program, available \
-                 everywhere, known to the compiler before the program runs. Constants can be used in places \
-                 where a runtime value cannot — array lengths, for example. When you see `MAX_PLAYERS: usize = 4;` \
-                 you are learning a rule of the system, not storing a number.",
+                 **requires** a type annotation — no inference here. And its name is written in \
+                 `SCREAMING_SNAKE_CASE` by convention, because it reads as a named fact rather than a \
+                 working value.",
             ),
             code(
                 "rust",
-                "const MAX_PLAYERS: usize = 4;\n\nfn main() {\n    // A constant can be used where a value is required at compile time\n    let table: [u8; MAX_PLAYERS] = [0; MAX_PLAYERS];\n\n    println!(\"Table size: {}\", table.len());\n    println!(\"Max players: {}\", MAX_PLAYERS);\n}",
+                r#"const MAX_PLAYERS: usize = 4;
+
+fn main() {
+    // A constant can be used where a value is required at compile time.
+    let table: [u8; MAX_PLAYERS] = [0; MAX_PLAYERS];
+
+    println!("table size: {}", table.len());
+}"#,
             ),
             callout(
-                "Practice — Try this now",
-                "Define three constants: `MAX_LEVEL: u8 = 50`, `STARTING_HEALTH: u16 = 100`, and `GAME_TITLE: &str`. \
-                 Print them. Then try to change one: `MAX_LEVEL = 60;` and read the error. Finally, try defining \
-                 a constant without a type annotation and see what Rust insists on.",
-            ),
-            callout(
-                "Mini challenge",
-                "Define a constant for `ITEMS_PER_PAGE: usize = 20`. Then define an array whose length is \
-                 that constant: `let items: [u8; ITEMS_PER_PAGE] = [0; ITEMS_PER_PAGE];`. Print its length. \
-                 Now change the constant to 10, re-run, and watch the array change with it. Nothing else in the \
-                 program needed editing — that is the point of a constant.",
+                "Constants are not \"variables that never change\"",
+                "They are a different kind of thing: a named fact about your program, available \
+                 everywhere and known to the compiler before it runs. That is why a constant can set an \
+                 array's length — a runtime value cannot.",
             ),
         ],
     )
@@ -861,44 +947,43 @@ fn lesson_shadowing() -> SeedLesson {
             labelled(
                 "CONCEPT",
                 "You can declare a new `let` with a name that already exists. The new binding does not \
-                 overwrite the old one — it *shadows* it. The old value still exists. You just cannot reach it \
-                 through that name anymore.",
+                 overwrite the old one — it *shadows* it. The old value still exists; you simply cannot \
+                 reach it through that name any more.",
             ),
             code(
                 "rust",
-                "fn main() {\n    let x = 5;\n\n    let x = x + 1;   // new binding, takes the name\n    let x = x * 2;   // another new binding\n\n    println!(\"{}\", x);  // 12\n}",
-            ),
-            diagram(
-                "what actually happens",
-                "x → 5            binding 1 created\n\nshadow\n\nx → 6            binding 2 created, binding 1 hidden\n\nshadow\n\nx → 12           binding 3 created, binding 2 hidden",
+                r#"fn main() {
+    let x = 5;
+
+    let x = x + 1;   // new binding, same name
+    let x = x * 2;   // another new binding
+
+    println!("{x}");  // 12
+}"#,
             ),
             labelled(
                 "EXPLANATION",
-                "Read `let x = x + 1;` carefully. The right-hand `x` is the old binding, value 5. The result, \
-                 6, is bound to a brand-new `x`. The old `x` still exists, still holds 5, and will still be \
-                 there until it goes out of scope. It is simply no longer reachable by that name.",
+                "Read `let x = x + 1;` carefully. The right-hand `x` is the old binding, value 5. The \
+                 result, 6, is bound to a brand-new `x`. The old `x` still holds 5, and will until it goes \
+                 out of scope; it is just no longer reachable by that name.",
+            ),
+            step_through(
+                "Three bindings, one name",
+                r#"let value = 10;
+let value = value + 5;
+let value = value * 3;
+println!("{value}");"#,
+                &[
+                    (&[1][..], "Binding 1 is created, holding 10."),
+                    (&[2][..], "Binding 2 reads the first (10), adds 5, and takes the name."),
+                    (&[3][..], "Binding 3 reads the second (15), multiplies by 3, and takes the name."),
+                    (&[4][..], "The name `value` now reaches 45; the earlier bindings are unreachable."),
+                ],
             ),
             callout(
                 "This is not mutation",
                 "Mutation would be `x = x + 1;` — no `let`. Shadowing is `let x = x + 1;` — a new `let`. \
-                 The presence of `let` is the tell. We will compare them properly in the next lesson, \
-                 because the difference matters more than it looks.",
-            ),
-            code(
-                "rust",
-                "fn main() {\n    // Shadowing to transform a value through steps\n    let measurement = 12;\n\n    let measurement = measurement * 2;    // 24\n    let measurement = measurement + 6;    // 30\n    let measurement = measurement / 3;    // 10\n\n    println!(\"{}\", measurement);  // 10\n}",
-            ),
-            callout(
-                "Practice — Try this now",
-                "Start with `let value = 10;`. Shadow it three times: `value + 5`, then `value * 3`, then \
-                 `value - 5`. Print after each step. Then try the same three steps with `let mut` and `=` \
-                 instead, and compare the two approaches line by line.",
-            ),
-            callout(
-                "Mini challenge",
-                "Write a unit conversion that uses shadowing to change the unit as it goes. Start with a \
-                 distance in kilometres, shadow it into metres, then into centimetres. Print all three values \
-                 with their units.",
+                 The presence of `let` is the tell, and the next lesson compares them properly.",
             ),
         ],
     )
@@ -911,50 +996,56 @@ fn lesson_shadowing_vs_mutation() -> SeedLesson {
             labelled(
                 "CONCEPT",
                 "These two look almost identical and behave differently in ways that matter. Understanding \
-                 *why* is the difference between writing Rust and guessing at it.",
-            ),
-            code(
-                "rust",
-                "fn main() {\n    // MUTATION — one binding, new value\n    let mut x = 5;\n    x = 6;\n    println!(\"{}\", x);  // 6\n\n    // SHADOWING — a new binding, same name\n    let x = 5;\n    let x = 6;\n    println!(\"{}\", x);  // 6\n}",
+                 why is the difference between writing Rust and guessing at it.",
             ),
             table(
                 &["", "Mutation", "Shadowing"],
                 &[
-                    &["Syntax", "x = 6;", "let x = 6;"],
-                    &["Bindings", "One, reused", "Two, second hides first"],
+                    &["Syntax", "`x = 6;`", "`let x = 6;`"],
+                    &["Bindings", "One, reused", "Two — the second hides the first"],
                     &["Old value", "Gone", "Still there, unreachable"],
                     &["Can change type?", "No", "Yes"],
-                    &["Reads as", "'update the value'", "'a new thing in the same role'"],
+                    &["Reads as", "\"update the value\"", "\"a new thing in the same role\""],
                 ],
             ),
             labelled(
                 "EXPLANATION",
-                "The deciding question is what the code is *saying*. If you are tracking the same quantity as it \
-                 changes — health dropping, a counter climbing, a balance moving — that is mutation. If you \
-                 are transforming one representation into another — a string parsed into a number, a value \
-                 converted between units — that is shadowing.",
+                "The deciding question is what the code is *saying*. If you are tracking one quantity as it \
+                 changes — health dropping, a counter climbing — that is mutation. If you are transforming \
+                 one representation into another — text parsed into a number, a value converted between \
+                 units — that is shadowing.",
             ),
-            callout(
-                "Spot the difference",
-                "Read both versions and notice the tell: mutation has no `let` on the reassignment line. \
-                 Shadowing has `let` on every line. The keyword is doing the work.",
+            guess_run(
+                "The second line has no `let`. Predict what it does.",
+                "fn main() {\n    let x = 5;\n    x = 6;\n\n    println!(\"{x}\");\n}",
+                &[
+                    "It compiles — assigning a new value is fine",
+                    "It does not compile — `x` is immutable, and there is no `let` to make a new binding",
+                ],
+                1,
+                "Without `let`, `x = 6` is an assignment to the existing immutable binding, so it fails. \
+                 With `let x = 6;` it would be a new binding, which always works. The keyword is doing the \
+                 work.",
             ),
             code(
                 "rust",
-                "fn main() {\n    // This is mutation: tracking one quantity as it changes\n    let mut health = 100;\n    health -= 30;\n    health -= 20;\n    println!(\"health: {}\", health);  // 50\n\n    // This is shadowing: transforming representations\n    let raw = \"42\";\n    let raw = raw.len();\n    let raw = raw as i32 * 2;\n    println!(\"raw: {}\", raw);  // 4\n}",
+                r#"fn main() {
+    // Mutation: tracking one quantity as it changes
+    let mut health = 100;
+    health -= 30;
+    health -= 20;
+    println!("health: {health}");  // 50
+
+    // Shadowing: transforming representations
+    let raw = "42";
+    let raw = raw.len();
+    println!("length: {raw}");     // 2
+}"#,
             ),
             callout(
-                "Practice — Try this now",
-                "Write the same three-step calculation twice. First with `let mut` and `=`. Then with \
-                 repeated `let x = x + 1;`. Both produce the same output. Now write one sentence for each \
-                 version explaining which one you would prefer in real code, and why.",
-            ),
-            callout(
-                "Mini challenge",
-                "You have a value that starts as a whole number, is doubled, then converted to a float, then \
-                 halved. Write it twice — once using mutation with an explicit type change, once using \
-                 shadowing. If mutation fights you on the type change, that fight is the lesson. Read the \
-                 error it gives you.",
+                "You will reach for both",
+                "Mutation for state that moves; shadowing for a value changing form. Most real code uses \
+                 both, and now you can tell which is which at a glance.",
             ),
         ],
     )
@@ -966,52 +1057,51 @@ fn lesson_shadowing_changes_types() -> SeedLesson {
         vec![
             labelled(
                 "CONCEPT",
-                "This is one of Rust's genuinely pleasant surprises. Shadowing lets the same name hold a \
-                 different type. The variable has moved to a new representation of the same idea, and you never \
-                 needed to invent a second name.",
+                "One of Rust's genuinely pleasant surprises: shadowing lets the same name hold a different \
+                 type. The value has moved to a new representation of the same idea, and you never needed \
+                 to invent a second name.",
             ),
             code(
                 "rust",
-                "fn main() {\n    let value = \"42\";\n    let value: i32 = value.parse().unwrap();\n\n    println!(\"{}\", value + 1);  // 43 — it's an i32 now\n}",
+                r#"fn main() {
+    let value = "42";
+    let value: i32 = value.parse().unwrap();
+
+    println!("{}", value + 1);  // 43 — it is an i32 now
+}"#,
             ),
             labelled(
                 "EXPLANATION",
                 "The first `value` is a `&str` holding the characters `4` and `2`. `.parse()` asks Rust to \
-                 interpret those characters as a number. `.unwrap()` says: if that fails, panic — we are \
-                 handling errors properly in module 09, so for now assume it works. The result is an `i32`, and \
-                 the annotation on the new `let` says so.",
+                 read those characters as a number, and `.unwrap()` says \"assume it works\" — proper \
+                 error handling is Module 09, so for now we take the success for granted. The result is \
+                 an `i32`, and the annotation on the new `let` says so.",
             ),
-            callout(
-                "Now try the mutation version",
-                "`let mut value = \"42\"; value = 42;` does not compile. The type of a mutable variable is \
-                 fixed the moment you declare it. Shadowing is how you change representation in Rust. This \
-                 is the single most useful thing to remember from the whole module.",
+            broken(
+                "fn main() {\n    let mut value = \"42\";\n    value = 42;\n}",
             ),
-            code(
-                "rust",
-                "fn main() {\n    // Mutation cannot change the type\n    let mut value = \"42\";\n    // value = 42;\n    //   error[E0308]: mismatched types\n    //   expected `&str`, found integer `{integer}`\n    //   help: if you meant to assign a different type, use shadowing:\n    //   let value = 42;\n\n    // Shadowing can\n    let value = \"42\";\n    let value: i32 = value.parse().unwrap();\n    println!(\"{}\", value);\n}",
-            ),
-            text_block(
-                "Notice that Rust's own error message suggests shadowing. The compiler is not just a gate — \
-                 it is a teacher. Most of its errors include a `help:` line telling you what to do instead. \
-                 Start reading those.",
+            labelled(
+                "EXPLANATION",
+                "The mutation version cannot do this. A mutable binding's type is fixed the moment you \
+                 declare it, so `value = 42` fails with `expected &str, found integer`. Shadowing creates \
+                 a new binding, which is free to have a new type. This is the single most useful thing to \
+                 remember from the whole module.",
             ),
             code(
                 "rust",
-                "fn main() {\n    // A realistic chain of transformations\n    let input = \"255\";\n    let input: u8 = input.parse().unwrap();     // now a small number\n    let input = input as u32 * 2;                // widened and doubled\n    let input = format!(\"value={}\", input);     // now a String\n\n    println!(\"{}\", input);  // value=510\n}",
+                r#"fn main() {
+    // A realistic chain of transformations
+    let input = "255";
+    let input: u8 = input.parse().unwrap();   // now a small number
+    let input = input as u32 * 2;             // widened and doubled
+    println!("value={input}");                // value=510
+}"#,
             ),
             callout(
-                "Practice — Try this now",
-                "Start with `let x = \"100\";` and shadow it three times: parse to i32, double it, then convert \
-                 to a string with `format!`. Print after each step and note the type each time. Then write the \
-                 `let mut` equivalent and watch it fail on the second step.",
-            ),
-            callout(
-                "Mini challenge",
-                "Write a program that takes a number as a string and reports what kind of number it is. \
-                 Start with `let input = \"42\";`, shadow it into an `i32` with `.parse().unwrap()`, then check \
-                 whether it is positive, zero, or negative using comparisons and print the result. Three \
-                 variables would be the wrong way to write this.",
+                "The compiler suggests shadowing",
+                "Try the mutation version and read the error. Rust's own message includes a `help:` line \
+                 pointing you at a shadowing fix. The compiler is not just a gate — it is a teacher. Start \
+                 reading those help lines.",
             ),
         ],
     )
@@ -1023,42 +1113,44 @@ fn lesson_conversions() -> SeedLesson {
         vec![
             labelled(
                 "CONCEPT",
-                "Rust will not quietly convert between numeric types for you. If you want an `i32` to become \
-                 an `f64`, you have to say so with `as`. Every time.",
+                "Rust will not quietly convert between numeric types for you. To turn an `i32` into an \
+                 `f64` you have to say so with `as`, every time.",
             ),
             code(
                 "rust",
-                "fn main() {\n    let x: i32 = 10;\n    let y: f64 = x as f64;\n\n    println!(\"{}\", y);        // 10\n    println!(\"{}\", y / 4.0);   // 2.5 — floating point division\n}",
+                r#"fn main() {
+    let x: i32 = 10;
+    let y: f64 = x as f64;
+
+    println!("{y}");        // 10
+    println!("{}", y / 4.0); // 2.5
+}"#,
             ),
             labelled(
                 "EXPLANATION",
-                "`as` is a conversion, not a cast in the C sense. Rust is telling you: *I will do this, and \
-                 here is what it costs.* Widening — turning a small integer into a bigger one, or an integer \
-                 into a float — is safe and exact. Narrowing — a big number into a small type, or a float \
-                 into an integer — can silently lose information.",
+                "`as` makes a conversion explicit and visible. Widening — a small integer into a bigger \
+                 one, or an integer into a float — is safe and exact. Narrowing — a big number into a \
+                 small type, or a float into an integer — can silently lose information, so Rust makes \
+                 you write the `as` and take responsibility.",
             ),
-            code(
-                "rust",
-                "fn main() {\n    // Safe: i32 → i64 → f64 (nothing is lost)\n    let a: i32 = 100;\n    let b: i64 = a as i64;\n    let c: f64 = b as f64;\n\n    // Lossy: f64 → i32 truncates the decimal part\n    let d: f64 = 3.99;\n    let e: i32 = d as i32;   // 3, not 4 — it truncates, it does not round\n\n    // Lossy: i32 → u8 keeps only the low byte\n    let f: i32 = 300;\n    let g: u8 = f as u8;    // 44\n\n    println!(\"{} {} {}\", c, e, g);\n}",
-            ),
-            callout(
-                "Different types are different types. Rust won't silently pretend otherwise.",
-                "This is the mental model. Casting is always visible, always intentional, and never free. \
-                 When you see `as` in real code, someone made a decision. That is a good thing.",
-            ),
-            callout(
-                "Practice — Try this now",
-                "Declare `let x: i32 = 10;`. Try `let y: i64 = x;` without `as` and read the error — it is the \
-                 exact `expected i64, found i32` message from the spec. Fix it with `as`. Then try \
-                 `let z: u8 = 300;` and read what happens. Finally, try casting `f64` to `i32` and confirm it \
-                 truncates rather than rounds.",
+            step_through(
+                "What narrowing actually does",
+                r#"let d: f64 = 3.99;
+let e: i32 = d as i32;
+
+let f: i32 = 300;
+let g: u8 = f as u8;"#,
+                &[
+                    (&[1][..], "A float holding 3.99."),
+                    (&[2][..], "`as i32` truncates toward zero — `e` is 3, not 4. It does not round."),
+                    (&[3][..], "300 as a signed 32-bit number."),
+                    (&[4][..], "`as u8` keeps only the low byte, so `g` is 44 — information is lost, silently."),
+                ],
             ),
             callout(
-                "Mini challenge",
-                "Write a conversion helper by hand. Take a `u16` value representing a temperature in tenths of a \
-                 degree (`253` means 25.3°C). Cast it to f64, divide by 10.0, and print the result with one \
-                 decimal place. Then do the reverse: take a `f64` temperature, multiply by 10.0, cast to `u16`, \
-                 and print the raw integer.",
+                "Different types are different types",
+                "Casting is always visible, always intentional, and sometimes lossy. When you see `as` in \
+                 real code, someone made a decision. That is a good thing.",
             ),
         ],
     )
@@ -1070,49 +1162,34 @@ fn lesson_type_compatibility() -> SeedLesson {
         vec![
             labelled(
                 "CONCEPT",
-                "Two integer types do not mix just because both hold integers. `i32` and `i64` are different \
-                 types, and Rust will not add them for you.",
+                "Two integer types do not mix just because both hold integers. `i32` and `i64` are \
+                 different types, and Rust will not add them for you.",
             ),
-            code(
-                "rust",
-                "fn main() {\n    let x: i32 = 10;\n    let y: i64 = 20;\n\n    let total = x + y;  // ← this does not compile\n}",
+            broken(
+                "fn main() {\n    let x: i32 = 10;\n    let y: i64 = 20;\n\n    let total = x + y;\n}",
             ),
-            code(
-                "text",
+            broken_text(
                 "error[E0308]: mismatched types\n  --> src/main.rs:4:18\n   |\n4  |     let total = x + y;\n   |                  ^   expected `i32`, found `i64`",
             ),
             labelled(
                 "EXPLANATION",
-                "Read that error from the inside out. `^` points at `x`. Rust expected `i32` (the type of the \
-                 left side of `+`) and found `i64` (the type of `y`). It cannot decide which one you meant, so \
-                 it stops and asks.",
+                "Read the error from the inside out. The caret points at `y`. Rust expected `i32`, the \
+                 type of the left side of `+`, and found `i64`, the type of `y`. It cannot decide which \
+                 one you meant, so it stops and asks rather than guessing.",
             ),
-            callout(
-                "How to fix it — pick a direction",
-                "Either widen the narrow one: `let y: i32 = 20;`. Or cast the narrow one up: `let total = x as i64 + y;`. \
-                 Both are correct. The second is more honest when the types are genuinely different in the \
-                 rest of your program.",
-            ),
-            code(
-                "rust",
-                "fn main() {\n    let a: i32 = 10;\n    let b: i64 = 20;\n\n    // Option 1: make them the same type up front\n    let b: i32 = 20;\n    let sum1 = a + b;   // i32\n\n    // Option 2: cast the narrower one up\n    let sum2 = a as i64 + 20;\n\n    // Option 3: let inference do the work\n    let c = 10;      // i32\n    let d = 20;      // i32\n    let sum3 = c + d;\n\n    println!(\"{} {} {}\", sum1, sum2, sum3);\n}",
+            fixed(
+                "fn main() {\n    let a: i32 = 10;\n    let b: i64 = 20;\n\n    // Make them the same type, or cast the narrower one up.\n    let sum = a as i64 + b;\n\n    println!(\"{sum}\");\n}",
             ),
             text_block(
-                "Notice option 3. When you never write an annotation, Rust picks `i32` for both and everything \
-                 just works. Type annotations are what create the mismatch in the first place. Neither approach \
-                 is wrong — you just need to know which problem you are solving.",
+                "When you never write an annotation, Rust picks `i32` for both and everything just works. \
+                 Type annotations are often what create the mismatch in the first place — not a problem, \
+                 just something to be aware of.",
             ),
             callout(
-                "Practice — Try this now",
-                "Write `let x: i32 = 5;` and `let y: u64 = 10;` and try `x + y`. Read the error. Now try all \
-                 three fixes: change y's annotation, cast x up with `as`, and remove both annotations. Print \
-                 all three results.",
-            ),
-            callout(
-                "Mini challenge",
-                "You have a `u8` quantity, a `u32` quantity, and a `f64` quantity. Write a single expression \
-                 that adds all three. It will not work on the first try — that is the point. Get it to work, \
-                 then write one sentence explaining what type the final result is and why.",
+                "Pick a direction",
+                "Either make both sides the same type up front, or cast the narrower one up with `as`. The \
+                 cast is more honest when the two types are genuinely different in the rest of your \
+                 program.",
             ),
         ],
     )
@@ -1124,42 +1201,43 @@ fn lesson_expressions() -> SeedLesson {
         vec![
             labelled(
                 "CONCEPT",
-                "In most languages, an expression is either a value or a thing you do. In Rust, that line is \
-                 blurry. Almost everything produces a value, including blocks.",
+                "In many languages a line of code is either a value or an action. In Rust almost \
+                 everything produces a value, including a block of code.",
             ),
             code(
                 "rust",
-                "fn main() {\n    let x = 10 + 20;              // an expression that produces 30\n\n    let y = {\n        let a = 10;\n        let b = 20;\n        a + b                    // no semicolon — this is the value\n    };\n\n    println!(\"{} {}\", x, y);  // 30 30\n}",
+                r#"fn main() {
+    let x = 10 + 20;              // an expression producing 30
+
+    let y = {
+        let a = 10;
+        let b = 20;
+        a + b                    // no semicolon — this is the block's value
+    };
+
+    println!("{x} {y}");  // 30 30
+}"#,
             ),
             labelled(
                 "EXPLANATION",
-                "That block assigned to `y` produced `30`. The rule that makes this work: the final expression \
-                 in a block, with no semicolon, is the block's value. Put a semicolon on `a + b` and the block \
-                 produces `()`, which is the absence of a value. That one character is the entire difference.",
+                "The rule that makes the block work: the final expression in a block, with no semicolon, is \
+                 the block's value. Put a semicolon after `a + b` and the block instead produces `()`, the \
+                 **unit** type — a value that means \"nothing\". One character is the entire difference.",
+            ),
+            breakdown(
+                "Where a block's value comes from",
+                "let y = {\n    let a = 10;\n    let b = 20;\n    a + b\n};",
+                &[
+                    "The block opens; `a` and `b` are ordinary statements.",
+                    "`a + b` has no semicolon, so it is the block's value.",
+                    "`y` receives that value (30).",
+                ],
             ),
             callout(
-                "Rust keeps producing values from things",
-                "Hold onto that thought. It is the seed of the entire next module. `if` produces a value. \
-                 `match` produces a value. A loop body produces a value. Once you internalise that blocks \
-                 evaluate to things, control flow stops feeling like a special case and starts feeling like \
-                 just more expression syntax.",
-            ),
-            code(
-                "rust",
-                "fn main() {\n    // A block that produces a value\n    let result = {\n        let base = 100;\n        let bonus = 50;\n        base + bonus        // 150\n    };\n\n    // The same block, but the value is thrown away\n    let discarded = {\n        let base = 100;\n        let bonus = 50;\n        base + bonus;       // semicolon — produces ()\n    };\n\n    println!(\"result: {}\", result);\n    println!(\"discarded still works: {}\", discarded);\n}",
-            ),
-            callout(
-                "Practice — Try this now",
-                "Write a block that computes `let x = 5;` then `let y = x * 2;` then returns `x + y` as the \
-                 block's value. Assign it to `total` and print. Now add a semicolon to the last line and print \
-                 again — see what breaks.",
-            ),
-            callout(
-                "Mini challenge",
-                "Write three blocks. The first returns a whole number. The second returns a float. The third \
-                 contains two nested blocks and returns the sum of both. Assign each to a variable and print. \
-                 Then remove the final semicolon from one of them and read the error carefully — it is a \
-                 preview of module 09.",
+                "This is the seed of control flow",
+                "`if` produces a value. `match` produces a value. Once blocks evaluate to things, control \
+                 flow stops feeling like a special case and starts feeling like more expression syntax — \
+                 which is exactly where Module 03 begins.",
             ),
         ],
     )
@@ -1171,51 +1249,37 @@ fn lesson_reading_errors() -> SeedLesson {
         vec![
             labelled(
                 "CONCEPT",
-                "Compiler errors are not rejection notices. They are the closest thing Rust has to a pair \
-                 programmer sitting next to you. Learn to read them and you will stop treating them as walls.",
+                "Compiler errors are not rejection notices. They are the closest thing Rust has to a \
+                 patient engineer sitting next to you. Learn their shape and they stop being walls.",
             ),
-            code(
-                "rust",
-                "fn main() {\n    let age: i32 = \"25\";\n}",
-            ),
-            code(
-                "text",
+            broken("fn main() {\n    let age: i32 = \"25\";\n}"),
+            broken_text(
                 "error[E0308]: mismatched types\n --> src/main.rs:2:20\n  |\n2 |     let age: i32 = \"25\";\n  |                    ^^^^   expected `i32`, found `&str`\n  |                    |\n  |                    expected because of this annotation\n  |                    found because of this expression",
             ),
             steps(&[
-                "expected `i32` — what Rust believed you wanted (from your annotation)",
-                "found `&str` — what your value actually is (a string slice)",
-                "because of this annotation — which line of code created that expectation",
-                "because of this expression — which line produced the real value",
+                "`expected i32` — what Rust believed you wanted, from your annotation.",
+                "`found &str` — what your value actually is.",
+                "`expected because of this annotation` — the line that created the expectation.",
+                "`found because of this expression` — the line that produced the real value.",
             ]),
             labelled(
                 "EXPLANATION",
-                "Every type error has the same two-part shape. Rust states what it expected, states what it \
-                 found, and points at the two places those beliefs came from. Once you scan for those four \
-                 pieces, a `mismatched types` error takes about three seconds instead of three minutes.",
+                "Every `mismatched types` error has the same two-part shape: what Rust expected, and what \
+                 it found. The extra lines point at where each belief came from. Scan for those two words \
+                 and the error takes about three seconds instead of three minutes.",
+            ),
+            table(
+                &["Error", "What it means", "The fix"],
+                &[
+                    &["`expected i32, found &str`", "text where a number belongs", "parse it, or change the annotation"],
+                    &["`expected u8, found u32`", "close but not identical types", "cast with `as`, or match the types"],
+                    &["`cannot assign twice to immutable variable`", "you reassigned a `let`", "add `mut`"],
+                ],
             ),
             callout(
-                "Three errors you will meet today",
-                "`expected i32, found &str` — you put a string where a number belongs. \
-                 `expected u8, found u32` — the types are close but not identical. \
-                 `cannot assign twice to immutable variable` — you forgot `mut`.",
-            ),
-            code(
-                "rust",
-                "fn main() {\n    let x: i32 = \"hello\";      // expected i32, found &str\n\n    let y: u8 = \"300\";        // expected u8, found &str\n\n    let z = 5;\n    z = 10;                     // cannot assign twice to immutable variable `z`\n\n    let a: i32 = 10;\n    let b: i64 = 20;\n    let c = a + b;               // expected i32, found i64\n}",
-            ),
-            callout(
-                "Practice — Try this now",
-                "Write all four of the broken lines above in one file. Run it. Read the errors in order. For \
-                 each one, write down: what was expected, what was found, and the one-line fix. Do not fix them \
-                 in the file yet — reading first is the skill.",
-            ),
-            callout(
-                "Mini challenge",
-                "Deliberately produce an error that mentions a type you have not used yet, such as `u128` or \
-                 `i64`. Read the message and extract the same four pieces. Then introduce an error with a \
-                 *named* type like `String` or `Vec` and see how the message shape stays identical even when \
-                 the type is far more complicated.",
+                "Read `expected` and `found` first",
+                "The `help:` line at the bottom is useful, but only once you know what went wrong. The two \
+                 types tell you that.",
             ),
         ],
     )
@@ -1227,73 +1291,33 @@ fn lesson_common_mistakes() -> SeedLesson {
         vec![
             labelled(
                 "CONCEPT",
-                "Six mistakes that account for most of what beginners hit in their first week. None of them \
-                 are stupid. All of them have a shape, and once you see the shape you stop making them.",
+                "Six mistakes account for most of what beginners hit in their first week. None of them are \
+                 stupid — all of them have a shape, and once you see the shape you stop making them.",
             ),
+            table(
+                &["#", "Mistake", "Cause", "Fix"],
+                &[
+                    &["1", "Reassign an immutable variable", "`let`, not `let mut`", "add `mut`"],
+                    &["2", "Add two different number types", "`i32` + `i64` are distinct", "cast with `as`, or match types"],
+                    &["3", "Use `\"A\"` where a `char` is needed", "double quotes make `&str`", "single quotes: `'A'`"],
+                    &["4", "Index an array out of range", "indexing is checked at runtime", "stay inside `0..len`"],
+                    &["5", "Change a value's type by mutation", "a binding's type is fixed", "shadow with a new `let`"],
+                    &["6", "Forget an annotation on an empty list", "nothing to infer from", "annotate the element type"],
+                ],
+            ),
+            labelled(
+                "EXPLANATION",
+                "Two of these are worth a closer look. Out-of-range indexing (4) is the one mistake that is \
+                 *not* caught at compile time — it compiles and then panics when it runs. And changing type \
+                 by mutation (5) is impossible by design; shadowing is the tool, which is why it got its \
+                 own lesson.",
+            ),
+            broken("fn main() {\n    let score = 10;\n    score = 20;\n}"),
+            fixed("fn main() {\n    let mut score = 10;\n    score = 20;\n    println!(\"{score}\");\n}"),
             callout(
-                "Mistake 1 — Trying to mutate an immutable variable",
-                "`let score = 10; score = 20;` — the compiler says cannot assign twice to immutable variable. \
-                 The concept is that mutability is opt-in. Fix: `let mut score = 10;`.",
-            ),
-            code(
-                "rust",
-                "fn main() {\n    let score = 10;\n    score = 20;   // error[E0384]\n}",
-            ),
-            callout(
-                "Mistake 2 — Mixing numeric types",
-                "`let a: i32 = 10; let b: i64 = 20; let total = a + b;` — expected i32, found i64. \
-                 The concept is that integer types are distinct. Fix: cast with `as`, or annotate both the same.",
-            ),
-            code(
-                "rust",
-                "fn main() {\n    let a: i32 = 10;\n    let b: i64 = 20;\n    let total = a as i64 + b;   // fix\n}",
-            ),
-            callout(
-                "Mistake 3 — Confusing char and strings",
-                "`let letter = \"A\";` when you meant a char. The concept is that single quotes are a char, \
-                 double quotes are a &str. Fix: `let letter = 'A';`.",
-            ),
-            code(
-                "rust",
-                "fn main() {\n    let letter: char = 'A';    // fix\n    let text: &str = \"A\";     // also valid, but a different type\n}",
-            ),
-            callout(
-                "Mistake 4 — Wrong array index",
-                "`values[10]` on a three-element array. The concept is that indexing is checked at runtime, not \
-                 compile time. Fix: check the length, or stay inside the range.",
-            ),
-            code(
-                "rust",
-                "fn main() {\n    let values = [1, 2, 3];\n    println!(\"{}\", values[0]);   // fine\n    // println!(\"{}\", values[10]);  // panics at runtime\n}",
-            ),
-            callout(
-                "Mistake 5 — Expecting mutation to change a variable's type",
-                "`let mut value = \"42\"; value = 42;` — expected &str, found integer. The concept is that \
-                 a mutable binding's type is fixed at declaration. Fix: shadow instead.",
-            ),
-            code(
-                "rust",
-                "fn main() {\n    let mut value = \"42\";\n    // value = 42;                 // error: type is fixed\n    let value: i32 = value.parse().unwrap();   // shadow instead — works\n}",
-            ),
-            callout(
-                "Mistake 6 — Forgetting an annotation when Rust cannot infer",
-                "`let empty = Vec::new();` — the compiler says type annotations needed. The concept is that \
-                 an empty collection carries no element information. Fix: annotate the element type.",
-            ),
-            code(
-                "rust",
-                "fn main() {\n    // let empty = Vec::new();            // error: cannot infer type\n    let empty: Vec<i32> = Vec::new();  // fix\n    let scores: [i32; 0] = [];\n\n    println!(\"{} {}\", empty.len(), scores.len());\n}",
-            ),
-            callout(
-                "Practice — Try this now",
-                "Write a file with all six mistakes, uncommented and unfixed. Run it. Work through the errors \
-                 one at a time, fixing as you go, and note which of the six felt most surprising.",
-            ),
-            callout(
-                "Mini challenge",
-                "Invent a seventh mistake. It should be something a beginner would plausibly write, that \
-                 produces a real compiler error, and that teaches a concept from this module. Write the broken \
-                 version, the error it produces, and the fix. Then verify all three by running them.",
+                "Use this as a checklist",
+                "When something will not compile, find which of these six it is. Most of the time the \
+                 answer is here, and the fix is the last column.",
             ),
         ],
     )
@@ -1306,59 +1330,78 @@ fn lesson_bridge() -> SeedLesson {
             labelled(
                 "CONCEPT",
                 "You now have the vocabulary. Variables store information, types describe it, `mut` controls \
-                 change, shadowing transforms, and conversions move between representations. Time to use all of \
-                 it at once, and then to notice what is still missing.",
+                 change, shadowing transforms, and conversions move between representations. Time to use \
+                 all of it at once — and then notice what is still missing.",
             ),
             code(
                 "rust",
-                "const MAX_PLAYERS: usize = 4;\n\nfn main() {\n    // Immutable facts about the game\n    let game_title: &str = \"Dungeon Run\";\n    let starting_health: u16 = 100;\n\n    // Mutable state that changes\n    let mut players: usize = 0;\n    let mut high_score: u32 = 0;\n\n    // Shadowing to transform representations\n    let score_input = \"1500\";\n    let score_input: u32 = score_input.parse().unwrap();\n    let score_input = score_input as i64 * 2;\n\n    // A tuple for data that travels together\n    let player = (\"Gus\", starting_health, true);\n\n    // An array for a fixed collection\n    let party: [&str; 4] = [\"Gus\", \"Ada\", \"Lin\", \"Sam\"];\n\n    players = party.len();\n    high_score = score_input as u32;\n\n    println!(\"=== {} ===\", game_title);\n    println!(\"Players: {} / {}\", players, MAX_PLAYERS);\n    println!(\"Player 1: {} ({} HP, alive: {})\", player.0, player.1, player.2);\n    println!(\"Party: {:?}\", party);\n    println!(\"High score: {}\", high_score);\n}",
+                r#"const MAX_PLAYERS: usize = 4;
+
+fn main() {
+    // Immutable facts about the game
+    let game_title: &str = "Dungeon Run";
+    let starting_health: u16 = 100;
+
+    // Mutable state that changes
+    let mut players: usize = 0;
+    let mut high_score: u32 = 0;
+
+    // Shadowing to transform representations
+    let score_input = "1500";
+    let score_input: u32 = score_input.parse().unwrap();
+    let score_input = score_input as i64 * 2;
+
+    // A tuple for data that travels together
+    let player = ("Gus", starting_health, true);
+
+    // An array for a fixed collection
+    let party: [&str; 4] = ["Gus", "Ada", "Lin", "Sam"];
+
+    players = party.len();
+    high_score = score_input as u32;
+
+    println!("=== {game_title} ===");
+    println!("Players: {players} / {MAX_PLAYERS}");
+    println!("Player 1: {} ({} HP, alive: {})", player.0, player.1, player.2);
+    println!("Party: {party:?}");
+    println!("High score: {high_score}");
+}"#,
             ),
             labelled(
                 "EXPLANATION",
-                "That program uses a constant, immutable bindings, mutable bindings, a tuple, an array, \
-                 shadowing across two type changes, an explicit `as` conversion, and a `.parse()`. None of it \
-                 is advanced. All of it is the vocabulary of this module. Read it and notice that every choice \
-                 had a reason.",
+                "That program uses a constant, immutable and mutable bindings, a tuple, an array, shadowing \
+                 across a type change, an `as` conversion, and a `.parse()`. None of it is advanced; all of \
+                 it is this module's vocabulary. Read it and notice that every choice had a reason.",
             ),
-            callout(
-                "Cool. We can store information now.",
-                "But storing information isn't very interesting if our program can't do anything with it.",
+            checklist(
+                "You can now do this",
+                &[
+                    "Create a binding with `let`, and say what a name, a value, and a type are",
+                    "Explain why bindings are immutable by default, and add `mut` when a value changes",
+                    "Let Rust infer a type, and add an annotation when it cannot",
+                    "Read and write text (`&str`) and single characters (`char`)",
+                    "Choose an integer or float type on purpose and state its limits",
+                    "Use booleans, tuples, arrays, and constants",
+                    "Shadow a binding, and tell shadowing from mutation",
+                    "Convert between numeric types with `as`",
+                    "Read a `mismatched types` error and name the expected and found types",
+                ],
             ),
             paragraphs(&[
-                "Right now your game has four players and a high score, and the program does exactly the \
-                 same thing every time you run it. What if the player has no health left? What if the score \
-                 went above 100? What if the user picked an option that does not exist? What if you need to \
-                 do the same thing fifty times?",
-                "What if there are seven possible states and you need to handle each one?",
+                "Right now your game stores information and does exactly the same thing every run. What if \
+                 health reaches zero? What if the score passes 100? What if you need to repeat something \
+                 fifty times?",
+                "That is where control flow comes in — `if`, `match`, `loop`, `while`, `for`. Every one of \
+                 those tools also produces a value, which is exactly why the expressions lesson was worth \
+                 sitting through.",
             ]),
             callout(
-                "That's where control flow comes in",
-                "`if`, `match`, `loop`, `while`, `for`. The next module is about making decisions and \
-                 repeating work. Every one of those tools produces a value, which is exactly why the \
-                 expression lesson in this module was worth sitting through.",
-            ),
-            callout(
-                "Mini challenge — the gate",
-                "Extend the program above with three new pieces of data: a `difficulty` as a `&str` (immutable), \
-                 a `lives_left` as a `u8` (mutable, starts at 3), and a `completed` as a `bool` (immutable, \
-                 `false`). Print them all in a summary block. Do not add any `if` yet. Just prove to yourself \
-                 that you can choose types and mutability deliberately.",
+                "On to control flow",
+                "The next module is about making decisions and repeating work. You have all the data; now \
+                 you make it move.",
             ),
         ],
     )
-}
-
-// ─── HELPERS ───────────────────────────────────────────────────────────────
-
-/// A paragraph prefixed with a section label, e.g. "CONCEPT — ...".
-/// A single argument is used verbatim, which suits continuation paragraphs.
-fn text_block(text: &str) -> serde_json::Value {
-    super::types::text(text)
-}
-
-/// A paragraph explicitly tagged with a label from the 6-step strategy.
-fn labelled(label: &str, body: &str) -> serde_json::Value {
-    super::types::text(&format!("{label} — {body}"))
 }
 
 // ─── EXERCISES ──────────────────────────────────────────────────────────────
@@ -1371,7 +1414,7 @@ fn exercises() -> Vec<SeedExercise> {
             "What is the main reason we give values names?",
             &[
                 "To make programs run faster",
-                "So the code communicates what values mean",
+                "So the code communicates what the values mean",
                 "Because Rust requires names",
                 "To reduce memory usage",
             ],
@@ -1436,7 +1479,7 @@ fn exercises() -> Vec<SeedExercise> {
             "After `let mut count = 5; count += 3;` what is `count`?",
             &["3", "5", "8", "It does not compile"],
             2,
-            "`+= 3` adds 3 to the existing value. 5 + 3 = 8. The semicolon at the end of a line is a statement terminator, not part of the expression.",
+            "`+= 3` is shorthand for `count = count + 3`. 5 + 3 = 8.",
         )
         .kind(ExerciseKind::PredictOutput)
         .with_code("fn main() {\n    let mut health = 100;\n    health -= 10;\n    health -= 20;\n    println!(\"{}\", health);\n}")
@@ -1457,10 +1500,10 @@ fn exercises() -> Vec<SeedExercise> {
         ),
         SeedExercise::mcq(
             3,
-            "A function takes `value: i32` and you pass `user_count`. Can the function change `user_count`?",
-            &["Yes, it can reassign it", "No, it has no way to reach it", "Only if it is `mut`", "Only in release mode"],
+            "A block reads a value declared without `mut`, then tries to change it. What happens?",
+            &["The change is allowed", "It does not compile — the binding is immutable", "It panics", "It works once"],
             1,
-            "The function received a copy of the value. It has no binding to your variable at all. (Reference semantics come later — in the borrowing module.)",
+            "A nested block does not grant new powers. If the binding was declared without `mut`, nothing may reassign it.",
         ),
 
         // L5 — inference
@@ -1484,7 +1527,7 @@ fn exercises() -> Vec<SeedExercise> {
             &[
                 "let a = 1;",
                 "let b = \"hello\";",
-                "let c = vec![];",
+                "let c = Vec::new();",
                 "let d = 3.14;",
             ],
             2,
@@ -1515,16 +1558,35 @@ fn exercises() -> Vec<SeedExercise> {
         .with_code("fn main() {\n    let scores = Vec::new();\n    println!(\"{}\", scores.len());\n}")
         .with_hints(&["An empty collection tells Rust nothing about its elements"]),
 
-        // L7 — integer types
+        // L7 — text &str
         SeedExercise::mcq(
             6,
-            "What is the maximum value a `u8` can hold?",
-            &["127", "255", "256", "65535"],
+            "What is `\"hello\"`?",
+            &["A char", "A &str (string slice)", "A tuple", "An integer"],
             1,
-            "u8 is unsigned, so it starts at 0. 8 bits gives 256 distinct values: 0 through 255. i8 would be -128 through 127.",
+            "Double quotes make a string slice, `&str`, which can hold any number of characters. A char uses single quotes: `'h'`.",
         ),
         SeedExercise::mcq(
             6,
+            "Which of these is a `char`?",
+            &["\"R\"", "'R'", "\"Rust\"", "'Rust'"],
+            1,
+            "`'R'` is a char — one character in single quotes. `\"R\"` is a &str; `\"Rust\"` is a longer &str; `'Rust'` is not valid syntax at all.",
+        )
+        .kind(ExerciseKind::PredictOutput)
+        .with_code("fn main() {\n    let letter: char = 'A';\n    let word: &str = \"A\";\n    println!(\"{letter} {word}\");\n}")
+        .detached(),
+
+        // L8 — integer types
+        SeedExercise::mcq(
+            7,
+            "What is the maximum value a `u8` can hold?",
+            &["127", "255", "256", "65535"],
+            1,
+            "u8 is unsigned, so it starts at 0. 8 bits give 256 distinct values: 0 through 255. i8 would be -128 through 127.",
+        ),
+        SeedExercise::mcq(
+            7,
             "In `u16`, what do `u` and `16` mean?",
             &[
                 "unsigned, 16 bits",
@@ -1536,33 +1598,30 @@ fn exercises() -> Vec<SeedExercise> {
             "The leading letter is the signedness, the number is the bit width. `i` = signed, `u` = unsigned.",
         ),
         SeedExercise::mcq(
-            6,
+            7,
             "What is the largest value `i8` can hold?",
             &["0", "127", "128", "255"],
             1,
             "i8 is signed 8-bit: -128 to 127. Half the range goes to negatives, so the positive side stops at 127.",
-        )
-        .kind(ExerciseKind::FixCode)
-        .with_code("fn main() {\n    let value: u8 = 256;\n    println!(\"{}\", value);\n}")
-        .with_hints(&["What is the maximum u8?", "Maybe u16 is a better fit"]),
+        ),
 
-        // L8 — literals
+        // L9 — literals
         SeedExercise::mcq(
-            7,
+            8,
             "What is `0b1010` equal to in decimal?",
             &["10", "8", "12", "20"],
             0,
             "Binary reads right-to-left: 8 + 2 = 10. The `0b` prefix marks it as binary.",
         ),
         SeedExercise::mcq(
-            7,
+            8,
             "What is `0o755` equal to in decimal?",
             &["755", "493", "435", "1000"],
             1,
             "Octal: 7×64 + 5×8 + 5 = 448 + 40 + 5 = 493. You will see this constantly in file permissions.",
         ),
         SeedExercise::mcq(
-            7,
+            8,
             "What do the underscores in `1_000_000` do?",
             &[
                 "Multiply the number by 1000",
@@ -1574,9 +1633,9 @@ fn exercises() -> Vec<SeedExercise> {
             "They are purely for human readability. `1_000_000` and `1000000` compile to exactly the same value.",
         ),
 
-        // L9 — signed vs unsigned
+        // L10 — signed vs unsigned
         SeedExercise::mcq(
-            8,
+            9,
             "Why is `let age: u32 = -1;` rejected?",
             &[
                 "Because -1 is not a number",
@@ -1588,23 +1647,23 @@ fn exercises() -> Vec<SeedExercise> {
             "Unsigned types have no room for negatives — they start at 0. Rust agrees that an age of -1 is not a real thing.",
         ),
         SeedExercise::mcq(
-            8,
+            9,
             "Which of these should most likely be `usize`?",
             &["A player's level", "The number of items in a list", "A temperature", "A score change"],
             1,
-            "usize is pointer-sized and unsigned — ideal for counts and lengths, which is exactly what indexing and Vec::len() use.",
+            "usize is pointer-sized and unsigned — ideal for counts and lengths, which is exactly what indexing and a list's `.len()` use.",
         ),
 
-        // L10 — floats
+        // L11 — floats
         SeedExercise::mcq(
-            9,
+            10,
             "What type does Rust infer for `let price = 19.99;`?",
             &["f32", "f64", "i32", "f128"],
             1,
             "Floating-point literals with no other context default to f64. It is the safer default — more precision.",
         ),
         SeedExercise::mcq(
-            9,
+            10,
             "Why does `0.1 + 0.2` not equal `0.3` exactly?",
             &[
                 "Rust has a rounding bug",
@@ -1616,39 +1675,39 @@ fn exercises() -> Vec<SeedExercise> {
             "0.1 is not exactly representable in binary, in any language with binary floats. The stored value is extremely close, but not identical.",
         ),
         SeedExercise::mcq(
-            9,
-            "What does `let x: f64 = 3.99 as i32;` produce?",
+            10,
+            "What does `3.99 as i32` produce?",
             &["4", "3", "0", "A compile error"],
             1,
             "`as` truncates toward zero — it does not round. 3.99 becomes 3. This surprises people regularly.",
         ),
 
-        // L11 — bools
+        // L12 — booleans
         SeedExercise::mcq(
-            10,
+            11,
             "How much memory does a `bool` occupy?",
             &["0 bytes", "1 byte", "4 bytes", "8 bytes"],
             1,
             "A bool has exactly two values, so one byte is enough. It is the smallest type in Rust.",
         ),
         SeedExercise::mcq(
-            10,
+            11,
             "Which of these is a valid `bool` literal?",
             &["True", "true", "TRUE", "1"],
             1,
             "Rust is lowercase: `true` and `false`. `True` is an undefined name and will not compile.",
         ),
 
-        // L12 — char
+        // L13 — char
         SeedExercise::mcq(
-            11,
+            12,
             "How many bytes does a Rust `char` always occupy?",
             &["1", "2", "4", "It varies"],
             2,
             "Always 4. A char is a Unicode scalar value, so it needs a fixed width regardless of how many UTF-8 bytes the glyph itself takes.",
         ),
         SeedExercise::mcq(
-            11,
+            12,
             "What is the difference between 'A' and \"A\"?",
             &[
                 "They are identical",
@@ -1657,22 +1716,22 @@ fn exercises() -> Vec<SeedExercise> {
                 "Double quotes are deprecated",
             ],
             1,
-            "Single quotes hold exactly one Unicode scalar value. Double quotes hold a string slice — a whole run of text. Different types entirely.",
+            "Single quotes hold exactly one character. Double quotes hold a string slice — a whole run of text. Different types entirely.",
         )
         .kind(ExerciseKind::TypeDetective)
         .with_code("fn main() {\n    let a = 'x';\n    let b = \"x\";\n    let c = '🥷';\n}")
         .with_hints(&["Single quotes → char", "Double quotes → &str"]),
 
-        // L13 — tuples
+        // L14 — tuples
         SeedExercise::mcq(
-            12,
+            13,
             "How do you access the second element of `let pair = (10, 20);`?",
             &["pair[1]", "pair.1", "pair.2", "pair.get(1)"],
             1,
             "Tuples use dot notation with a numeric field: `.0` is first, `.1` is second. Indexing with square brackets is for arrays.",
         ),
         SeedExercise::mcq(
-            12,
+            13,
             "What does `let (a, b) = (1, 2);` do?",
             &[
                 "Creates a tuple of two variables",
@@ -1684,9 +1743,9 @@ fn exercises() -> Vec<SeedExercise> {
             "Destructuring pulls the values out of the tuple and binds them to names. Much more readable than .0 and .1.",
         ),
 
-        // L14 — arrays
+        // L15 — arrays
         SeedExercise::mcq(
-            13,
+            14,
             "What does `[i32; 5]` describe?",
             &[
                 "An array of 5 i32 values",
@@ -1698,14 +1757,14 @@ fn exercises() -> Vec<SeedExercise> {
             "Square brackets = array, inner type = element type, the number after the semicolon = length. The length is part of the type.",
         ),
         SeedExercise::mcq(
-            13,
+            14,
             "What is the first element of `[10, 20, 30]`?",
             &["10", "20", "30", "There is no first element"],
             0,
             "Indexing is zero-based. `arr[0]` is the first, `arr[1]` is the second. This trips up everyone exactly once.",
         ),
         SeedExercise::mcq(
-            13,
+            14,
             "What is `let zeros: [u8; 4] = [0; 4];`?",
             &[
                 "An array of four zeros",
@@ -1717,23 +1776,23 @@ fn exercises() -> Vec<SeedExercise> {
             "The `[value; count]` form repeats a value. `[0; 4]` is `[0, 0, 0, 0]` — extremely handy for fixed buffers.",
         ),
 
-        // L15 — constants
+        // L16 — constants
         SeedExercise::mcq(
-            14,
+            15,
             "What does a `const` require that a `let` does not?",
             &["A value", "A type annotation", "A name in caps", "mut"],
             1,
             "Constants must state their type explicitly. `const MAX: u32 = 100;` — no inference. The compiler needs it before the program runs.",
         ),
         SeedExercise::mcq(
-            14,
+            15,
             "What is the conventional naming style for constants?",
             &["camelCase", "snake_case", "SCREAMING_SNAKE_CASE", "PascalCase"],
             2,
             "SCREAMING_SNAKE_CASE signals at a glance that this is a fixed named fact rather than a working value.",
         ),
         SeedExercise::mcq(
-            14,
+            15,
             "What is special about a constant compared to a variable?",
             &[
                 "It is faster at runtime",
@@ -1745,9 +1804,9 @@ fn exercises() -> Vec<SeedExercise> {
             "Constants are resolved before the program runs, which is why they can be used where a runtime value cannot — like an array length.",
         ),
 
-        // L16/L17/L18 — shadowing cluster
+        // L17/L18/L19 — shadowing cluster
         SeedExercise::mcq(
-            15,
+            16,
             "What does `let x = 5; let x = 6;` do?",
             &[
                 "Changes x from 5 to 6",
@@ -1759,7 +1818,7 @@ fn exercises() -> Vec<SeedExercise> {
             "The second `let` creates a brand-new binding. The first x still exists at 5, just unreachable by that name.",
         ),
         SeedExercise::mcq(
-            15,
+            16,
             "After `let x = 5; let x = x + 1; let x = x * 2;` what is x?",
             &["5", "6", "12", "10"],
             2,
@@ -1770,14 +1829,14 @@ fn exercises() -> Vec<SeedExercise> {
         .with_code_b("let x = 5;\nlet x = 6;")
         .with_hints(&["Look for the `let` on the second line"]),
         SeedExercise::mcq(
-            16,
+            17,
             "In `let x = 5; let x = 6;` is the original value of x still stored anywhere?",
             &["No, it is overwritten", "Yes, it exists but is unreachable by that name", "No, it is deleted", "Yes, you can access it as x.0"],
             1,
             "Shadowing hides a binding; it does not destroy it. The old x still holds 5 until it goes out of scope.",
         ),
         SeedExercise::mcq(
-            16,
+            17,
             "Which line mutates, and which shadows?",
             &[
                 "`x = 6;` mutates, `let x = 6;` shadows",
@@ -1792,7 +1851,7 @@ fn exercises() -> Vec<SeedExercise> {
         .with_code("fn main() {\n    let x = 5;\n    let x = x + 1;\n    let x = x * 2;\n    println!(\"{}\", x);\n}")
         .detached(),
         SeedExercise::mcq(
-            17,
+            18,
             "Which of these can change a variable's type?",
             &[
                 "`let mut x = \"42\"; x = 42;`",
@@ -1810,23 +1869,16 @@ fn exercises() -> Vec<SeedExercise> {
             "Try shadowing with a new `let` instead",
         ]),
 
-        // L19 — conversions
+        // L20 — conversions
         SeedExercise::mcq(
-            18,
+            19,
             "How do you convert an `i32` variable into an `f64`?",
             &["let y: f64 = x;", "let y: f64 = x as f64;", "convert(x, f64)", "let y = f64(x);"],
             1,
             "Rust never converts implicitly. `as` makes the conversion explicit and visible in the source.",
         ),
         SeedExercise::mcq(
-            18,
-            "What does `let x: i32 = 3.99 as i32;` produce?",
-            &["4", "3", "0", "A compile error"],
-            1,
-            "Casting float to integer truncates toward zero. It does not round. 3.99 becomes 3.",
-        ),
-        SeedExercise::mcq(
-            18,
+            19,
             "Which conversion is guaranteed to lose no information?",
             &[
                 "f64 → i32",
@@ -1838,9 +1890,9 @@ fn exercises() -> Vec<SeedExercise> {
             "Widening a signed integer to a larger signed integer is always exact. Narrowing in either direction can lose information.",
         ),
 
-        // L20 — compatibility
+        // L21 — compatibility
         SeedExercise::mcq(
-            19,
+            20,
             "Why does `let x: i32 = 10; let y: i64 = 20; x + y` fail?",
             &[
                 "i64 is not a real type",
@@ -1854,22 +1906,10 @@ fn exercises() -> Vec<SeedExercise> {
         .kind(ExerciseKind::FixCode)
         .with_code("fn main() {\n    let x: i32 = 10;\n    let y: i64 = 20;\n    let total = x + y;\n    println!(\"{}\", total);\n}")
         .with_hints(&["Which direction do you want to convert?", "`as` makes it explicit"]),
-        SeedExercise::mcq(
-            19,
-            "What does this error mean? `error[E0308]: mismatched types — expected i32, found &str`",
-            &[
-                "Your code is too long",
-                "Rust expected an i32 but your value is a string",
-                "The i32 type is missing from your Cargo.toml",
-                "You need to install a crate",
-            ],
-            1,
-            "Two-part error: what Rust expected, and what it actually got. Scan for those two words every time.",
-        ),
 
-        // L21 — expressions
+        // L22 — expressions
         SeedExercise::mcq(
-            20,
+            21,
             "What does a block's value come from?",
             &[
                 "The first statement",
@@ -1884,7 +1924,7 @@ fn exercises() -> Vec<SeedExercise> {
         .with_code("fn main() {\n    let y = {\n        let a = 10;\n        let b = 20;\n        a + b\n    };\n    println!(\"{}\", y);\n}")
         .detached(),
         SeedExercise::mcq(
-            20,
+            21,
             "What happens if you add a semicolon to `a + b` inside that block?",
             &[
                 "The block produces no value, so `y` cannot be used as a number",
@@ -1896,9 +1936,9 @@ fn exercises() -> Vec<SeedExercise> {
             "`a + b;` becomes a statement whose value is discarded. The block then yields `()`, and using it as a number is an error.",
         ),
 
-        // L22 — reading errors
+        // L23 — reading errors
         SeedExercise::mcq(
-            21,
+            22,
             "In `error[E0308]: expected i32, found &str`, what do the two words tell you?",
             &[
                 "How long the file is and how many lines it has",
@@ -1912,22 +1952,10 @@ fn exercises() -> Vec<SeedExercise> {
         .kind(ExerciseKind::CompilerChallenge)
         .with_code("error[E0308]: mismatched types\n --> src/main.rs:2:20\n  |\n2 |     let age: i32 = \"25\";\n  |                    ^^^^   expected `i32`, found `&str`")
         .with_hints(&["Read the words after 'expected' and 'found'", "What did the annotation say?"]),
-        SeedExercise::mcq(
-            21,
-            "What should you read first in a `mismatched types` error?",
-            &[
-                "The line number",
-                "The `expected` and `found` types",
-                "The error code",
-                "The `help:` suggestion at the bottom",
-            ],
-            1,
-            "The two types tell you what the disagreement is. The help line is useful, but only once you know what went wrong.",
-        ),
 
-        // L23 — common mistakes
+        // L24 — common mistakes
         SeedExercise::mcq(
-            22,
+            23,
             "You write `let empty = Vec::new();` and get 'type annotations needed'. Why?",
             &[
                 "Vec is not imported",
@@ -1939,11 +1967,11 @@ fn exercises() -> Vec<SeedExercise> {
             "Inference works from values. With zero values, there is nothing to go on. Annotate: `let empty: Vec<i32> = Vec::new();`",
         )
         .kind(ExerciseKind::SpotDifference)
-        .with_code("let letter = 'A';")
-        .with_code_b("let letter = \"A\";")
-        .with_hints(&["One is a char, one is a &str"]),
+        .with_code("let empty = Vec::new();")
+        .with_code_b("let empty: Vec<i32> = Vec::new();")
+        .with_hints(&["Which version tells Rust what the list holds?"]),
         SeedExercise::mcq(
-            22,
+            23,
             "Which mistake does NOT produce a compile error?",
             &[
                 "Reassigning an immutable variable",
@@ -1955,9 +1983,9 @@ fn exercises() -> Vec<SeedExercise> {
             "Out-of-bounds indexing is caught at runtime, not compile time. That distinction matters and is worth remembering.",
         ),
 
-        // L24 — bridge
+        // L25 — bridge
         SeedExercise::mcq(
-            23,
+            24,
             "You have `let name = \"Gus\";` and want a numeric id. What is the idiomatic approach?",
             &[
                 "Make name mutable and assign an integer",
@@ -1966,7 +1994,7 @@ fn exercises() -> Vec<SeedExercise> {
                 "You cannot change a variable's type in Rust",
             ],
             1,
-            "Shadowing. `let name = name.parse().unwrap();` creates a new binding with a new type. Mutation cannot do this.",
+            "Shadowing. `let name: i32 = name.parse().unwrap();` creates a new binding with a new type. Mutation cannot do this.",
         )
         .kind(ExerciseKind::PredictOutput)
         .with_code("fn main() {\n    let value = \"42\";\n    let value: i32 = value.parse().unwrap();\n    println!(\"{}\", value + 8);\n}")
@@ -1981,19 +2009,19 @@ fn exercises() -> Vec<SeedExercise> {
             code: Some(CHALLENGE_CODE.to_string()),
             code_b: None,
             options: vec![
-"Identify the type of every variable".to_string(),
-"Find all four errors and explain each one".to_string(),
-"Fix the program so it compiles and runs".to_string(),
-"Predict the correct output once fixed".to_string(),
+                "Identify the type of every variable".to_string(),
+                "Find all four errors and explain each one".to_string(),
+                "Fix the program so it compiles and runs".to_string(),
+                "Predict the correct output once fixed".to_string(),
             ],
             correct_answer: 0,
             explanation: CHALLENGE_SOLUTION.to_string(),
             xp_reward: 100,
             hints: vec![
-"Error 1 is a subtraction between two different types. Which one is the odd one out?".to_string(),
-"Error 2 is a string being assigned where a number is required. Shadowing is your friend here.".to_string(),
-"Error 3 is not a compile error at all — it compiles fine and panics when it runs. How many elements does the array actually have?".to_string(),
-"Error 4 is a number too large for the type you chose. 300 needs at least 16 bits.".to_string(),
+                "Error 1 is a subtraction between two different types. Which one is the odd one out?".to_string(),
+                "Error 2 is a string being assigned where a number is required. Shadowing is your friend here.".to_string(),
+                "Error 3 is not a compile error at all — it compiles fine and panics when it runs. How many elements does the array actually have?".to_string(),
+                "Error 4 is a number too large for the type you chose. 300 needs at least 16 bits.".to_string(),
             ],
         },
 
@@ -2005,19 +2033,19 @@ fn exercises() -> Vec<SeedExercise> {
             code: None,
             code_b: None,
             options: vec![
-"Store the player's name as a &str and level as a u8".to_string(),
-"Store the current health as a mutable i32, starting at 100".to_string(),
-"Define a const MAX_HEALTH: i32 = 100 and compare health against it".to_string(),
-"Store a tuple of (name, level, health) and destructure it to print each field".to_string(),
-"Shadow a &str into a u8 using .parse().unwrap(), then double it".to_string(),
+                "Store the player's name as a &str and level as a u8".to_string(),
+                "Store the current health as a mutable i32, starting at 100".to_string(),
+                "Define a const MAX_HEALTH: i32 = 100 and compare health against it".to_string(),
+                "Store a tuple of (name, level, health) and destructure it to print each field".to_string(),
+                "Shadow a &str into a u8 using .parse().unwrap(), then double it".to_string(),
             ],
             correct_answer: 0,
             explanation: "There is no single right answer here. What matters is that you can state WHY each type was chosen, and that your mutable and immutable bindings are deliberate."
                 .to_string(),
             xp_reward: 50,
             hints: vec![
-"Start with the immutable facts, then the mutable state".to_string(),
-"A const needs an explicit type — there is no inference there".to_string(),
+                "Start with the immutable facts, then the mutable state".to_string(),
+                "A const needs an explicit type — there is no inference there".to_string(),
             ],
         },
     ]
