@@ -3190,3 +3190,109 @@ button[disabled] {
 .pipe-fb {
     margin: 0.25rem 0 0;
 }
+
+/* ── Playground page ──────────────────────────────────────────────────
+   `/playground` renders the same editor as the lesson modal, as page
+   content. It reuses `.playground-panel` for the interior, but must not
+   inherit the dialog's viewport-height cap — on a page the editor should
+   grow with the content rather than scroll inside a fixed box. */
+
+/* The nav gained a fourth link; keep each label on one line and let the
+   bar wrap as a whole rather than mid-link. */
+.nav-links {
+    flex-wrap: wrap;
+    row-gap: 0.5rem;
+}
+
+.nav-links a {
+    white-space: nowrap;
+}
+
+.playground-page-header {
+    margin-bottom: 1.5rem;
+}
+
+.playground-page-header h1 {
+    font-size: 1.75rem;
+    margin-top: 0.5rem;
+}
+
+.playground-page-intro {
+    color: var(--text-muted);
+    font-size: 0.875rem;
+    line-height: 1.6;
+    max-width: 60ch;
+    margin-bottom: 1.5rem;
+}
+
+.playground-page-intro strong {
+    color: var(--text);
+}
+
+.playground-disabled {
+    border: 1px solid var(--border);
+    border-left: 3px solid var(--accent-secondary);
+    border-radius: var(--radius-sm);
+    background: var(--surface);
+    padding: 1rem 1.25rem;
+    margin-bottom: 1.5rem;
+}
+
+.playground-disabled-label {
+    display: inline-block;
+    font-size: 0.6875rem;
+    font-weight: 700;
+    letter-spacing: 1px;
+    color: var(--accent-secondary);
+    margin-bottom: 0.5rem;
+}
+
+.playground-disabled p {
+    color: var(--text-muted);
+    font-size: 0.8125rem;
+    line-height: 1.6;
+    max-width: 70ch;
+}
+
+.playground-disabled code {
+    font-family: 'IBM Plex Mono', 'JetBrains Mono', monospace;
+    color: var(--text);
+}
+
+.playground-inline {
+    border: 1px solid var(--border-strong);
+    border-radius: var(--radius-lg);
+    background: var(--surface);
+    overflow: hidden;
+}
+
+.playground-inline .playground-panel {
+    max-height: none;
+}
+
+.playground-inline .playground-body {
+    overflow-y: visible;
+    padding: 1.25rem;
+}
+
+/* The standalone editor is the point of the page, so give it more room than
+   the modal on a wide screen. */
+@media (min-width: 900px) {
+    .playground-inline .editor-input {
+        min-height: 20rem;
+    }
+
+    .playground-inline .console {
+        max-height: 28rem;
+    }
+}
+
+@media (max-width: 640px) {
+    .navbar {
+        padding: 0.875rem 1rem;
+    }
+
+    .nav-links {
+        gap: 1rem;
+    }
+}

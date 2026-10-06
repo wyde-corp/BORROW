@@ -5,6 +5,7 @@ pub mod home;
 pub mod layout;
 pub mod lesson;
 pub mod module;
+pub mod playground;
 pub mod practice;
 pub mod progress;
 pub mod project;

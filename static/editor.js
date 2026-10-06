@@ -1,14 +1,16 @@
+(() => {
 // The playground editor: gutter, run, and error rendering.
 //
 // Kept apart from app.js because the two have different lifetimes. app.js wires
-// up page furniture that exists on every page; this owns one dialog, and there
-// is exactly one of them (rendered by views::layout), so it can hold module-level
-// state without worrying about two editors fighting over a snippet.
+// up page furniture that exists on every page; this owns the one editor. It has
+// two homes — a modal on lesson pages, opened by TRY THIS, and the `/playground`
+// page itself — so it looks its root up by `[data-playground]` and branches on
+// whether that root is a `<dialog>` rather than assuming either shape.
 
 const STORAGE_KEY = "borrow.playground.snippet";
 const MAX_LINES = 2000;
 
-// ── the eight states of the RUN button ────────────────────────���──────────
+// ── the eight states of the RUN button ───────────────────────────────────
 //
 // Kept as a single function so the whole state machine is readable at once.
 // Every state is reachable and the CSS in style.css carries the matching rule;
@@ -31,7 +33,11 @@ let resultsEl;
 let emptyEl;
 let inputEl;
 let gutterEl;
-let dialog;
+let root;
+let isDialog = false;
+// False when the server is not bound to loopback: the endpoint refuses, and
+// saying so on the button is better than a 403 the learner has to interpret.
+let playgroundEnabled = true;
 let currentRequest = 0;
 let activeController = null;
 
@@ -43,17 +49,20 @@ const STARTER_CODE = `fn main() {
 }`;
 
 document.addEventListener("DOMContentLoaded", () => {
-  dialog = document.getElementById("playground");
-  if (!dialog) return;
+  root = document.querySelector("[data-playground]");
+  if (!root) return;
 
-  runButton = dialog.querySelector("[data-pg-run]");
-  runLabel = dialog.querySelector("[data-pg-run-label]");
-  statusEl = dialog.querySelector("[data-pg-status]");
-  consoleEl = dialog.querySelector("[data-pg-console]");
-  resultsEl = dialog.querySelector("[data-pg-results]");
-  emptyEl = dialog.querySelector("[data-pg-empty]");
-  inputEl = dialog.querySelector("[data-pg-input]");
-  gutterEl = dialog.querySelector("[data-pg-gutter]");
+  isDialog = root.tagName === "DIALOG";
+  playgroundEnabled = root.dataset.pgDisabled !== "true";
+
+  runButton = root.querySelector("[data-pg-run]");
+  runLabel = root.querySelector("[data-pg-run-label]");
+  statusEl = root.querySelector("[data-pg-status]");
+  consoleEl = root.querySelector("[data-pg-console]");
+  resultsEl = root.querySelector("[data-pg-results]");
+  emptyEl = root.querySelector("[data-pg-empty]");
+  inputEl = root.querySelector("[data-pg-input]");
+  gutterEl = root.querySelector("[data-pg-gutter]");
 
   inputEl.value = loadSnippet();
   syncGutter();
@@ -74,27 +83,37 @@ document.addEventListener("DOMContentLoaded", () => {
     gutterEl.scrollTop = inputEl.scrollTop;
   });
 
-  dialog.querySelector("[data-pg-close]").addEventListener("click", close);
-  dialog.querySelector("[data-pg-reset]").addEventListener("click", () => {
+  root.querySelector("[data-pg-reset]").addEventListener("click", () => {
     inputEl.value = STARTER_CODE;
     lineOffset = 0;
     syncGutter();
     saveSnippet(inputEl.value);
     clearResults();
+    // Back to a clean slate, not just clean output. Leaving the button reading
+    // "RUN AGAIN" in the error colour after RESET would say the starter program
+    // had already been run and failed, when it has not been run at all.
+    setState(STATE.IDLE);
     refreshDisabled();
     inputEl.focus();
   });
 
-  // Clicking the backdrop closes, but only the backdrop — a click that started
-  // inside the panel and drifted onto the scrim should not dismiss the editor
-  // and lose the learner's place.
-  dialog.addEventListener("click", (event) => {
-    if (event.target === dialog) close();
-  });
+  // Close, backdrop dismissal and Escape only make sense for the modal. On the
+  // standalone page there is nothing to dismiss and no `[data-pg-close]`.
+  if (isDialog) {
+    const closeButton = root.querySelector("[data-pg-close]");
+    if (closeButton) closeButton.addEventListener("click", close);
 
-  document.addEventListener("keydown", (event) => {
-    if (event.key === "Escape" && dialog.open) close();
-  });
+    // Only the backdrop closes: a click that started inside the panel and
+    // drifted onto the scrim should not dismiss the editor and lose the
+    // learner's place.
+    root.addEventListener("click", (event) => {
+      if (event.target === root) close();
+    });
+
+    document.addEventListener("keydown", (event) => {
+      if (event.key === "Escape" && root.open) close();
+    });
+  }
 
   document.querySelectorAll("[data-try-this]").forEach((button) => {
     button.addEventListener("click", () => open(button));
@@ -104,6 +123,10 @@ document.addEventListener("DOMContentLoaded", () => {
 // ── opening ─────────────────────────────────────────────────────────────
 
 function open(button) {
+  // Only the modal is opened by a TRY THIS button; on the standalone page the
+  // editor is already on screen.
+  if (!isDialog) return;
+
   const snippet = JSON.parse(button.dataset.tryThis);
 
   // Reopening resets to the panel that was clicked, so a learner who fixed the
@@ -116,12 +139,12 @@ function open(button) {
   clearResults();
   refreshDisabled();
   inputEl.setSelectionRange(0, 0);
-  dialog.showModal();
+  root.showModal();
   inputEl.focus();
 }
 
 function close() {
-  dialog.close();
+  if (isDialog) root.close();
 }
 
 // ── the gutter ──────────────────────────────────────────────────────────
@@ -193,7 +216,7 @@ function indentSelection(outdent) {
 // ── running ─────────────────────────────────────────────────────────────
 
 async function run() {
-  if (runButton.disabled) return;
+  if (runButton.disabled || !playgroundEnabled) return;
 
   // Pressing RUN while a compile is in flight means "I changed my mind", not
   // "do nothing": the previous request is abandoned rather than left to land on
@@ -243,7 +266,9 @@ ${escapeHtml(String(err))}</pre>`;
 /// Keeps the disabled state honest without letting it fight the result states:
 /// an empty editor cannot be run, and a non-empty one always can.
 function refreshDisabled() {
-  if (inputEl.value.trim() === "") {
+  // Nothing to run, or nowhere to run it. Both leave RUN inert; the reason is
+  // carried by the page copy, not by the button.
+  if (!playgroundEnabled || inputEl.value.trim() === "") {
     setState(STATE.DISABLED);
   } else if (runButton.dataset.state === STATE.DISABLED) {
     setState(STATE.IDLE);
@@ -444,3 +469,4 @@ function jumpTo(line) {
   inputEl.setAttribute("data-pg-flash", "true");
   setTimeout(() => inputEl.removeAttribute("data-pg-flash"), 600);
 }
+})();

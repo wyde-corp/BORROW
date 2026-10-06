@@ -6,11 +6,21 @@
 
 use axum::extract::State;
 use axum::http::StatusCode;
-use axum::response::{IntoResponse, Response};
+use axum::response::{Html, IntoResponse, Response};
 use axum::Json;
 use sqlx::SqlitePool;
 
+use crate::error::Result;
 use crate::services::sandbox;
+
+/// The standalone playground page.
+///
+/// Rendered whatever the bind address is: when the playground is disabled the
+/// page still opens and explains why, which is more useful than a 404 for a link
+/// that is visible in the nav.
+pub async fn page(State(_pool): State<SqlitePool>) -> Result<Html<String>> {
+    Ok(Html(crate::views::playground::show(sandbox::is_enabled())))
+}
 
 /// A cap on how much code we will compile in one request.
 ///

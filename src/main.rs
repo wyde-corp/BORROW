@@ -55,6 +55,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
             post(handlers::practice::restart),
         )
         .route("/playground/run", post(handlers::playground::run))
+        .route("/playground", get(handlers::playground::page))
         .route("/progress", get(handlers::progress::show))
         .route("/api/curriculum", get(handlers::api::curriculum))
         .route("/api/progress", get(handlers::api::stats))
