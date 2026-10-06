@@ -14,3 +14,13 @@ tracing = "0.1"
 tracing-subscriber = "0.3"
 tower = "0.4"
 tower-http = { version = "0.5", features = ["fs"] }
+
+# Desktop UI stack (the `app` branch only).
+#
+# gpui-kit is the single entry point: it brings gpui-component (widgets), the
+# gpui asset source, and gpui-pre — Zed's gpui published as a pinned snapshot
+# with Zed's licence intact. Go through gpui-kit's re-exports and nowhere else.
+# Importing crates.io `gpui` directly gives you a different, incompatible type
+# universe: same names, different `App`/`Window`, and errors that look like
+# "expected `App`, found `App`".
+gpui-kit = "0.7.1"

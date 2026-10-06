@@ -1,0 +1,54 @@
+name: app
+
+# Phase 1 gate: the gpui-kit stack must build on all three target platforms.
+# This can only be proven in CI — a single Linux machine cannot compile for
+# macOS (Metal/Xcode) or Windows (MSVC/Win32), and those two are exactly where
+# gpui is least battle-tested.
+
+on:
+  push:
+    branches: [app]
+  pull_request:
+    branches: [app]
+  workflow_dispatch:
+
+jobs:
+  build:
+    name: build · ${{ matrix.os }}
+    runs-on: ${{ matrix.os }}
+    strategy:
+      # One platform failing must not hide the results for the other two —
+      # that failure is the whole point of the matrix.
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, macos-latest, windows-latest]
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install Linux GUI build dependencies
+        if: runner.os == 'Linux'
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y --no-install-recommends \
+            pkg-config cmake \
+            libwayland-dev libxkbcommon-dev libxkbcommon-x11-dev \
+            libx11-dev libxcb1-dev \
+            libfontconfig1-dev fontconfig \
+            libvulkan-dev \
+            libsqlite3-dev libssl-dev
+
+      - uses: dtolnay/rust-toolchain@stable
+
+      - uses: Swatinem/rust-cache@v2
+        with:
+          key: borrow-${{ matrix.os }}
+
+      - name: Build web server
+        run: cargo build --bin borrow
+
+      - name: Build desktop app
+        run: cargo build --bin app
+
+      - name: Test
+        run: cargo test
