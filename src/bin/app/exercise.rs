@@ -123,7 +123,11 @@ pub fn submit(db: &crate::app_db::Db, exercise: &Exercise, selected: Option<usiz
     }
 }
 
-/// The question itself: prompt, code, and any hints.
+/// The question itself: prompt and code.
+///
+/// Hints live in `screen::AppView::hints_panel`, because revealing one needs to
+/// write to the view — `question` has no handle to it and `exercise.rs` should
+/// not depend on the screen module.
 pub fn question(theme: &Theme, exercise: &Exercise) -> Div {
     let mut body = div()
         .flex()
@@ -142,44 +146,6 @@ pub fn question(theme: &Theme, exercise: &Exercise) -> Div {
             code,
             crate::models::CodeStatus::Valid,
         ));
-    }
-
-    // Hints render all at once rather than one at a time as the site does —
-    // progressive reveal needs interaction state, which arrives with the
-    // editor work. Showing them up front costs nothing the learner cannot ask
-    // themselves to ignore.
-    let hints = hints_of(exercise);
-    if !hints.is_empty() {
-        let mut list = div().flex().flex_col().gap_2();
-        for hint in hints {
-            list = list.child(
-                div()
-                    .flex()
-                    .flex_row()
-                    .gap_2()
-                    .child(div().text_size(px(12.)).text_color(theme.info).child("?"))
-                    .child(
-                        div()
-                            .text_size(px(13.))
-                            .text_color(theme.foreground)
-                            .child(hint),
-                    ),
-            );
-        }
-
-        body = body.child(
-            div()
-                .rounded_md()
-                .border_1()
-                .border_color(theme.border)
-                .bg(theme.secondary)
-                .p_4()
-                .flex()
-                .flex_col()
-                .gap_3()
-                .child(crate::components::label(theme, "HINTS"))
-                .child(list),
-        );
     }
 
     body

@@ -75,6 +75,10 @@ pub struct AppView {
     selected: Option<usize>,
     result: Option<exercise_view::Submission>,
     practice: PracticeState,
+    /// Which hint disclosures are open. A set rather than a count, because the
+    /// site's hints are independent `<details>` — a learner can open the third
+    /// without reading the first.
+    hints_open: std::collections::HashSet<usize>,
 }
 
 impl AppView {
@@ -85,12 +89,14 @@ impl AppView {
             selected: None,
             result: None,
             practice: PracticeState::default(),
+            hints_open: std::collections::HashSet::new(),
         }
     }
 
     fn clear_answer(&mut self) {
         self.selected = None;
         self.result = None;
+        self.hints_open.clear();
     }
 
     fn clear_practice(&mut self) {
@@ -470,6 +476,87 @@ impl AppView {
                     ),
             )
     }
+    /// Hints, each behind its own disclosure — the `<details>` the site uses.
+    ///
+    /// Reveal state lives on the view rather than in a widget because the
+    /// toggle writes to it, and the whole hint row is a Button so the
+    /// disclosure is reachable and operable from the keyboard like the cards.
+    fn hints_panel(&self, theme: &Theme, exercise: &Exercise, view: Entity<AppView>) -> Div {
+        let hints = exercise_view::hints_of(exercise);
+        if hints.is_empty() {
+            return div();
+        }
+
+        let mut list = div().flex().flex_col().gap_2();
+
+        for (index, hint) in hints.iter().enumerate() {
+            let open = self.hints_open.contains(&index);
+            let number = index + 1;
+            let toggling = view.clone();
+
+            let mut row = Button::new(format!("hint-{index}"))
+                .ghost()
+                .rounded_sm()
+                .border_1()
+                .border_color(if open { theme.info } else { theme.border })
+                .p_3()
+                .flex()
+                .flex_col()
+                .gap_1()
+                .on_click(move |_, _, cx| {
+                    toggling.update(cx, |view, cx| {
+                        if !view.hints_open.remove(&index) {
+                            view.hints_open.insert(index);
+                        }
+                        cx.notify();
+                    });
+                })
+                .child(
+                    div()
+                        .flex()
+                        .flex_row()
+                        .items_center()
+                        .gap_2()
+                        .child(
+                            div()
+                                .text_size(px(12.))
+                                .text_color(theme.info)
+                                .child(if open { "▾" } else { "▸" }),
+                        )
+                        .child(
+                            div()
+                                .text_size(px(11.))
+                                .font_weight(FontWeight::BOLD)
+                                .text_color(theme.muted_foreground)
+                                .child(format!("HINT {number}")),
+                        ),
+                );
+
+            if open {
+                row = row.child(
+                    div()
+                        .text_size(px(13.))
+                        .text_color(theme.foreground)
+                        .child(hint.clone()),
+                );
+            }
+
+            list = list.child(row);
+        }
+
+        div()
+            .rounded_md()
+            .border_1()
+            .border_color(theme.border)
+            .bg(theme.secondary)
+            .p_4()
+            .flex()
+            .flex_col()
+            .gap_3()
+            .child(label(theme, "HINTS"))
+            .child(list)
+    }
+
     /// One exercise: the question, the answer controls, and the result.
     fn exercise_screen(
         &self,
@@ -494,7 +581,8 @@ impl AppView {
             .flex()
             .flex_col()
             .gap_5()
-            .child(exercise_view::question(theme, record));
+            .child(exercise_view::question(theme, record))
+            .child(self.hints_panel(theme, record, view.clone()));
 
         if !options.is_empty() {
             body = body.child(self.option_list(
@@ -897,7 +985,8 @@ impl AppView {
                     .gap_4()
                     .child(label(theme, format!("QUESTION {} / {total}", position + 1))),
             )
-            .child(exercise_view::question(theme, exercise));
+            .child(exercise_view::question(theme, exercise))
+            .child(self.hints_panel(theme, exercise, view.clone()));
 
         if !options.is_empty() {
             body = body.child(self.option_list(
@@ -1378,7 +1467,9 @@ fn callout(theme: &Theme, title: &str, text: &str) -> Div {
 ///   is what crashed the compiler. Hence the explicit imports.
 #[cfg(test)]
 mod ui_tests {
-    use super::{answer_question, finish_run, load_builder, start_run, AppView, Screen};
+    use super::{
+        answer_question, exercise_view, finish_run, load_builder, start_run, AppView, Screen,
+    };
     use gpui_kit::{TestAppContext, TestDispatcher, VisualTestContext};
 
     /// Applies the BORROW_ theme and opens the app at home on this context.
@@ -1564,5 +1655,68 @@ mod ui_tests {
             Some(1),
             "the one answer recorded should be in the results"
         );
+    }
+
+    /// Hints are disclosures, one per hint, matching the site's `<details>`.
+    ///
+    /// The panel is rendered on every draw, so a panic in it fails here rather
+    /// than on a learner's screen; the state assertions check that revealing
+    /// one does not reveal the rest, and that leaving the exercise closes them.
+    #[test]
+    fn hints_reveal_independently_and_reset_per_exercise() {
+        let mut cx = TestAppContext::build(TestDispatcher::new(0), Some("hints"));
+        let (view, cx) = open(&mut cx);
+
+        // Find a seeded exercise that actually has hints, so the test does not
+        // rot when content moves between modules.
+        let spot = cx.update(|_, cx| {
+            let view = view.read(cx);
+            view.modules.iter().enumerate().find_map(|(m, seed)| {
+                seed.exercises
+                    .iter()
+                    .enumerate()
+                    .find(|(_, exercise)| !exercise_view::hints_of(exercise).is_empty())
+                    .map(|(e, _)| (m, e))
+            })
+        });
+
+        let (module, exercise) = spot.expect("the course has an exercise with hints");
+
+        cx.update(|_, cx| {
+            view.update(cx, |view, cx| {
+                view.clear_answer();
+                view.screen = Screen::Exercise { module, exercise };
+                cx.notify();
+            });
+        });
+        cx.update(|window, cx| window.draw(cx).clear(cx));
+        assert_eq!(
+            screen_of(&view, cx),
+            format!("Exercise {{ module: {module}, exercise: {exercise} }}")
+        );
+        assert_eq!(cx.update(|_, cx| view.read(cx).hints_open.len()), 0);
+
+        // Opening one hint reveals that one.
+        cx.update(|_, cx| {
+            view.update(cx, |view, cx| {
+                view.hints_open.insert(0);
+                cx.notify();
+            });
+        });
+        cx.update(|window, cx| window.draw(cx).clear(cx));
+        assert_eq!(
+            cx.update(|_, cx| { view.read(cx).hints_open.iter().copied().collect::<Vec<_>>() }),
+            vec![0],
+            "one hint open should not open the others"
+        );
+
+        // Leaving the exercise closes them, so a later one starts clean.
+        cx.update(|_, cx| {
+            view.update(cx, |view, cx| {
+                view.clear_answer();
+                cx.notify();
+            });
+        });
+        assert_eq!(cx.update(|_, cx| view.read(cx).hints_open.len()), 0);
     }
 }
