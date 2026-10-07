@@ -3,9 +3,7 @@
 //! The Log Analyzer, assembled, and its three core questions answered with
 //! pipelines.
 
-use crate::content::types::{
-    callout, code, labelled, paragraphs, pipeline, table, SeedLesson,
-};
+use crate::content::types::{callout, code, labelled, paragraphs, pipeline, table, SeedLesson};
 
 pub fn lessons() -> Vec<SeedLesson> {
     vec![assembled(), filtering_counting_top_n()]

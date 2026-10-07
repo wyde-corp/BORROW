@@ -67,8 +67,9 @@ fn exercise_answers_are_in_range() {
     for seed in content::all() {
         for exercise in &seed.exercises {
             let payload: serde_json::Value = match exercise.options.as_ref() {
-                Some(o) => serde_json::from_str(o)
-                    .unwrap_or_else(|e| panic!("{} exercise {}: {e}", seed.module.slug, exercise.id)),
+                Some(o) => serde_json::from_str(o).unwrap_or_else(|e| {
+                    panic!("{} exercise {}: {e}", seed.module.slug, exercise.id)
+                }),
                 None => serde_json::Value::Null,
             };
 
@@ -120,10 +121,9 @@ fn choice_exercises_have_options() {
                 continue;
             }
 
-            let payload: serde_json::Value = serde_json::from_str(
-                exercise.options.as_deref().unwrap_or("[]"),
-            )
-            .unwrap_or(serde_json::Value::Null);
+            let payload: serde_json::Value =
+                serde_json::from_str(exercise.options.as_deref().unwrap_or("[]"))
+                    .unwrap_or(serde_json::Value::Null);
 
             let count = payload
                 .get("options")
@@ -152,10 +152,9 @@ fn challenges_ship_hints() {
                 continue;
             }
 
-            let payload: serde_json::Value = serde_json::from_str(
-                exercise.options.as_deref().unwrap_or("{}"),
-            )
-            .unwrap_or(serde_json::Value::Null);
+            let payload: serde_json::Value =
+                serde_json::from_str(exercise.options.as_deref().unwrap_or("{}"))
+                    .unwrap_or(serde_json::Value::Null);
 
             let hints = payload
                 .get("hints")

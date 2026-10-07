@@ -5,8 +5,8 @@
 //! happens when a vector grows past its capacity.
 
 use crate::content::types::{
-    broken, callout, code, diagram, gap_fill, guess_run, labelled, paragraphs, step_through,
-    table, SeedLesson,
+    broken, callout, code, diagram, gap_fill, guess_run, labelled, paragraphs, step_through, table,
+    SeedLesson,
 };
 
 pub fn lessons() -> Vec<SeedLesson> {

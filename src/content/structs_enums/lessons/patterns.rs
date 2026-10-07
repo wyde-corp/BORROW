@@ -9,11 +9,7 @@ use crate::content::types::{
 };
 
 pub fn lessons() -> Vec<SeedLesson> {
-    vec![
-        destructuring(),
-        common_mistakes(),
-        putting_it_together(),
-    ]
+    vec![destructuring(), common_mistakes(), putting_it_together()]
 }
 
 fn destructuring() -> SeedLesson {

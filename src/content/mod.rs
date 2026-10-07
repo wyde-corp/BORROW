@@ -5,18 +5,19 @@ pub mod functions;
 pub mod generics_traits;
 pub mod getting_started;
 pub mod iterators;
-pub mod ownership;
 pub mod option_result;
+pub mod ownership;
 pub mod structs_enums;
-mod types;
 #[cfg(test)]
 mod tests;
+mod types;
 pub mod variables_and_types;
 
 pub use types::SeedModule;
 
 use crate::models::{Exercise, Lesson, Module, Project};
 
+#[allow(dead_code)] // the desktop app reads lessons only so far
 pub struct ModuleSeed {
     pub module: Module,
     pub lessons: Vec<Lesson>,

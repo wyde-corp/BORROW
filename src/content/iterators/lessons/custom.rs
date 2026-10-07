@@ -8,7 +8,11 @@ use crate::content::types::{
 };
 
 pub fn lessons() -> Vec<SeedLesson> {
-    vec![returning_impl_iterator(), writing_an_iterator(), common_mistakes()]
+    vec![
+        returning_impl_iterator(),
+        writing_an_iterator(),
+        common_mistakes(),
+    ]
 }
 
 fn returning_impl_iterator() -> SeedLesson {

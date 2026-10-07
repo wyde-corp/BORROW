@@ -21,13 +21,20 @@ pub enum LessonSection {
         status: CodeStatus,
     },
     /// Source paired with a per-line explanation of what each part does.
-    Breakdown { title: String, code: String, items: Vec<String> },
+    Breakdown {
+        title: String,
+        code: String,
+        items: Vec<String>,
+    },
     /// A ticked list — module recaps and in-lesson requirement lists.
     Checklist { title: String, items: Vec<String> },
     /// A monospace diagram panel — ASCII art, visualisations, syntax breakdowns.
     Diagram { title: String, code: String },
     /// A data table. `rows` is a list of equally-sized cell lists.
-    Table { headers: Vec<String>, rows: Vec<Vec<String>> },
+    Table {
+        headers: Vec<String>,
+        rows: Vec<Vec<String>>,
+    },
     /// An ordered list — used for "read the error like this" walkthroughs.
     Steps { items: Vec<String> },
     /// A list of paragraphs rendered as separate blocks.

@@ -39,6 +39,23 @@ pub fn apply(cx: &mut App) -> anyhow::Result<()> {
     Ok(())
 }
 
+/// Builds BORROW_'s theme in memory, for tests that need real colours without
+/// opening a window. The same path `apply` takes, minus the registry.
+#[cfg(test)]
+pub fn test_theme() -> gpui_kit::component::Theme {
+    let set: gpui_kit::component::ThemeSet =
+        serde_json::from_str(BORROW_THEME).expect("borrows theme must parse");
+    let config = set
+        .themes
+        .into_iter()
+        .find(|t| t.name == THEME_NAME)
+        .expect("BORROW_ theme present");
+
+    let mut theme = gpui_kit::component::Theme::default();
+    theme.apply_config(&std::rc::Rc::new(config));
+    theme
+}
+
 #[cfg(test)]
 mod tests {
     use super::BORROW_THEME;

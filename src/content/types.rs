@@ -399,10 +399,7 @@ pub fn diagram(title: &str, value: &str) -> serde_json::Value {
 
 /// Comparison table. `rows` are `[cell, cell]` pairs; `headers` is the header row.
 pub fn table(headers: &[&str], rows: &[&[&str]]) -> serde_json::Value {
-    let rows: Vec<serde_json::Value> = rows
-        .iter()
-        .map(|r| json!(r))
-        .collect();
+    let rows: Vec<serde_json::Value> = rows.iter().map(|r| json!(r)).collect();
 
     json!({
         "type": "table",
@@ -482,9 +479,7 @@ pub fn checklist(title: &str, items: &[&str]) -> serde_json::Value {
 pub fn gap_fill(intro: &str, code: &str, blanks: &[(&str, &str, &str)]) -> serde_json::Value {
     let blanks: Vec<serde_json::Value> = blanks
         .iter()
-        .map(|(id, answer, hint)| {
-            json!({ "id": id, "answer": answer, "hint": hint })
-        })
+        .map(|(id, answer, hint)| json!({ "id": id, "answer": answer, "hint": hint }))
         .collect();
 
     json!({
@@ -540,11 +535,7 @@ pub fn guess_run(
 ///
 /// `steps` are `(lines, static_note, dynamic_note)`, where `lines` are 1-based
 /// line numbers the step highlights.
-pub fn dispatch(
-    title: &str,
-    code: &str,
-    steps: &[(&[usize], &str, &str)],
-) -> serde_json::Value {
+pub fn dispatch(title: &str, code: &str, steps: &[(&[usize], &str, &str)]) -> serde_json::Value {
     let steps: Vec<serde_json::Value> = steps
         .iter()
         .map(|(lines, static_note, dynamic_note)| {
@@ -569,16 +560,10 @@ pub fn dispatch(
 ///
 /// `steps` are `(lines, phase, note)`, where `phase` is `"lazy"` or `"eager"`
 /// and `lines` are 1-based line numbers the step highlights.
-pub fn pipeline(
-    title: &str,
-    code: &str,
-    steps: &[(&[usize], &str, &str)],
-) -> serde_json::Value {
+pub fn pipeline(title: &str, code: &str, steps: &[(&[usize], &str, &str)]) -> serde_json::Value {
     let steps: Vec<serde_json::Value> = steps
         .iter()
-        .map(|(lines, phase, note)| {
-            json!({ "lines": lines, "phase": phase, "note": note })
-        })
+        .map(|(lines, phase, note)| json!({ "lines": lines, "phase": phase, "note": note }))
         .collect();
 
     json!({

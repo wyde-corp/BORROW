@@ -9,11 +9,7 @@ use crate::content::types::{
 };
 
 pub fn lessons() -> Vec<SeedLesson> {
-    vec![
-        immutable_borrowing(),
-        mutable_borrowing(),
-        the_core_rule(),
-    ]
+    vec![immutable_borrowing(), mutable_borrowing(), the_core_rule()]
 }
 
 fn immutable_borrowing() -> SeedLesson {

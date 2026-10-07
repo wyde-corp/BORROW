@@ -3,12 +3,14 @@
 //! Derives. What `#[derive]` really does, which derives are worth knowing, and
 //! when the generated implementation is not what you want.
 
-use crate::content::types::{
-    callout, code, gap_fill, labelled, step_through, table, SeedLesson,
-};
+use crate::content::types::{callout, code, gap_fill, labelled, step_through, table, SeedLesson};
 
 pub fn lessons() -> Vec<SeedLesson> {
-    vec![what_derive_does(), the_common_derives(), when_derive_is_not_enough()]
+    vec![
+        what_derive_does(),
+        the_common_derives(),
+        when_derive_is_not_enough(),
+    ]
 }
 
 fn what_derive_does() -> SeedLesson {

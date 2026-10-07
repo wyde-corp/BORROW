@@ -37,6 +37,10 @@ pub struct Exercise {
 impl Exercise {
     /// True when there is no single right answer to check against.
     ///
+    /// Answering exercises is not in the desktop app yet; until it is, this
+    /// reads as unused in that target only.
+    #[allow(dead_code)]
+    ///
     /// The submission flow, the result view, and the graded practice run all
     /// have to agree on this, so it is defined once here. Previously the test
     /// was written out three times, which is exactly the kind of thing that
@@ -48,6 +52,7 @@ impl Exercise {
 
 /// Free-standing form of [`Exercise::is_open_ended`], for callers that have
 /// only a type string (a SQL row, a run item).
+#[allow(dead_code)] // see Exercise::is_open_ended
 pub fn is_open_ended_type(exercise_type: &str) -> bool {
     matches!(exercise_type, "challenge" | "build_it")
 }
