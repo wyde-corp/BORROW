@@ -45,6 +45,20 @@ pub fn hints_of(exercise: &Exercise) -> Vec<String> {
         .unwrap_or_default()
 }
 
+/// The control's label, as the site's `ExerciseView::submit_label` gives it.
+///
+/// Same three-way split for the same reason: `MARK AS DONE` and `CHECK MY WORK`
+/// tell a learner their submission is being recorded, while `CHECK ANSWER` says
+/// it is being scored. Getting that wrong is the difference between a
+/// self-assessed build and a graded question.
+pub fn submit_label(exercise: &Exercise) -> &'static str {
+    match exercise.exercise_type.as_str() {
+        "build_it" | "refactor" | "fill_gap" => "MARK AS DONE",
+        "challenge" => "CHECK MY WORK",
+        _ => "CHECK ANSWER",
+    }
+}
+
 /// A checked answer and what it earned.
 #[derive(Debug, Clone, Default)]
 pub struct Submission {
@@ -190,7 +204,7 @@ fn prompt_block(theme: &Theme, exercise: &Exercise) -> Div {
 
 #[cfg(test)]
 mod tests {
-    use super::grade;
+    use super::{grade, options_of, submit_label};
     use crate::models::Exercise;
 
     fn exercise(kind: &str, correct_answer: &str) -> Exercise {
@@ -251,5 +265,45 @@ mod tests {
 
         let freeform = exercise("challenge", "n/a");
         assert!(freeform.is_open_ended());
+    }
+
+    /// The whole course is multiple-choice under the hood.
+    ///
+    /// Worth pinning because it is the opposite of what the exercise *types*
+    /// suggest: `fill_gap`, `refactor`, `challenge` and `build_it` are not in
+    /// `is_choice` on the site, yet all of them carry options. Branching on
+    /// the type instead of on options is what made 41 exercises look
+    /// answerless when the data had answers all along.
+    #[test]
+    fn every_seeded_exercise_carries_options() {
+        let mut without = Vec::new();
+
+        for seed in crate::content::all() {
+            for exercise in &seed.exercises {
+                if options_of(exercise).is_empty() {
+                    without.push(format!(
+                        "{} ({}) — {}",
+                        exercise.id, exercise.exercise_type, exercise.prompt
+                    ));
+                }
+            }
+        }
+
+        assert!(
+            without.is_empty(),
+            "{} exercises have no options to choose from:\n{}",
+            without.len(),
+            without.join("\n")
+        );
+    }
+
+    /// The control must say what it does: scored, or recorded.
+    #[test]
+    fn the_submit_label_matches_what_the_exercise_needs() {
+        assert_eq!(submit_label(&exercise("mcq", "1")), "CHECK ANSWER");
+        assert_eq!(submit_label(&exercise("fill_gap", "1")), "MARK AS DONE");
+        assert_eq!(submit_label(&exercise("refactor", "1")), "MARK AS DONE");
+        assert_eq!(submit_label(&exercise("build_it", "1")), "MARK AS DONE");
+        assert_eq!(submit_label(&exercise("challenge", "1")), "CHECK MY WORK");
     }
 }

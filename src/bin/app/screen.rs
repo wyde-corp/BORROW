@@ -574,7 +574,6 @@ impl AppView {
         };
 
         let options = exercise_view::options_of(record);
-        let open_ended = record.is_open_ended();
         let chosen = self.selected;
 
         let mut body = div()
@@ -584,6 +583,10 @@ impl AppView {
             .child(exercise_view::question(theme, record))
             .child(self.hints_panel(theme, record, view.clone()));
 
+        // Every seeded exercise carries options, so this is the branch the whole
+        // course reaches: radios, and a submit labelled by kind. The two arms
+        // that used to follow it were unreachable — that is what made 41
+        // exercises look answerless when in fact they were only mis-labelled.
         if !options.is_empty() {
             body = body.child(self.option_list(
                 theme,
@@ -597,7 +600,7 @@ impl AppView {
                 body = body.child(
                     Button::new("check")
                         .primary()
-                        .label("CHECK ANSWER")
+                        .label(exercise_view::submit_label(record))
                         .disabled(chosen.is_none())
                         .on_click({
                             let answer = record.clone();
@@ -616,41 +619,6 @@ impl AppView {
                         }),
                 );
             }
-        } else if open_ended {
-            body = body.child(
-                Button::new("complete")
-                    .primary()
-                    .label("MARK COMPLETE")
-                    .on_click({
-                        let answer = record.clone();
-                        let reported = view.clone();
-                        move |_, _, cx| {
-                            let submission = {
-                                let db = cx.global::<Db>();
-                                exercise_view::submit(db, &answer, None)
-                            };
-                            reported.update(cx, |view, cx| {
-                                view.result = Some(submission);
-                                cx.notify();
-                            });
-                        }
-                    }),
-            );
-        } else {
-            // fill_gap and refactor are graded against typed text. A text field
-            // needs the editor's input state, which Phase 5 builds anyway, so
-            // the question is readable here rather than half-answered.
-            body = body.child(
-                div()
-                    .rounded_md()
-                    .border_1()
-                    .border_color(theme.border)
-                    .bg(theme.secondary)
-                    .p_4()
-                    .text_size(px(13.))
-                    .text_color(theme.muted_foreground)
-                    .child("Type your answer once the editor arrives in a later phase — this exercise is written to grade a typed reply."),
-            );
         }
 
         if let Some(result) = &self.result {
@@ -734,10 +702,14 @@ impl AppView {
         options: &[String],
         result: &exercise_view::Submission,
     ) -> Div {
-        let (mark, colour, words) = if result.correct {
-            ("✓", theme.success, "Correct")
-        } else if record.is_open_ended() {
+        // Checked before correctness: an open-ended exercise has no right
+        // answer, and `correct` for one is only whether a picked option matched
+        // a stored index — reporting that as "Correct" would be inventing a
+        // grade the course never set.
+        let (mark, colour, words) = if record.is_open_ended() {
             ("✓", theme.success, "Recorded")
+        } else if result.correct {
+            ("✓", theme.success, "Correct")
         } else {
             ("✗", theme.danger, "Not quite")
         };
