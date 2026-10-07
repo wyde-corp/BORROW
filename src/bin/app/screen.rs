@@ -5,8 +5,10 @@
 //! `content::all()` is compiled in, so switching screens costs a render rather
 //! than a query.
 
+use crate::app_db::Db;
 use crate::components::label;
 use crate::content::ModuleSeed;
+use crate::exercise as exercise_view;
 use crate::lesson::render_section;
 use crate::models::LessonContent;
 use gpui_kit::component::button::{Button, ButtonVariants};
@@ -23,11 +25,18 @@ pub enum Screen {
     Home,
     Module(usize),
     Lesson { module: usize, lesson: usize },
+    Exercise { module: usize, exercise: usize },
 }
 
 pub struct AppView {
     modules: Vec<ModuleSeed>,
     screen: Screen,
+    /// Which option the learner has picked on the open exercise, and what the
+    /// last submission returned. Both are transient: navigating away and back
+    /// clears them, so a graded result is never left on screen for an exercise
+    /// that has not been answered again.
+    selected: Option<usize>,
+    result: Option<exercise_view::Submission>,
 }
 
 impl AppView {
@@ -35,7 +44,14 @@ impl AppView {
         Self {
             modules,
             screen: Screen::Home,
+            selected: None,
+            result: None,
         }
+    }
+
+    fn clear_answer(&mut self) {
+        self.selected = None;
+        self.result = None;
     }
 
     /// Parses one lesson's stored JSON.
@@ -181,17 +197,77 @@ impl AppView {
             );
         }
 
+        let mut exercise_list = div().flex().flex_col().gap_2();
+
+        for (position, record) in seed.exercises.iter().enumerate() {
+            let id = record.id;
+            let prompt = record
+                .prompt
+                .lines()
+                .next()
+                .unwrap_or(&record.prompt)
+                .trim()
+                .to_string();
+            let module_index = index;
+            let jump_to = view.clone();
+
+            exercise_list = exercise_list.child(
+                div()
+                    .id(format!("exercise-{id}"))
+                    .p_3()
+                    .rounded_md()
+                    .border_1()
+                    .border_color(theme.border)
+                    .bg(theme.secondary)
+                    .cursor_pointer()
+                    .hover(|d| d.bg(theme.muted))
+                    .on_click(move |_, _, cx| {
+                        jump_to.update(cx, |view, cx| {
+                            view.clear_answer();
+                            view.screen = Screen::Exercise {
+                                module: module_index,
+                                exercise: position,
+                            };
+                            cx.notify();
+                        });
+                    })
+                    .flex()
+                    .flex_row()
+                    .items_center()
+                    .gap_3()
+                    .child(
+                        div()
+                            .w(px(28.))
+                            .text_size(px(11.))
+                            .text_color(theme.muted_foreground)
+                            .child(format!("{:02}", position + 1)),
+                    )
+                    .child(
+                        div()
+                            .text_size(px(13.5))
+                            .text_color(theme.foreground)
+                            .child(prompt),
+                    ),
+            );
+        }
+
         let body = div()
             .flex()
             .flex_col()
-            .gap_4()
+            .gap_5()
             .child(
                 div()
                     .text_size(px(13.))
                     .text_color(theme.muted_foreground)
                     .child(description),
             )
-            .child(list);
+            .child(label(theme, format!("LESSONS ({})", seed.lessons.len())))
+            .child(list)
+            .child(label(
+                theme,
+                format!("EXERCISES ({})", seed.exercises.len()),
+            ))
+            .child(exercise_list);
 
         self.shell(theme, view, &title, "", Some(index), body)
     }
@@ -329,6 +405,248 @@ impl AppView {
                     ),
             )
     }
+    /// One exercise: the question, the answer controls, and the result.
+    fn exercise_screen(
+        &self,
+        theme: &Theme,
+        view: Entity<AppView>,
+        module: usize,
+        exercise: usize,
+    ) -> Div {
+        let Some(seed) = self.module(module) else {
+            return self.shell(theme, view, "Exercise not found", "", None, div());
+        };
+        let total = seed.exercises.len();
+        let Some(record) = seed.exercises.get(exercise) else {
+            return self.shell(theme, view, "Exercise not found", "", None, div());
+        };
+
+        let options = exercise_view::options_of(record);
+        let open_ended = record.is_open_ended();
+        let chosen = self.selected;
+
+        let mut body = div()
+            .flex()
+            .flex_col()
+            .gap_5()
+            .child(exercise_view::question(theme, record));
+
+        if !options.is_empty() {
+            body = body.child(self.option_list(theme, &options, chosen, view.clone()));
+
+            if self.result.is_none() {
+                body = body.child(
+                    Button::new("check")
+                        .primary()
+                        .label("CHECK ANSWER")
+                        .disabled(chosen.is_none())
+                        .on_click({
+                            let answer = record.clone();
+                            let picked = chosen;
+                            let reported = view.clone();
+                            move |_, _, cx| {
+                                let submission = {
+                                    let db = cx.global::<Db>();
+                                    exercise_view::submit(db, &answer, picked)
+                                };
+                                reported.update(cx, |view, cx| {
+                                    view.result = Some(submission);
+                                    cx.notify();
+                                });
+                            }
+                        }),
+                );
+            }
+        } else if open_ended {
+            body = body.child(
+                Button::new("complete")
+                    .primary()
+                    .label("MARK COMPLETE")
+                    .on_click({
+                        let answer = record.clone();
+                        let reported = view.clone();
+                        move |_, _, cx| {
+                            let submission = {
+                                let db = cx.global::<Db>();
+                                exercise_view::submit(db, &answer, None)
+                            };
+                            reported.update(cx, |view, cx| {
+                                view.result = Some(submission);
+                                cx.notify();
+                            });
+                        }
+                    }),
+            );
+        } else {
+            // fill_gap and refactor are graded against typed text. A text field
+            // needs the editor's input state, which Phase 5 builds anyway, so
+            // the question is readable here rather than half-answered.
+            body = body.child(
+                div()
+                    .rounded_md()
+                    .border_1()
+                    .border_color(theme.border)
+                    .bg(theme.secondary)
+                    .p_4()
+                    .text_size(px(13.))
+                    .text_color(theme.muted_foreground)
+                    .child("Type your answer once the editor arrives in a later phase — this exercise is written to grade a typed reply."),
+            );
+        }
+
+        if let Some(result) = &self.result {
+            body = body.child(self.feedback(theme, record, &options, result));
+        }
+
+        let heading = format!("Exercise {}/{}", exercise + 1, total);
+        self.shell(theme, view, &heading, "", Some(module), body)
+    }
+
+    /// Choice rows; selecting one updates the view so CHECK ANSWER is enabled.
+    fn option_list(
+        &self,
+        theme: &Theme,
+        options: &[String],
+        selected: Option<usize>,
+        view: Entity<AppView>,
+    ) -> Div {
+        let mut list = div().flex().flex_col().gap_2();
+
+        for (index, text) in options.iter().enumerate() {
+            let chosen = selected == Some(index);
+            let accent = if chosen { theme.primary } else { theme.border };
+            let picked = view.clone();
+
+            list = list.child(
+                div()
+                    .id(format!("option-{index}"))
+                    .cursor_pointer()
+                    .hover(|d| d.border_color(theme.primary))
+                    .on_click(move |_, _, cx| {
+                        picked.update(cx, |view, cx| {
+                            view.selected = Some(index);
+                            view.result = None;
+                            cx.notify();
+                        });
+                    })
+                    .flex()
+                    .flex_row()
+                    .items_start()
+                    .gap_3()
+                    .p_3()
+                    .rounded_md()
+                    .border_1()
+                    .border_color(accent)
+                    .bg(if chosen { theme.muted } else { theme.secondary })
+                    .child(
+                        div()
+                            .w(px(16.))
+                            .text_size(px(13.))
+                            .text_color(if chosen {
+                                theme.primary
+                            } else {
+                                theme.muted_foreground
+                            })
+                            .child(if chosen { "●" } else { "○" }),
+                    )
+                    .child(
+                        div()
+                            .text_size(px(13.5))
+                            .text_color(theme.foreground)
+                            .child(text.clone()),
+                    ),
+            );
+        }
+
+        list
+    }
+
+    /// What the last submission earned, with the explanation attached.
+    fn feedback(
+        &self,
+        theme: &Theme,
+        record: &crate::models::Exercise,
+        options: &[String],
+        result: &exercise_view::Submission,
+    ) -> Div {
+        let (mark, colour, words) = if result.correct {
+            ("✓", theme.success, "Correct")
+        } else if record.is_open_ended() {
+            ("✓", theme.success, "Recorded")
+        } else {
+            ("✗", theme.danger, "Not quite")
+        };
+
+        let chosen = result
+            .shown_answer
+            .parse::<usize>()
+            .ok()
+            .and_then(|index| options.get(index))
+            .cloned()
+            .unwrap_or_else(|| result.shown_answer.clone());
+
+        let mut panel = div()
+            .rounded_md()
+            .border_1()
+            .border_color(colour)
+            .bg(theme.secondary)
+            .p_4()
+            .flex()
+            .flex_col()
+            .gap_3()
+            .child(
+                div()
+                    .flex()
+                    .flex_row()
+                    .items_center()
+                    .gap_3()
+                    .child(div().text_size(px(16.)).text_color(colour).child(mark))
+                    .child(
+                        div()
+                            .text_size(px(15.))
+                            .font_weight(FontWeight::BOLD)
+                            .text_color(colour)
+                            .child(words),
+                    )
+                    .child(if result.xp > 0 {
+                        div()
+                            .text_size(px(12.))
+                            .text_color(theme.warning)
+                            .child(format!("+{} XP", result.xp))
+                    } else {
+                        div()
+                    }),
+            );
+
+        if !chosen.is_empty() && !record.is_open_ended() {
+            panel = panel.child(
+                div()
+                    .text_size(px(13.))
+                    .text_color(theme.muted_foreground)
+                    .child(format!("Your answer: {chosen}")),
+            );
+        }
+
+        if !result.message.is_empty() {
+            panel = panel.child(
+                div()
+                    .text_size(px(13.))
+                    .text_color(theme.muted_foreground)
+                    .child(result.message.clone()),
+            );
+        }
+
+        if !record.explanation.trim().is_empty() {
+            panel = panel.child(
+                div()
+                    .text_size(px(13.))
+                    .text_color(theme.foreground)
+                    .child(record.explanation.trim().to_string()),
+            );
+        }
+
+        panel
+    }
 }
 
 /// The top strip: wordmark back to home, and where you are.
@@ -380,11 +698,13 @@ impl Render for AppView {
             Screen::Home => self.home(theme, view),
             Screen::Module(index) => self.module_screen(theme, view, index),
             Screen::Lesson { module, lesson } => self.lesson_screen(theme, view, module, lesson),
+            Screen::Exercise { module, exercise } => {
+                self.exercise_screen(theme, view, module, exercise)
+            }
         }
     }
 }
 
-/// The page heading: title, plus a subtitle only when the screen has one.
 fn heading(theme: &Theme, title: &str, subtitle: &str) -> Div {
     let mut head = div().flex().flex_col().gap_1();
     head = head.child(

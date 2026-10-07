@@ -22,6 +22,23 @@ mod lesson;
 mod models;
 #[path = "app/screen.rs"]
 mod screen;
+// The web's host/port and playground-guard helpers; the desktop app binds no
+// listener. Allowed here rather than in shared code, so the web target keeps
+// the lint.
+#[allow(dead_code)]
+#[path = "../config.rs"]
+mod config;
+#[path = "../db/mod.rs"]
+mod db;
+// The read-side queries are the web's. The desktop app calls only
+// `record_exercise_result`, so everything else reads as dead here.
+#[path = "app/db.rs"]
+mod app_db;
+#[path = "app/exercise.rs"]
+mod exercise;
+#[allow(dead_code)]
+#[path = "../services/progress.rs"]
+mod progress;
 #[path = "app/theme.rs"]
 mod theme;
 
@@ -37,6 +54,15 @@ fn main() {
         if let Err(err) = theme::apply(cx) {
             panic!("could not apply the BORROW_ theme: {err:#}");
         }
+
+        // Seeding and migrations happen here rather than in a view, so the
+        // cost lands once on launch and no click handler can discover halfway
+        // through that the schema is not there yet.
+        let db = match app_db::Db::connect() {
+            Ok(db) => db,
+            Err(err) => panic!("could not open the database: {err:#}"),
+        };
+        cx.set_global(db);
 
         let modules = content::all();
 

@@ -50,79 +50,96 @@ pub struct ProgressSummary {
 }
 
 pub async fn all_modules(pool: &SqlitePool) -> Result<Vec<Module>> {
-    Ok(sqlx::query_as::<_, Module>("SELECT * FROM modules ORDER BY order_index")
-        .fetch_all(pool)
-        .await?)
+    Ok(
+        sqlx::query_as::<_, Module>("SELECT * FROM modules ORDER BY order_index")
+            .fetch_all(pool)
+            .await?,
+    )
 }
 
 pub async fn module_by_id(pool: &SqlitePool, id: i64) -> Result<Option<Module>> {
-    Ok(sqlx::query_as::<_, Module>("SELECT * FROM modules WHERE id = ?")
-        .bind(id)
-        .fetch_optional(pool)
-        .await?)
+    Ok(
+        sqlx::query_as::<_, Module>("SELECT * FROM modules WHERE id = ?")
+            .bind(id)
+            .fetch_optional(pool)
+            .await?,
+    )
 }
 
 pub async fn lesson_by_id(pool: &SqlitePool, id: i64) -> Result<Option<Lesson>> {
-    Ok(sqlx::query_as::<_, Lesson>("SELECT * FROM lessons WHERE id = ?")
-        .bind(id)
-        .fetch_optional(pool)
-        .await?)
+    Ok(
+        sqlx::query_as::<_, Lesson>("SELECT * FROM lessons WHERE id = ?")
+            .bind(id)
+            .fetch_optional(pool)
+            .await?,
+    )
 }
 
 pub async fn lessons_for_module(pool: &SqlitePool, module_id: i64) -> Result<Vec<Lesson>> {
-    Ok(sqlx::query_as::<_, Lesson>("SELECT * FROM lessons WHERE module_id = ? ORDER BY order_index")
-        .bind(module_id)
-        .fetch_all(pool)
-        .await?)
+    Ok(sqlx::query_as::<_, Lesson>(
+        "SELECT * FROM lessons WHERE module_id = ? ORDER BY order_index",
+    )
+    .bind(module_id)
+    .fetch_all(pool)
+    .await?)
 }
 
 pub async fn exercises_for_module(pool: &SqlitePool, module_id: i64) -> Result<Vec<Exercise>> {
-    Ok(sqlx::query_as::<_, Exercise>("SELECT * FROM exercises WHERE module_id = ? ORDER BY order_index")
-        .bind(module_id)
-        .fetch_all(pool)
-        .await?)
+    Ok(sqlx::query_as::<_, Exercise>(
+        "SELECT * FROM exercises WHERE module_id = ? ORDER BY order_index",
+    )
+    .bind(module_id)
+    .fetch_all(pool)
+    .await?)
 }
 
 pub async fn projects_for_module(pool: &SqlitePool, module_id: i64) -> Result<Vec<Project>> {
-    Ok(sqlx::query_as::<_, Project>("SELECT * FROM projects WHERE module_id = ? ORDER BY order_index")
-        .bind(module_id)
-        .fetch_all(pool)
-        .await?)
+    Ok(sqlx::query_as::<_, Project>(
+        "SELECT * FROM projects WHERE module_id = ? ORDER BY order_index",
+    )
+    .bind(module_id)
+    .fetch_all(pool)
+    .await?)
 }
 
 pub async fn exercise_by_id(pool: &SqlitePool, id: i64) -> Result<Option<Exercise>> {
-    Ok(sqlx::query_as::<_, Exercise>("SELECT * FROM exercises WHERE id = ?")
-        .bind(id)
-        .fetch_optional(pool)
-        .await?)
+    Ok(
+        sqlx::query_as::<_, Exercise>("SELECT * FROM exercises WHERE id = ?")
+            .bind(id)
+            .fetch_optional(pool)
+            .await?,
+    )
 }
 
 pub async fn project_by_id(pool: &SqlitePool, id: i64) -> Result<Option<Project>> {
-    Ok(sqlx::query_as::<_, Project>("SELECT * FROM projects WHERE id = ?")
-        .bind(id)
-        .fetch_optional(pool)
-        .await?)
+    Ok(
+        sqlx::query_as::<_, Project>("SELECT * FROM projects WHERE id = ?")
+            .bind(id)
+            .fetch_optional(pool)
+            .await?,
+    )
 }
 
 pub async fn next_exercise_id(pool: &SqlitePool, exercise_id: i64) -> Result<Option<i64>> {
-    Ok(sqlx::query_scalar::<_, i64>("SELECT id FROM exercises WHERE id > ? ORDER BY id LIMIT 1")
-        .bind(exercise_id)
-        .fetch_optional(pool)
-        .await?)
+    Ok(
+        sqlx::query_scalar::<_, i64>("SELECT id FROM exercises WHERE id > ? ORDER BY id LIMIT 1")
+            .bind(exercise_id)
+            .fetch_optional(pool)
+            .await?,
+    )
 }
 
 pub async fn completed_lesson_ids(pool: &SqlitePool) -> Result<Vec<i64>> {
-    Ok(sqlx::query_scalar::<_, i64>("SELECT lesson_id FROM progress WHERE lesson_id IS NOT NULL")
-        .fetch_all(pool)
-        .await?)
+    Ok(
+        sqlx::query_scalar::<_, i64>("SELECT lesson_id FROM progress WHERE lesson_id IS NOT NULL")
+            .fetch_all(pool)
+            .await?,
+    )
 }
 
 /// How many of a module's own lessons are complete. Scoped to the module —
 /// a global count would unlock the wrong thing.
-pub async fn completed_lesson_count_for_module(
-    pool: &SqlitePool,
-    module_id: i64,
-) -> Result<i64> {
+pub async fn completed_lesson_count_for_module(pool: &SqlitePool, module_id: i64) -> Result<i64> {
     Ok(sqlx::query_scalar::<_, i64>(
         "SELECT COUNT(*) FROM progress p JOIN lessons l ON l.id = p.lesson_id WHERE l.module_id = ?",
     )
@@ -132,23 +149,31 @@ pub async fn completed_lesson_count_for_module(
 }
 
 pub async fn completed_exercise_ids(pool: &SqlitePool) -> Result<Vec<i64>> {
-    Ok(sqlx::query_scalar::<_, i64>("SELECT exercise_id FROM progress WHERE exercise_id IS NOT NULL")
-        .fetch_all(pool)
-        .await?)
+    Ok(sqlx::query_scalar::<_, i64>(
+        "SELECT exercise_id FROM progress WHERE exercise_id IS NOT NULL",
+    )
+    .fetch_all(pool)
+    .await?)
 }
 
 pub async fn is_lesson_completed(pool: &SqlitePool, lesson_id: i64) -> Result<bool> {
-    Ok(sqlx::query_scalar::<_, bool>("SELECT EXISTS(SELECT 1 FROM progress WHERE lesson_id = ?)")
-        .bind(lesson_id)
-        .fetch_one(pool)
-        .await?)
+    Ok(
+        sqlx::query_scalar::<_, bool>("SELECT EXISTS(SELECT 1 FROM progress WHERE lesson_id = ?)")
+            .bind(lesson_id)
+            .fetch_one(pool)
+            .await?,
+    )
 }
 
 pub async fn is_exercise_completed(pool: &SqlitePool, exercise_id: i64) -> Result<bool> {
-    Ok(sqlx::query_scalar::<_, bool>("SELECT EXISTS(SELECT 1 FROM progress WHERE exercise_id = ?)")
+    Ok(
+        sqlx::query_scalar::<_, bool>(
+            "SELECT EXISTS(SELECT 1 FROM progress WHERE exercise_id = ?)",
+        )
         .bind(exercise_id)
         .fetch_one(pool)
-        .await?)
+        .await?,
+    )
 }
 
 pub async fn mark_lesson_complete(pool: &SqlitePool, lesson_id: i64) -> Result<bool> {
@@ -173,7 +198,11 @@ pub async fn mark_lesson_complete(pool: &SqlitePool, lesson_id: i64) -> Result<b
     Ok(true)
 }
 
-pub async fn record_exercise_result(pool: &SqlitePool, exercise_id: i64, correct: bool) -> Result<i64> {
+pub async fn record_exercise_result(
+    pool: &SqlitePool,
+    exercise_id: i64,
+    correct: bool,
+) -> Result<i64> {
     let exercise = exercise_by_id(pool, exercise_id).await?;
 
     let Some(exercise) = exercise else {
@@ -199,9 +228,11 @@ pub async fn record_exercise_result(pool: &SqlitePool, exercise_id: i64, correct
 }
 
 pub async fn total_xp(pool: &SqlitePool) -> Result<i64> {
-    Ok(sqlx::query_scalar::<_, i64>("SELECT COALESCE(SUM(xp_earned), 0) FROM progress")
-        .fetch_one(pool)
-        .await?)
+    Ok(
+        sqlx::query_scalar::<_, i64>("SELECT COALESCE(SUM(xp_earned), 0) FROM progress")
+            .fetch_one(pool)
+            .await?,
+    )
 }
 
 pub const LESSON_XP: i64 = 10;
@@ -315,10 +346,11 @@ pub async fn lesson_page_data(pool: &SqlitePool, lesson_id: i64) -> Result<Lesso
             .fetch_optional(pool)
             .await?;
 
-            let total = sqlx::query_scalar::<_, i64>("SELECT COUNT(*) FROM lessons WHERE module_id = ?")
-                .bind(l.module_id)
-                .fetch_one(pool)
-                .await?;
+            let total =
+                sqlx::query_scalar::<_, i64>("SELECT COUNT(*) FROM lessons WHERE module_id = ?")
+                    .bind(l.module_id)
+                    .fetch_one(pool)
+                    .await?;
 
             (prev, next, total, l.order_index)
         }
