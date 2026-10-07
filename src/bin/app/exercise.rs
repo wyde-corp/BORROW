@@ -6,7 +6,7 @@
 //! completion instead, which is what earns the XP.
 
 use crate::models::Exercise;
-use crate::progress;
+use crate::services::progress;
 use gpui_kit::component::Theme;
 use gpui_kit::*;
 

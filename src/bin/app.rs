@@ -25,20 +25,22 @@ mod screen;
 // The web's host/port and playground-guard helpers; the desktop app binds no
 // listener. Allowed here rather than in shared code, so the web target keeps
 // the lint.
+#[path = "app/db.rs"]
+mod app_db;
 #[allow(dead_code)]
 #[path = "../config.rs"]
 mod config;
 #[path = "../db/mod.rs"]
 mod db;
-// The read-side queries are the web's. The desktop app calls only
-// `record_exercise_result`, so everything else reads as dead here.
-#[path = "app/db.rs"]
-mod app_db;
 #[path = "app/exercise.rs"]
 mod exercise;
+// The whole tree rather than just `progress`: `practice.rs` addresses
+// `crate::services::progress` by that exact path. The desktop app calls
+// `record_exercise_result` and the practice API — the read-side queries and
+// the sandbox are the web's, so dead code is allowed at the module boundary.
 #[allow(dead_code)]
-#[path = "../services/progress.rs"]
-mod progress;
+#[path = "../services/mod.rs"]
+mod services;
 #[path = "app/theme.rs"]
 mod theme;
 

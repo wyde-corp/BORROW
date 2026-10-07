@@ -10,7 +10,8 @@ use crate::components::label;
 use crate::content::ModuleSeed;
 use crate::exercise as exercise_view;
 use crate::lesson::render_section;
-use crate::models::LessonContent;
+use crate::models::{Exercise, LessonContent};
+use crate::services::practice;
 use gpui_kit::component::button::{Button, ButtonVariants};
 use gpui_kit::component::*;
 // `overflow_y_scroll` is on StatefulInteractiveElement, not InteractiveElement,
@@ -24,8 +25,44 @@ use gpui_kit::{InteractiveElement, StatefulInteractiveElement};
 pub enum Screen {
     Home,
     Module(usize),
-    Lesson { module: usize, lesson: usize },
-    Exercise { module: usize, exercise: usize },
+    Lesson {
+        module: usize,
+        lesson: usize,
+    },
+    Exercise {
+        module: usize,
+        exercise: usize,
+    },
+    /// Practice builder for a module.
+    Practice {
+        module: usize,
+    },
+    /// One question of an active run.
+    PracticeRun {
+        module: usize,
+    },
+    /// After finishing a run.
+    PracticeResults {
+        module: usize,
+    },
+}
+
+/// Everything the practice screens need between renders, all loaded once on
+/// navigation rather than re-queried per frame.
+#[derive(Default)]
+struct PracticeState {
+    builder: Option<practice::BuilderData>,
+    run: Option<practice::RunPageData>,
+    results: Option<practice::ResultsData>,
+    position: usize,
+    selected: Option<usize>,
+}
+
+/// Which of the two answer fields an option row writes to.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+enum AnswerSlot {
+    Exercise,
+    PracticeQuestion,
 }
 
 pub struct AppView {
@@ -37,6 +74,7 @@ pub struct AppView {
     /// that has not been answered again.
     selected: Option<usize>,
     result: Option<exercise_view::Submission>,
+    practice: PracticeState,
 }
 
 impl AppView {
@@ -46,12 +84,17 @@ impl AppView {
             screen: Screen::Home,
             selected: None,
             result: None,
+            practice: PracticeState::default(),
         }
     }
 
     fn clear_answer(&mut self) {
         self.selected = None;
         self.result = None;
+    }
+
+    fn clear_practice(&mut self) {
+        self.practice = PracticeState::default();
     }
 
     /// Parses one lesson's stored JSON.
@@ -251,7 +294,7 @@ impl AppView {
             );
         }
 
-        let body = div()
+        let mut body = div()
             .flex()
             .flex_col()
             .gap_5()
@@ -268,6 +311,29 @@ impl AppView {
                 format!("EXERCISES ({})", seed.exercises.len()),
             ))
             .child(exercise_list);
+
+        // Practice is reached from here rather than from the nav: it is
+        // per-module by nature, and its builder needs the module's id to find
+        // the runs belonging to it.
+        let target = view.clone();
+        let practice_module = index;
+        let module_id = seed.module.id;
+        body = body.child(
+            Button::new("practice")
+                .primary()
+                .label("PRACTICE THIS MODULE")
+                .on_click(move |_, _, cx| {
+                    let data = load_builder(cx, module_id);
+                    target.update(cx, |view, cx| {
+                        view.clear_practice();
+                        view.practice.builder = data;
+                        view.screen = Screen::Practice {
+                            module: practice_module,
+                        };
+                        cx.notify();
+                    });
+                }),
+        );
 
         self.shell(theme, view, &title, "", Some(index), body)
     }
@@ -432,7 +498,13 @@ impl AppView {
             .child(exercise_view::question(theme, record));
 
         if !options.is_empty() {
-            body = body.child(self.option_list(theme, &options, chosen, view.clone()));
+            body = body.child(self.option_list(
+                theme,
+                &options,
+                chosen,
+                AnswerSlot::Exercise,
+                view.clone(),
+            ));
 
             if self.result.is_none() {
                 body = body.child(
@@ -508,6 +580,7 @@ impl AppView {
         theme: &Theme,
         options: &[String],
         selected: Option<usize>,
+        slot: AnswerSlot,
         view: Entity<AppView>,
     ) -> Div {
         let mut list = div().flex().flex_col().gap_2();
@@ -524,8 +597,15 @@ impl AppView {
                     .hover(|d| d.border_color(theme.primary))
                     .on_click(move |_, _, cx| {
                         picked.update(cx, |view, cx| {
-                            view.selected = Some(index);
-                            view.result = None;
+                            match slot {
+                                AnswerSlot::Exercise => {
+                                    view.selected = Some(index);
+                                    view.result = None;
+                                }
+                                AnswerSlot::PracticeQuestion => {
+                                    view.practice.selected = Some(index);
+                                }
+                            }
                             cx.notify();
                         });
                     })
@@ -647,6 +727,466 @@ impl AppView {
 
         panel
     }
+
+    /// The practice builder: resume an unfinished run, start a new one, and
+    /// see how previous runs went.
+    fn practice_screen(&self, theme: &Theme, view: Entity<AppView>, module: usize) -> Div {
+        let Some(seed) = self.module(module) else {
+            return self.shell(theme, view, "Practice not found", "", None, div());
+        };
+        let module_id = seed.module.id;
+
+        let mut body = div().flex().flex_col().gap_5();
+
+        match self.practice.builder.as_ref() {
+            None => {
+                body = body.child(
+                    div()
+                        .text_size(px(13.))
+                        .text_color(theme.muted_foreground)
+                        .child("Practice questions could not be loaded."),
+                )
+            }
+            Some(data) => {
+                let total = data.exercises.len();
+
+                body = body.child(
+                    div()
+                        .text_size(px(13.))
+                        .text_color(theme.muted_foreground)
+                        .child(format!(
+                            "{total} gradable questions. Practice never awards XP and never marks a lesson complete — wrong answers are yours to keep, not to lose credit for."
+                        )),
+                );
+
+                if let Some(run) = &data.unfinished {
+                    let run_id = run.id;
+                    let target = view.clone();
+                    let resumed = run.label.clone();
+                    body = body.child(
+                        Button::new("resume")
+                            .primary()
+                            .label(format!("RESUME — {resumed}"))
+                            .on_click(move |_, _, cx| {
+                                if let Some(page) = load_run(cx, run_id) {
+                                    let first =
+                                        page.answers.len().min(page.items.len()).saturating_sub(0);
+                                    target.update(cx, |view, cx| {
+                                        view.clear_answer();
+                                        view.practice.run = Some(page);
+                                        view.practice.position = first;
+                                        view.practice.selected = None;
+                                        view.screen = Screen::PracticeRun { module };
+                                        cx.notify();
+                                    });
+                                }
+                            }),
+                    );
+                }
+
+                let mut actions = div().flex().flex_row().gap_3().flex_wrap();
+
+                let all_count = total;
+                let target_all = view.clone();
+                actions = actions.child(
+                    Button::new("all")
+                        .primary()
+                        .label(format!("PRACTICE ALL {all_count}"))
+                        .on_click(move |_, _, cx| {
+                            if let Some(page) = start_run(cx, module_id, None) {
+                                target_all.update(cx, |view, cx| {
+                                    view.clear_answer();
+                                    view.practice.run = Some(page);
+                                    view.practice.position = 0;
+                                    view.practice.selected = None;
+                                    view.screen = Screen::PracticeRun { module };
+                                    cx.notify();
+                                });
+                            }
+                        }),
+                );
+
+                if total > 10 {
+                    let target_ten = view.clone();
+                    actions = actions.child(
+                        Button::new("ten")
+                            .secondary()
+                            .label("10 QUESTIONS")
+                            .on_click(move |_, _, cx| {
+                                if let Some(page) = start_run(cx, module_id, Some(10)) {
+                                    target_ten.update(cx, |view, cx| {
+                                        view.clear_answer();
+                                        view.practice.run = Some(page);
+                                        view.practice.position = 0;
+                                        view.practice.selected = None;
+                                        view.screen = Screen::PracticeRun { module };
+                                        cx.notify();
+                                    });
+                                }
+                            }),
+                    );
+                }
+
+                body = body.child(actions);
+
+                if !data.history.is_empty() {
+                    let mut history = div().flex().flex_col().gap_2();
+
+                    for (run, correct, history_total) in &data.history {
+                        history = history.child(
+                            div()
+                                .flex()
+                                .flex_row()
+                                .justify_between()
+                                .py_2()
+                                .border_b_1()
+                                .border_color(theme.border)
+                                .child(
+                                    div()
+                                        .text_size(px(13.))
+                                        .text_color(theme.foreground)
+                                        .child(format!("{} · {}", run.label, run.created_at)),
+                                )
+                                .child(
+                                    div()
+                                        .text_size(px(13.))
+                                        .text_color(if *correct == *history_total {
+                                            theme.success
+                                        } else {
+                                            theme.warning
+                                        })
+                                        .child(format!("{correct}/{history_total}")),
+                                ),
+                        );
+                    }
+
+                    body = body.child(label(theme, "PAST RUNS")).child(history);
+                }
+            }
+        }
+
+        self.shell(theme, view, "Practice", "", Some(module), body)
+    }
+
+    /// One question of an active run: answer it, then move on.
+    fn practice_run_screen(&self, theme: &Theme, view: Entity<AppView>, module: usize) -> Div {
+        let Some(data) = self.practice.run.as_ref() else {
+            return self.shell(theme, view, "Practice not found", "", Some(module), div());
+        };
+        let total = data.items.len();
+        let position = self.practice.position.min(total.saturating_sub(1));
+
+        let Some(item) = data.items.get(position) else {
+            return self.shell(theme, view, "Practice not found", "", Some(module), div());
+        };
+        let exercise = &item.exercise;
+        let options = exercise_view::options_of(exercise);
+        let run_id = data.run.id;
+
+        // An answer already on the run is the source of truth for whether this
+        // question has been answered — it survives navigation back and forth
+        // and a restart, where a field on the view would not.
+        let answered = data.answers.iter().find(|(id, _, _)| *id == exercise.id);
+
+        let mut body = div()
+            .flex()
+            .flex_col()
+            .gap_5()
+            .child(
+                div()
+                    .flex()
+                    .flex_row()
+                    .items_baseline()
+                    .gap_4()
+                    .child(label(theme, format!("QUESTION {} / {total}", position + 1))),
+            )
+            .child(exercise_view::question(theme, exercise));
+
+        if !options.is_empty() {
+            body = body.child(self.option_list(
+                theme,
+                &options,
+                self.practice.selected,
+                AnswerSlot::PracticeQuestion,
+                view.clone(),
+            ));
+
+            match answered {
+                None => {
+                    let chosen = self.practice.selected;
+                    let target = view.clone();
+                    let answer_for = exercise.clone();
+                    body = body.child(
+                        Button::new("check")
+                            .primary()
+                            .label("CHECK ANSWER")
+                            .disabled(chosen.is_none())
+                            .on_click(move |_, _, cx| {
+                                let Some(index) = chosen else {
+                                    return;
+                                };
+                                answer_question(cx, run_id, &answer_for, Some(index));
+                                let page = load_run(cx, run_id);
+                                target.update(cx, |view, cx| {
+                                    view.practice.run = page;
+                                    view.practice.selected = None;
+                                    cx.notify();
+                                });
+                            }),
+                    );
+                }
+                Some((_, correct, given)) => {
+                    let (mark, colour, words) = if *correct {
+                        ("✓", theme.success, "Correct")
+                    } else {
+                        ("✗", theme.danger, "Not quite")
+                    };
+
+                    let shown = given
+                        .parse::<usize>()
+                        .ok()
+                        .and_then(|index| options.get(index))
+                        .cloned()
+                        .unwrap_or_else(|| given.clone());
+
+                    let mut panel = div()
+                        .rounded_md()
+                        .border_1()
+                        .border_color(colour)
+                        .bg(theme.secondary)
+                        .p_4()
+                        .flex()
+                        .flex_col()
+                        .gap_3()
+                        .child(
+                            div()
+                                .flex()
+                                .flex_row()
+                                .items_center()
+                                .gap_3()
+                                .child(div().text_size(px(16.)).text_color(colour).child(mark))
+                                .child(
+                                    div()
+                                        .text_size(px(15.))
+                                        .font_weight(FontWeight::BOLD)
+                                        .text_color(colour)
+                                        .child(words),
+                                ),
+                        );
+
+                    if !shown.is_empty() {
+                        panel = panel.child(
+                            div()
+                                .text_size(px(13.))
+                                .text_color(theme.muted_foreground)
+                                .child(format!("You answered: {shown}")),
+                        );
+                    }
+
+                    if !exercise.explanation.trim().is_empty() {
+                        panel = panel.child(
+                            div()
+                                .text_size(px(13.))
+                                .text_color(theme.foreground)
+                                .child(exercise.explanation.trim().to_string()),
+                        );
+                    }
+
+                    body = body.child(panel);
+                }
+            }
+        }
+
+        // ── movement ──
+        let mut pager = div().flex().flex_row().gap_3();
+
+        if position > 0 {
+            let target = view.clone();
+            pager = pager.child(Button::new("prev").secondary().label("← PREV").on_click(
+                move |_, _, cx| {
+                    target.update(cx, |view, cx| {
+                        view.practice.position = view.practice.position.saturating_sub(1);
+                        view.practice.selected = None;
+                        cx.notify();
+                    });
+                },
+            ));
+        }
+
+        if position + 1 < total {
+            let target = view.clone();
+            pager = pager.child(Button::new("next").secondary().label("NEXT →").on_click(
+                move |_, _, cx| {
+                    target.update(cx, |view, cx| {
+                        view.practice.position += 1;
+                        view.practice.selected = None;
+                        cx.notify();
+                    });
+                },
+            ));
+        } else {
+            let target = view.clone();
+            pager = pager.child(Button::new("finish").primary().label("FINISH →").on_click(
+                move |_, _, cx| {
+                    if let Some(results) = finish_run(cx, run_id) {
+                        target.update(cx, |view, cx| {
+                            view.practice.results = Some(results);
+                            view.practice.selected = None;
+                            view.screen = Screen::PracticeResults { module };
+                            cx.notify();
+                        });
+                    }
+                },
+            ));
+        }
+
+        body = body.child(pager);
+
+        self.shell(theme, view, &data.run.label, "", Some(module), body)
+    }
+
+    /// The score after a run, and a way to throw it away and start again.
+    fn practice_results_screen(&self, theme: &Theme, view: Entity<AppView>, module: usize) -> Div {
+        let Some(data) = self.practice.results.as_ref() else {
+            return self.shell(theme, view, "Results not found", "", Some(module), div());
+        };
+
+        let total = data.items.len();
+        let correct = data.answers.iter().filter(|answer| answer.correct).count();
+        let perfect = correct == total;
+        let colour = if perfect {
+            theme.success
+        } else if correct == 0 {
+            theme.danger
+        } else {
+            theme.warning
+        };
+
+        let mut rows = div().flex().flex_col().gap_2();
+
+        for item in &data.items {
+            let answer = data
+                .answers
+                .iter()
+                .find(|answer| answer.exercise_id == item.exercise.id);
+            let answered_correct = answer.map(|a| a.correct).unwrap_or(false);
+            let given = answer.and_then(|a| a.given.clone()).unwrap_or_default();
+
+            let shown = given
+                .parse::<usize>()
+                .ok()
+                .and_then(|index| {
+                    exercise_view::options_of(&item.exercise)
+                        .get(index)
+                        .cloned()
+                })
+                .unwrap_or_else(|| given.clone());
+
+            rows = rows.child(
+                div()
+                    .flex()
+                    .flex_row()
+                    .items_start()
+                    .gap_3()
+                    .py_2()
+                    .border_b_1()
+                    .border_color(theme.border)
+                    .child(
+                        div()
+                            .text_size(px(14.))
+                            .text_color(if answered_correct {
+                                theme.success
+                            } else {
+                                theme.danger
+                            })
+                            .child(if answered_correct { "✓" } else { "✗" }),
+                    )
+                    .child(
+                        div()
+                            .flex()
+                            .flex_col()
+                            .gap_1()
+                            .child(
+                                div().text_size(px(13.)).text_color(theme.foreground).child(
+                                    item.exercise
+                                        .prompt
+                                        .lines()
+                                        .next()
+                                        .unwrap_or("")
+                                        .trim()
+                                        .to_string(),
+                                ),
+                            )
+                            .child(
+                                div()
+                                    .text_size(px(12.))
+                                    .text_color(theme.muted_foreground)
+                                    .child(if shown.is_empty() {
+                                        "not answered".to_string()
+                                    } else {
+                                        format!("you said: {shown}")
+                                    }),
+                            ),
+                    ),
+            );
+        }
+
+        let mut body = div()
+            .flex()
+            .flex_col()
+            .gap_5()
+            .child(
+                div()
+                    .flex()
+                    .flex_row()
+                    .items_baseline()
+                    .gap_4()
+                    .text_size(px(32.))
+                    .font_weight(FontWeight::BOLD)
+                    .text_color(colour)
+                    .child(format!("{correct}/{total}"))
+                    .child(
+                        div()
+                            .text_size(px(13.))
+                            .text_color(theme.muted_foreground)
+                            .child(if perfect {
+                                "every one correct"
+                            } else {
+                                "graded practice — no XP at stake"
+                            }),
+                    ),
+            )
+            .child(rows);
+
+        let run_id = data.run.id;
+        let module_id = self
+            .module(module)
+            .map(|seed| seed.module.id)
+            .unwrap_or_default();
+        let another = view.clone();
+
+        body = body.child(div().flex().flex_row().gap_3()).child(
+            Button::new("again")
+                .primary()
+                .label("START ANOTHER RUN")
+                .on_click(move |_, _, cx| {
+                    // Discard the finished run rather than leaving it to
+                    // show up as unfinished later; its answers cascade.
+                    let _ = discard_run(cx, run_id);
+                    let builder = load_builder(cx, module_id);
+                    another.update(cx, |view, cx| {
+                        view.practice = PracticeState {
+                            builder,
+                            ..Default::default()
+                        };
+                        view.screen = Screen::Practice { module };
+                        cx.notify();
+                    });
+                }),
+        );
+
+        self.shell(theme, view, &data.run.label, "", Some(module), body)
+    }
 }
 
 /// The top strip: wordmark back to home, and where you are.
@@ -701,8 +1241,102 @@ impl Render for AppView {
             Screen::Exercise { module, exercise } => {
                 self.exercise_screen(theme, view, module, exercise)
             }
+            Screen::Practice { module } => self.practice_screen(theme, view, module),
+            Screen::PracticeRun { module } => self.practice_run_screen(theme, view, module),
+            Screen::PracticeResults { module } => self.practice_results_screen(theme, view, module),
         }
     }
+}
+
+/// Runs a database call inside a gpui callback.
+///
+/// The `&Db` borrow has to end before `view.update`, which needs `cx`
+/// mutably; returning an owned value makes that ordering obvious rather than
+/// something to reason about at every call site.
+fn with_db<T>(cx: &App, f: impl FnOnce(&Db) -> T) -> T {
+    f(cx.global::<Db>())
+}
+
+/// The practice builder's data for a module, or nothing if it cannot be read.
+fn load_builder(cx: &App, module_id: i64) -> Option<practice::BuilderData> {
+    with_db(cx, |db| {
+        db.block_on(practice::builder_data(db.pool(), module_id))
+            .ok()
+            .flatten()
+    })
+}
+
+/// Starts a run of `limit` questions — every gradable one when `None` — and
+/// returns the page to render.
+///
+/// Questions come from `gradable_exercises`, which excludes open-ended work:
+/// a practice run is scored, and there is nothing to score there.
+fn start_run(cx: &App, module_id: i64, limit: Option<usize>) -> Option<practice::RunPageData> {
+    with_db(cx, |db| {
+        let pool = db.pool();
+        let gradable = db
+            .block_on(practice::gradable_exercises(pool, module_id))
+            .ok()?;
+        let take = limit.unwrap_or(gradable.len()).min(gradable.len());
+        let ids: Vec<i64> = gradable.iter().take(take).map(|e| e.id).collect();
+
+        if ids.is_empty() {
+            return None;
+        }
+
+        let label = format!("{} questions", ids.len());
+        let run = db
+            .block_on(practice::create_run(pool, module_id, &label, &ids))
+            .ok()?;
+        db.block_on(practice::run_page_data(pool, run.id))
+            .ok()
+            .flatten()
+    })
+}
+
+/// Reopens a run's page.
+fn load_run(cx: &App, run_id: i64) -> Option<practice::RunPageData> {
+    with_db(cx, |db| {
+        db.block_on(practice::run_page_data(db.pool(), run_id))
+            .ok()
+            .flatten()
+    })
+}
+
+/// Scores one answer and stores it, returning whether it was correct.
+///
+/// The write goes to `practice_answers` only — `record_answer` deliberately
+/// never touches `progress`, so a wrong answer stays invisible to XP and to
+/// the module page. That is why the table exists separately.
+fn answer_question(cx: &App, run_id: i64, exercise: &Exercise, selected: Option<usize>) -> bool {
+    with_db(cx, |db| {
+        let (correct, given) = exercise_view::grade(exercise, selected, false);
+        let _ = db.block_on(practice::record_answer(
+            db.pool(),
+            run_id,
+            exercise.id,
+            &given,
+            correct,
+        ));
+        correct
+    })
+}
+
+/// Marks a run finished and loads its results.
+fn finish_run(cx: &App, run_id: i64) -> Option<practice::ResultsData> {
+    with_db(cx, |db| {
+        let _ = db.block_on(practice::finish_run(db.pool(), run_id));
+        db.block_on(practice::results_data(db.pool(), run_id))
+            .ok()
+            .flatten()
+    })
+}
+
+/// Throws a run away — items and answers cascade — for starting again.
+fn discard_run(cx: &App, run_id: i64) -> bool {
+    with_db(cx, |db| {
+        db.block_on(practice::delete_run(db.pool(), run_id)).is_ok()
+    })
 }
 
 fn heading(theme: &Theme, title: &str, subtitle: &str) -> Div {
