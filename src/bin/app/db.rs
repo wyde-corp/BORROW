@@ -35,13 +35,22 @@ pub struct Db {
 impl Global for Db {}
 
 impl Db {
-    /// Opens the database, applying migrations and seeding content if empty.
+    /// Opens the app's database, applying migrations and seeding if empty.
     ///
     /// Seeding happens once, against an empty database, so the cost lands on
     /// first launch rather than in any particular view.
     pub fn connect() -> Result<Self> {
+        Self::connect_with(&crate::config::database_url())
+    }
+
+    /// Opens an arbitrary database URL.
+    ///
+    /// Exists for tests: writing a practice run must not reach for the real
+    /// `borrow.db`, so a test can hand in a throwaway file and migrate and seed
+    /// that instead.
+    pub fn connect_with(url: &str) -> Result<Self> {
         let runtime = Arc::new(Runtime::new().map_err(|err| anyhow::anyhow!("tokio: {err}"))?);
-        let pool = runtime.block_on(db::init())?;
+        let pool = runtime.block_on(db::init_at(url))?;
 
         Ok(Self { runtime, pool })
     }

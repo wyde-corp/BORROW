@@ -7,10 +7,17 @@ use std::str::FromStr;
 
 use crate::config;
 
+/// The web server's entry point, which reads `BORROW_DB_URL`. The desktop app
+/// calls [`init_at`] directly, so this reads as dead code there.
+#[allow(dead_code)]
 pub async fn init() -> Result<SqlitePool> {
-    let url = config::database_url();
+    init_at(&config::database_url()).await
+}
 
-    let options = SqliteConnectOptions::from_str(&url)?
+/// [`init`] against an explicit URL, so tests can point at a throwaway file
+/// instead of the app's database.
+pub async fn init_at(url: &str) -> Result<SqlitePool> {
+    let options = SqliteConnectOptions::from_str(url)?
         .create_if_missing(true)
         .journal_mode(SqliteJournalMode::Wal)
         .foreign_keys(true);

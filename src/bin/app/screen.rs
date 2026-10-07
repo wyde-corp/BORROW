@@ -1377,8 +1377,8 @@ fn callout(theme: &Theme, title: &str, text: &str) -> Div {
 ///   built-in `#[test]`. Every test here would have been gpui's macro, which
 ///   is what crashed the compiler. Hence the explicit imports.
 #[cfg(test)]
-mod keyboard_tests {
-    use super::AppView;
+mod ui_tests {
+    use super::{answer_question, finish_run, load_builder, start_run, AppView, Screen};
     use gpui_kit::{TestAppContext, TestDispatcher, VisualTestContext};
 
     /// Applies the BORROW_ theme and opens the app at home on this context.
@@ -1386,9 +1386,7 @@ mod keyboard_tests {
     /// Takes `&mut TestAppContext` rather than building its own so the returned
     /// window context can borrow it — returning a reference to a local built
     /// inside would not compile.
-    fn open(
-        cx: &mut TestAppContext,
-    ) -> (gpui_kit::Entity<AppView>, &mut VisualTestContext) {
+    fn open(cx: &mut TestAppContext) -> (gpui_kit::Entity<AppView>, &mut VisualTestContext) {
         cx.update(|cx| {
             gpui_kit::init(cx);
             let _ = crate::theme::apply(cx);
@@ -1397,6 +1395,25 @@ mod keyboard_tests {
         let (view, window) = cx.add_window_view(|_, _| AppView::new(crate::content::all()));
         window.update(|window, cx| window.draw(cx).clear(cx));
         (view, window)
+    }
+
+    /// Opens the app on a database of its own.
+    ///
+    /// Practice writes, so a test needs a pool — but not *the* pool. Each test
+    /// gets its own file, migrated and seeded fresh, rather than writing rows
+    /// into the app's `borrow.db` or racing another test over one shared file.
+    fn open_with_db<'a>(
+        cx: &'a mut TestAppContext,
+        name: &'static str,
+    ) -> (gpui_kit::Entity<AppView>, &'a mut VisualTestContext) {
+        let path = std::env::temp_dir().join(format!("borrow-ui-{name}-{}.db", std::process::id()));
+        let _ = std::fs::remove_file(&path);
+
+        let url = format!("sqlite:{}?mode=rwc", path.display());
+        let db = crate::app_db::Db::connect_with(&url).expect("test database migrates and seeds");
+        cx.update(|cx| cx.set_global(db));
+
+        open(cx)
     }
 
     fn screen_of(view: &gpui_kit::Entity<AppView>, cx: &mut VisualTestContext) -> String {
@@ -1447,6 +1464,105 @@ mod keyboard_tests {
             screen_of(&view, cx),
             "Module(0)",
             "Enter on a focused module card should navigate"
+        );
+    }
+
+    /// The practice builder must draw against real seeded data, not an empty
+    /// state. A panic here is a broken screen — `draw` is the assertion.
+    #[test]
+    fn practice_builder_renders_with_seeded_data() {
+        let mut cx = TestAppContext::build(TestDispatcher::new(0), Some("practice_builder"));
+        let (view, cx) = open_with_db(&mut cx, "practice_builder");
+
+        cx.update(|_, cx| {
+            let module_id = view.read(cx).modules[1].module.id;
+            let builder = load_builder(cx, module_id);
+            view.update(cx, |view, cx| {
+                view.clear_practice();
+                view.practice.builder = builder;
+                view.screen = Screen::Practice { module: 1 };
+                cx.notify();
+            });
+        });
+        cx.update(|window, cx| window.draw(cx).clear(cx));
+
+        assert_eq!(screen_of(&view, cx), "Practice { module: 1 }");
+
+        let exercises = cx.update(|_, cx| {
+            view.read(cx)
+                .practice
+                .builder
+                .as_ref()
+                .map(|builder| builder.exercises.len())
+        });
+        assert!(
+            exercises.unwrap_or(0) > 0,
+            "the builder should carry the module's exercises, got {exercises:?}"
+        );
+    }
+
+    /// Start a run, answer a question, finish — each step rendered.
+    ///
+    /// This is the coverage the screen grabs could not give: the run and
+    /// results screens were wired in phase 4 and never seen to render.
+    #[test]
+    fn a_run_can_be_started_answered_and_finished() {
+        let mut cx = TestAppContext::build(TestDispatcher::new(0), Some("practice_run"));
+        let (view, cx) = open_with_db(&mut cx, "practice_run");
+
+        cx.update(|_, cx| {
+            let module_id = view.read(cx).modules[1].module.id;
+            let page = start_run(cx, module_id, Some(3));
+            view.update(cx, |view, cx| {
+                view.clear_practice();
+                view.practice.run = page;
+                view.screen = Screen::PracticeRun { module: 1 };
+                cx.notify();
+            });
+        });
+        cx.update(|window, cx| window.draw(cx).clear(cx));
+
+        assert_eq!(screen_of(&view, cx), "PracticeRun { module: 1 }");
+
+        let requested = cx.update(|_, cx| {
+            view.read(cx)
+                .practice
+                .run
+                .as_ref()
+                .map(|page| page.items.len())
+        });
+        assert_eq!(requested, Some(3), "three questions were asked for");
+
+        // Answer the first question and finish the run, rendering both.
+        cx.update(|_, cx| {
+            let page = view.read(cx).practice.run.clone().expect("run loaded");
+            let run_id = page.run.id;
+            let exercise = page.items[0].exercise.clone();
+
+            let _ = answer_question(cx, run_id, &exercise, Some(0));
+            let results = finish_run(cx, run_id);
+
+            view.update(cx, |view, cx| {
+                view.practice.results = results;
+                view.screen = Screen::PracticeResults { module: 1 };
+                cx.notify();
+            });
+        });
+        cx.update(|window, cx| window.draw(cx).clear(cx));
+
+        assert_eq!(screen_of(&view, cx), "PracticeResults { module: 1 }");
+
+        let answers = cx.update(|_, cx| {
+            view.read(cx)
+                .practice
+                .results
+                .as_ref()
+                .map(|results| results.answers.len())
+        });
+        assert_eq!(
+            answers,
+            Some(1),
+            "the one answer recorded should be in the results"
         );
     }
 }
