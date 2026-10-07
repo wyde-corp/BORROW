@@ -4,6 +4,22 @@
 //! deliberately the only one — swapping the backend later (a WASI sandbox, a
 //! container) should mean rewriting this file and nothing else.
 //!
+//! ## What each platform gets
+//!
+//! The desktop app runs this on whatever OS it was installed on, so the
+//! mitigations are not uniform — this table is what the code actually does,
+//! rather than what a `Timeout`/`MemoryLimit` label implies:
+//!
+//! | | wall clock | address-space cap | peak-RSS signal |
+//! |---|---|---|---|
+//! | Linux | yes | yes (`ulimit -v`) | yes (`/proc`) |
+//! | macOS | yes | **no** — `ulimit -v` is not enforced | no |
+//! | Windows | yes | **no** — no POSIX shell to carry it | no |
+//!
+//! A timeout stops `loop {}` everywhere. A memory blow-up is diagnosed
+//! properly only on Linux; elsewhere the allocator either reports its own
+//! failure in `stderr` (detected by the message) or the OS intervenes.
+//!
 //! ## What this is not
 //!
 //! It is not a security boundary. A Rust program compiled and run here has the
@@ -343,22 +359,44 @@ fn peak_rss_kb(pid: u32) -> Option<u64> {
     })
 }
 
-/// rustc swallows the memory cap for us if we set it in the environment of the
-/// compile itself; for the *run* we go through `sh` so `ulimit -v` applies and
-/// `exec` keeps the pid we can kill.
+/// Launches the compiled program with whatever resource limits this platform
+/// can offer, and reports the outcome through the child handle.
+///
+/// The shell wrapper exists for exactly one reason: `ulimit -v` has to apply to
+/// the program itself, not to a `sh` that then forks away from it, so the child
+/// `exec`s in place and keeps a pid the wall clock can kill.
+///
+/// **Windows takes a different path.** There is no POSIX shell to lean on — the
+/// one that CI's runners happen to ship (Git Bash) would also mangle the
+/// backslashes in a Windows temp path, which is how the playground failed to run
+/// *anything* until this was split. The binary is spawned directly there: the
+/// run timeout still bounds a runaway loop, but there is no address-space cap.
 fn run_with_limits(bin: &Path, dir: &Path) -> std::io::Result<std::process::Child> {
-    Command::new("sh")
-        .arg("-c")
-        .arg(format!(
-            "ulimit -v {} 2>/dev/null; exec {}",
-            MEMORY_LIMIT_KB,
-            bin.display()
-        ))
-        .current_dir(dir)
-        .stdin(Stdio::null())
-        .stdout(Stdio::piped())
-        .stderr(Stdio::piped())
-        .spawn()
+    #[cfg(windows)]
+    {
+        Command::new(bin)
+            .current_dir(dir)
+            .stdin(Stdio::null())
+            .stdout(Stdio::piped())
+            .stderr(Stdio::piped())
+            .spawn()
+    }
+
+    #[cfg(not(windows))]
+    {
+        Command::new("sh")
+            .arg("-c")
+            .arg(format!(
+                "ulimit -v {} 2>/dev/null; exec {}",
+                MEMORY_LIMIT_KB,
+                bin.display()
+            ))
+            .current_dir(dir)
+            .stdin(Stdio::null())
+            .stdout(Stdio::piped())
+            .stderr(Stdio::piped())
+            .spawn()
+    }
 }
 
 // ── Public entry point ──────────────────────────────────────────────────
@@ -1010,6 +1048,12 @@ fn main() {
 
     /// The address-space cap, hit by one oversized allocation. Deterministic:
     /// the allocator fails on the first try, so this does not race the clock.
+    ///
+    /// Linux only, because enforcing the cap is Linux-only: it comes from
+    /// `ulimit -v` on the child, macOS does not enforce it (CI's macOS runner
+    /// returned `Ok` for a 600 MB allocation), and Windows has no equivalent
+    /// in this runner. `run_with_limits` documents what each platform gets.
+    #[cfg(target_os = "linux")]
     #[test]
     fn an_oversized_allocation_hits_the_memory_cap() {
         let r = run("fn main() { let v: Vec<u8> = vec![0u8; 600 * 1024 * 1024]; println!(\"{}\", v.len()); }");
@@ -1028,6 +1072,12 @@ fn main() {
     /// past the run clock. Asserting only the diagnosis here: which of the two
     /// signals got there first is genuinely a near-tie for this workload, and
     /// `peak_rss_kb` below covers that mechanism directly.
+    ///
+    /// Linux only for the same reason as the test above: both signals it
+    /// depends on — `ulimit -v` stopping the program, and `/proc` supplying
+    /// peak RSS — are absent on macOS and Windows. There, this workload is a
+    /// plain timeout, which the timeout test covers.
+    #[cfg(target_os = "linux")]
     #[test]
     fn a_slowly_growing_heap_is_reported_as_memory_not_as_a_timeout() {
         let r = run(
@@ -1050,6 +1100,11 @@ fn main() {
     /// If `peak_rss_kb` silently stopped working, memory failures would be
     /// misdiagnosed as timeouts and nothing else would catch it — the
     /// end-to-end tests above can't tell the two signals apart.
+    ///
+    /// Linux only because `peak_rss_kb` reads `/proc`. It returns `None`
+    /// elsewhere rather than guessing, which is correct-but-useless, so there
+    /// is nothing here worth asserting off Linux.
+    #[cfg(target_os = "linux")]
     #[test]
     fn peak_rss_is_readable() {
         let peak = peak_rss_kb(std::process::id())
