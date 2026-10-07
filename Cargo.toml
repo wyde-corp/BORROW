@@ -24,3 +24,8 @@ tower-http = { version = "0.5", features = ["fs"] }
 # universe: same names, different `App`/`Window`, and errors that look like
 # "expected `App`, found `App`".
 gpui-kit = "0.7.1"
+
+# Headless UI tests: render real views and drive focus/keys with no window
+# behind it. Dev-only so the shipped binary does not carry the test harness.
+[dev-dependencies]
+gpui-kit = { version = "0.7.1", features = ["test-support"] }

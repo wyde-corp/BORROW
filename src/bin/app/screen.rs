@@ -128,52 +128,55 @@ impl AppView {
             let lesson_count = seed.lessons.len();
             let jump_to = view.clone();
 
-            list = list.child(
-                div()
-                    .id(format!("module-{index}"))
-                    .p_4()
-                    .rounded_md()
-                    .border_1()
-                    .border_color(theme.border)
-                    .bg(theme.secondary)
-                    .cursor_pointer()
-                    .hover(|d| d.bg(theme.muted))
-                    .on_click(move |_, _, cx| {
-                        jump_to.update(cx, |view, cx| {
-                            view.screen = Screen::Module(index);
-                            cx.notify();
-                        });
-                    })
-                    .flex()
-                    .flex_col()
-                    .gap_1()
-                    .child(
-                        div()
-                            .flex()
-                            .flex_row()
-                            .items_baseline()
-                            .justify_between()
-                            .child(
-                                div()
-                                    .text_size(px(15.))
-                                    .text_color(theme.foreground)
-                                    .font_weight(FontWeight::BOLD)
-                                    .child(title),
-                            )
-                            .child(
-                                div()
-                                    .text_size(px(11.))
-                                    .text_color(theme.muted_foreground)
-                                    .child(format!("{lesson_count} lessons")),
-                            ),
-                    )
-                    .child(
-                        div()
-                            .text_size(px(13.))
-                            .text_color(theme.muted_foreground)
-                            .child(description),
-                    ),
-            );
+            // A Button rather than a div with on_click: gpui-component's Button
+            // owns focus, so the card is reachable with Tab and activates on
+            // Enter or Space without a second focus path to maintain. Its
+            // content stays ours — ParentElement lets the card hold the same
+            // title/description layout the div had.
+            let card = Button::new(format!("module-{index}"))
+                .ghost()
+                .rounded_md()
+                .border_1()
+                .border_color(theme.border)
+                .bg(theme.secondary)
+                .p_4()
+                .flex()
+                .flex_col()
+                .gap_1()
+                .on_click(move |_, _, cx| {
+                    jump_to.update(cx, |view, cx| {
+                        view.screen = Screen::Module(index);
+                        cx.notify();
+                    });
+                })
+                .child(
+                    div()
+                        .flex()
+                        .flex_row()
+                        .items_baseline()
+                        .justify_between()
+                        .child(
+                            div()
+                                .text_size(px(15.))
+                                .text_color(theme.foreground)
+                                .font_weight(FontWeight::BOLD)
+                                .child(title),
+                        )
+                        .child(
+                            div()
+                                .text_size(px(11.))
+                                .text_color(theme.muted_foreground)
+                                .child(format!("{lesson_count} lessons")),
+                        ),
+                )
+                .child(
+                    div()
+                        .text_size(px(13.))
+                        .text_color(theme.muted_foreground)
+                        .child(description),
+                );
+
+            list = list.child(card);
         }
 
         self.shell(
@@ -202,15 +205,13 @@ impl AppView {
             let jump_to = view.clone();
 
             list = list.child(
-                div()
-                    .id(format!("lesson-{id}"))
+                Button::new(format!("lesson-{id}"))
+                    .ghost()
                     .p_3()
                     .rounded_md()
                     .border_1()
                     .border_color(theme.border)
                     .bg(theme.secondary)
-                    .cursor_pointer()
-                    .hover(|d| d.bg(theme.muted))
                     .on_click(move |_, _, cx| {
                         jump_to.update(cx, |view, cx| {
                             view.screen = Screen::Lesson {
@@ -255,15 +256,13 @@ impl AppView {
             let jump_to = view.clone();
 
             exercise_list = exercise_list.child(
-                div()
-                    .id(format!("exercise-{id}"))
+                Button::new(format!("exercise-{id}"))
+                    .ghost()
                     .p_3()
                     .rounded_md()
                     .border_1()
                     .border_color(theme.border)
                     .bg(theme.secondary)
-                    .cursor_pointer()
-                    .hover(|d| d.bg(theme.muted))
                     .on_click(move |_, _, cx| {
                         jump_to.update(cx, |view, cx| {
                             view.clear_answer();
@@ -591,10 +590,8 @@ impl AppView {
             let picked = view.clone();
 
             list = list.child(
-                div()
-                    .id(format!("option-{index}"))
-                    .cursor_pointer()
-                    .hover(|d| d.border_color(theme.primary))
+                Button::new(format!("option-{index}"))
+                    .ghost()
                     .on_click(move |_, _, cx| {
                         picked.update(cx, |view, cx| {
                             match slot {
@@ -1202,9 +1199,8 @@ fn navbar(theme: &Theme, to_home: Entity<AppView>, module_name: String) -> Div {
         .border_color(theme.border)
         .bg(theme.secondary)
         .child(
-            div()
-                .id("nav-home")
-                .cursor_pointer()
+            Button::new("nav-home")
+                .ghost()
                 .text_size(px(15.))
                 .font_weight(FontWeight::BOLD)
                 .text_color(theme.primary)
@@ -1364,4 +1360,93 @@ fn heading(theme: &Theme, title: &str, subtitle: &str) -> Div {
 /// Convenience used by the lesson view's unavailable-content fallback.
 fn callout(theme: &Theme, title: &str, text: &str) -> Div {
     crate::components::callout(theme, title, text, crate::components::CalloutTone::Error)
+}
+
+/// Keyboard behaviour, checked without a compositor behind it.
+///
+/// The cards are `Button`s rather than `div().on_click` specifically so they
+/// sit in the focus order and activate on Enter — a pointer-only list would
+/// have looked identical on screen and been unreachable from a keyboard. This
+/// is the test that says the difference is real.
+///
+/// Two things are deliberately avoided in here:
+///
+/// - `#[gpui_kit::test]` segfaults against this version of gpui;
+/// - `use super::*` — the parent module does `use gpui_kit::*`, which carries
+///   gpui's own `test` attribute macro, and that silently replaces Rust's
+///   built-in `#[test]`. Every test here would have been gpui's macro, which
+///   is what crashed the compiler. Hence the explicit imports.
+#[cfg(test)]
+mod keyboard_tests {
+    use super::AppView;
+    use gpui_kit::{TestAppContext, TestDispatcher, VisualTestContext};
+
+    /// Applies the BORROW_ theme and opens the app at home on this context.
+    ///
+    /// Takes `&mut TestAppContext` rather than building its own so the returned
+    /// window context can borrow it — returning a reference to a local built
+    /// inside would not compile.
+    fn open(
+        cx: &mut TestAppContext,
+    ) -> (gpui_kit::Entity<AppView>, &mut VisualTestContext) {
+        cx.update(|cx| {
+            gpui_kit::init(cx);
+            let _ = crate::theme::apply(cx);
+        });
+
+        let (view, window) = cx.add_window_view(|_, _| AppView::new(crate::content::all()));
+        window.update(|window, cx| window.draw(cx).clear(cx));
+        (view, window)
+    }
+
+    fn screen_of(view: &gpui_kit::Entity<AppView>, cx: &mut VisualTestContext) -> String {
+        cx.update(|_, cx| format!("{:?}", view.read(cx).screen))
+    }
+
+    fn press(cx: &mut VisualTestContext, key: &str) {
+        let keystroke = gpui_kit::Keystroke::parse(key).expect("parses");
+        cx.simulate_event(gpui_kit::KeyDownEvent {
+            keystroke: keystroke.clone(),
+            is_held: false,
+            prefer_character_input: false,
+        });
+        cx.simulate_event(gpui_kit::KeyUpEvent { keystroke });
+    }
+
+    #[test]
+    fn some_control_is_reachable_from_the_keyboard() {
+        let mut cx = TestAppContext::build(TestDispatcher::new(0), Some("focus_exists"));
+        let (view, cx) = open(&mut cx);
+
+        // The floor under the whole accessibility claim: if nothing is
+        // focusable, focus_next leaves focus nowhere.
+        cx.update(|window, cx| window.focus_next(cx));
+        let focused = cx.update(|window, cx| window.focused(cx).is_some());
+
+        assert!(focused, "the first control should take focus on Tab");
+        let _ = view;
+    }
+
+    #[test]
+    fn tab_walks_from_the_wordmark_into_the_first_module_card() {
+        let mut cx = TestAppContext::build(TestDispatcher::new(0), Some("tab_walks"));
+        let (view, cx) = open(&mut cx);
+
+        assert_eq!(screen_of(&view, cx), "Home");
+
+        // First stop is the BORROW_ wordmark in the navbar, second the first
+        // module card. If the cards were plain divs again the second stop
+        // would not be a card, and Enter would leave us on Home.
+        cx.update(|window, cx| window.focus_next(cx));
+        cx.update(|window, cx| window.focus_next(cx));
+        press(cx, "enter");
+        cx.run_until_parked();
+        cx.update(|window, cx| window.draw(cx).clear(cx));
+
+        assert_eq!(
+            screen_of(&view, cx),
+            "Module(0)",
+            "Enter on a focused module card should navigate"
+        );
+    }
 }
