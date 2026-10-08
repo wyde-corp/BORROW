@@ -1,4 +1,4 @@
-//! Phase 3 — the screens: `cargo run --bin app`
+//! Phase 3 — the screens: `cargo run --bin borrow-app`
 //!
 //! Phase 1 proved the stack opens a window; phase 2 proved BORROW_'s tokens
 //! reach gpui-component's components. This renders real course content — the
@@ -40,6 +40,8 @@ mod config;
 mod db;
 #[path = "app/exercise.rs"]
 mod exercise;
+#[path = "app/fonts.rs"]
+mod fonts;
 // The whole tree rather than just `progress`: `practice.rs` addresses
 // `crate::services::progress` by that exact path. The desktop app calls
 // `record_exercise_result` and the practice API — the read-side queries and
@@ -56,6 +58,30 @@ use screen::AppView;
 fn main() {
     gpui_kit::application().run(|cx| {
         gpui_kit::init(cx);
+
+        // Fonts before the theme: an explicitly named family that was never
+        // registered renders no glyphs at all, so registration cannot happen
+        // after — or skipped — and the theme below must not come first.
+        if let Err(err) = cx.text_system().add_fonts(fonts::all()) {
+            panic!("could not register the embedded fonts: {err}");
+        }
+
+        // Not a panic: a font stack that refuses the registration still
+        // renders (badly, with no glyphs for the named family), and the
+        // message tells us which machine and which family — a crash at
+        // startup would say less.
+        if !cx
+            .text_system()
+            .all_font_names()
+            .iter()
+            .any(|name| name == fonts::FAMILY)
+        {
+            eprintln!(
+                "warning: {} is embedded but did not register with the font stack; \
+                 text may not shape",
+                fonts::FAMILY
+            );
+        }
 
         // After init: gpui_kit::init installs gpui-component's own defaults and
         // flips to light mode, so applying ours first would be thrown away.

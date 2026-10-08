@@ -3,6 +3,17 @@ name = "borrow"
 version = "0.1.0"
 edition = "2021"
 
+# The two entry points, named rather than left to inference: CI, HANDOFF.md
+# and the installers all say which binary they mean, and an installed desktop
+# app called `app` is a poor neighbour in /usr/bin.
+[[bin]]
+name = "borrow"
+path = "src/main.rs"
+
+[[bin]]
+name = "borrow-app"
+path = "src/bin/app.rs"
+
 [dependencies]
 axum = "0.7"
 tokio = { version = "1", features = ["full"] }

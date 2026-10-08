@@ -65,10 +65,10 @@ src/bin/app/borrow.theme.json  135 colour tokens, 31 syntax scopes
 ### Commands
 
 ```bash
-cargo build --bin borrow --bin app   # both targets
+cargo build --bin borrow --bin borrow-app   # both targets
 cargo test                           # 160 tests
 cargo clippy --all-targets           # must be clean
-cargo run --bin app                  # launch the desktop app
+cargo run --bin borrow-app            # launch the desktop app
 ```
 
 CI is `.github/workflows/app.yml` — builds both binaries and runs tests on
@@ -223,7 +223,7 @@ No release artifacts exist yet. CI builds binaries but uploads nothing.
   draw that text still shapes (a missing family renders nothing).
 - **Signing.** macOS needs an Apple Developer account ($99/yr) or Gatekeeper
   blocks installers. Windows Authenticode is optional but SmartScreen warns.
-- **Release build:** `cargo build --release --bin app` (the debug binary is
+- **Release build:** `cargo build --release --bin borrow-app` (the debug binary is
   756 MB; tree-sitter adds to this, so check the release size too).
 - **Desktop integration:** an icon (there is none yet), `.desktop` file on
   Linux, bundle id / Info.plist on macOS, ProductName on Windows.

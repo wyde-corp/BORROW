@@ -37,17 +37,25 @@ impl Global for Db {}
 impl Db {
     /// Opens the app's database, applying migrations and seeding if empty.
     ///
-    /// Seeding happens once, against an empty database, so the cost lands on
-    /// first launch rather than in any particular view.
+    /// The location is `db::init_app`'s decision — the per-user data
+    /// directory, because an installed app has no cwd of its own — and
+    /// seeding happens here rather than in a view, so the cost lands once on
+    /// launch and no click handler can discover halfway through that the
+    /// schema is not there yet.
     pub fn connect() -> Result<Self> {
-        Self::connect_with(&crate::config::database_url())
+        let runtime = Arc::new(Runtime::new().map_err(|err| anyhow::anyhow!("tokio: {err}"))?);
+        let pool = runtime.block_on(db::init_app())?;
+
+        Ok(Self { runtime, pool })
     }
 
     /// Opens an arbitrary database URL.
     ///
-    /// Exists for tests: writing a practice run must not reach for the real
-    /// `borrow.db`, so a test can hand in a throwaway file and migrate and seed
-    /// that instead.
+    /// Exists for `ui_tests`: writing a practice run must not reach for the
+    /// real database, so a test hands in a throwaway file and migrates and
+    /// seeds that instead. Nothing in the shipped app calls it — hence the
+    /// allow — but the tests are the only reason it is here.
+    #[allow(dead_code)]
     pub fn connect_with(url: &str) -> Result<Self> {
         let runtime = Arc::new(Runtime::new().map_err(|err| anyhow::anyhow!("tokio: {err}"))?);
         let pool = runtime.block_on(db::init_at(url))?;

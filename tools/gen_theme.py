@@ -296,11 +296,14 @@ def build():
         # shadcn's 6/8.
         "radius": 4,
         "radius.lg": 8,
-        # No `font.family` on purpose. IBM Plex Mono is not bundled yet
-        # (`assets/fonts/` is empty), and gpui uses an explicitly named family
-        # as-is rather than falling back — naming an absent font is how text
-        # ends up laying out with no glyphs. The web app has the same gap and
-        # falls back the same way. Bundling lands with packaging.
+        # The design's family, embedded from `assets/fonts/` and registered
+        # at startup with `text_system().add_fonts` before the theme is
+        # applied. gpui uses an explicitly named family as-is rather than
+        # falling back, so naming one that was never registered renders no
+        # glyphs at all — `fonts.rs` and these two strings must agree, and
+        # `theme::tests` says so.
+        "font.family": "IBM Plex Mono",
+        "mono_font.family": "IBM Plex Mono",
         "shadow": False,
         "colors": colors,
         "highlight": highlight,

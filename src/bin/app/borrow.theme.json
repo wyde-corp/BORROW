@@ -9,6 +9,8 @@
       "mode": "dark",
       "radius": 4,
       "radius.lg": 8,
+      "font.family": "IBM Plex Mono",
+      "mono_font.family": "IBM Plex Mono",
       "shadow": false,
       "colors": {
         "accent.background": "#1C1915",

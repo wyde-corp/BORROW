@@ -137,6 +137,13 @@ mod tests {
             gpui_kit::px(8.),
             "the design's large radius"
         );
+
+        // The embedded family, not a system one. gpui uses an explicitly
+        // named family as-is, so this pair — and `fonts.rs` registering the
+        // bytes behind it — is what stops text shaping with no glyphs on a
+        // machine that has never heard of IBM Plex Mono.
+        assert_eq!(&*theme.font_family, crate::fonts::FAMILY, "body font");
+        assert_eq!(&*theme.mono_font_family, crate::fonts::FAMILY, "code font");
     }
 
     fn css_tokens() -> HashMap<String, String> {

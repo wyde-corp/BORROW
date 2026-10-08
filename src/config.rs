@@ -1,8 +1,79 @@
 use std::env;
 use std::net::{IpAddr, Ipv4Addr, Ipv6Addr, SocketAddr};
+use std::path::PathBuf;
 
 pub fn database_url() -> String {
     env::var("BORROW_DB_URL").unwrap_or_else(|_| "sqlite:borrow.db?mode=rwc".to_string())
+}
+
+/// The desktop app's database file.
+///
+/// The web keeps [`database_url`]'s relative path: it runs from the repository,
+/// where a `borrow.db` beside the process is a feature. The installed app has
+/// no such directory — its cwd is wherever the launcher put it (`/` on macOS
+/// when opened from Finder, the shortcut's "Start in" on Windows) — so
+/// progress lives in a directory the user owns instead.
+///
+/// `BORROW_DB_URL` still wins when it is set; see `db::init_app`.
+#[allow(dead_code)] // called by the desktop app only; the web has its own URL
+pub fn app_database_path() -> PathBuf {
+    app_data_dir().join("borrow.db")
+}
+
+/// The directory [`app_database_path`] lives in, per platform convention:
+/// never beside the executable, which is not ours to write to.
+///
+/// Falls back to the current directory when no home can be found, which is
+/// the pre-0.1 behaviour — better to write somewhere than to refuse to start.
+#[allow(dead_code)] // called by the desktop app only
+pub fn app_data_dir() -> PathBuf {
+    let platform = if cfg!(target_os = "macos") {
+        Platform::Mac
+    } else if cfg!(windows) {
+        Platform::Windows
+    } else {
+        Platform::Other
+    };
+
+    let home = env::var_os("HOME").map(PathBuf::from);
+    let xdg = env::var_os("XDG_DATA_HOME").map(PathBuf::from);
+    let appdata = env::var_os("APPDATA").map(PathBuf::from);
+
+    data_dir_for(platform, home, xdg, appdata)
+        .unwrap_or_else(|| std::env::current_dir().unwrap_or_else(|_| PathBuf::from(".")))
+}
+
+/// Which platform's rules apply, so all three can be tested on any one of
+/// them — the environment is read here and handed in, never read twice.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+enum Platform {
+    Mac,
+    Windows,
+    Other,
+}
+
+/// macOS: `~/Library/Application Support/BORROW`
+/// Windows: `%APPDATA%\BORROW`, with `HOME` as the belt-and-braces case
+/// Linux/other: `$XDG_DATA_HOME/borrow`, with `~/.local/share/borrow`
+fn data_dir_for(
+    platform: Platform,
+    home: Option<PathBuf>,
+    xdg_data: Option<PathBuf>,
+    appdata: Option<PathBuf>,
+) -> Option<PathBuf> {
+    match platform {
+        Platform::Mac => home.map(|home| {
+            home.join("Library")
+                .join("Application Support")
+                .join("BORROW")
+        }),
+        Platform::Windows => appdata
+            .or_else(|| home.map(|home| home.join("AppData").join("Roaming")))
+            .map(|dir| dir.join("BORROW")),
+        Platform::Other => xdg_data
+            .map(|dir| dir.join("borrow"))
+            .or_else(|| home.map(|home| home.join(".local").join("share").join("borrow"))),
+    }
 }
 
 pub fn address() -> SocketAddr {
@@ -92,5 +163,75 @@ mod playground_guard_tests {
     fn a_non_loopback_bind_can_opt_in_explicitly() {
         let addr: SocketAddr = "0.0.0.0:3000".parse().unwrap();
         assert!(playground_allowed_on(addr.ip(), true));
+    }
+}
+
+#[cfg(test)]
+mod data_dir_tests {
+    use super::*;
+    use std::path::PathBuf;
+
+    fn some(path: &str) -> Option<PathBuf> {
+        Some(PathBuf::from(path))
+    }
+
+    /// All three platforms' rules, exercised wherever the tests run: the
+    /// installed app must land in a directory the user owns on every one of
+    /// them, never beside the executable.
+    #[test]
+    fn each_platform_has_its_own_data_directory() {
+        assert_eq!(
+            data_dir_for(Platform::Mac, some("/Users/ada"), None, None),
+            some("/Users/ada/Library/Application Support/BORROW")
+        );
+        assert_eq!(
+            data_dir_for(
+                Platform::Windows,
+                None,
+                None,
+                some("C:/Users/ada/AppData/Roaming")
+            ),
+            some("C:/Users/ada/AppData/Roaming/BORROW")
+        );
+        assert_eq!(
+            data_dir_for(Platform::Windows, some("C:/Users/ada"), None, None),
+            some("C:/Users/ada/AppData/Roaming/BORROW")
+        );
+        assert_eq!(
+            data_dir_for(Platform::Other, some("/home/ada"), some("/ada/.data"), None),
+            some("/ada/.data/borrow")
+        );
+        assert_eq!(
+            data_dir_for(Platform::Other, some("/home/ada"), None, None),
+            some("/home/ada/.local/share/borrow")
+        );
+    }
+
+    /// No home, no environment: `None`, and the caller falls back to the
+    /// current directory rather than refusing to start.
+    #[test]
+    fn an_empty_environment_falls_back_instead_of_failing() {
+        assert_eq!(data_dir_for(Platform::Mac, None, None, None), None);
+        assert_eq!(data_dir_for(Platform::Windows, None, None, None), None);
+        assert_eq!(data_dir_for(Platform::Other, None, None, None), None);
+    }
+
+    /// A home directory with a space in it is the normal case on every
+    /// platform — which is exactly why the path never becomes a URL.
+    #[test]
+    fn a_home_with_spaces_is_a_path_not_a_url() {
+        let path = data_dir_for(
+            Platform::Windows,
+            None,
+            None,
+            some("C:/Users/Ada Lovelace/AppData/Roaming"),
+        )
+        .expect("appdata is set")
+        .join("borrow.db");
+
+        assert_eq!(
+            path.to_string_lossy(),
+            "C:/Users/Ada Lovelace/AppData/Roaming/BORROW/borrow.db"
+        );
     }
 }
