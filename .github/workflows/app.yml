@@ -52,3 +52,26 @@ jobs:
 
       - name: Test
         run: cargo test
+
+      # The part no test covers: the window opens, nothing panics on the way
+      # up, and the database lands where a user owns it rather than wherever
+      # the launcher left the cwd. A virtual display is enough to prove
+      # launch; a screenshot would mean stealing focus from the machine.
+      - name: Smoke-test the desktop app
+        if: runner.os == 'Linux'
+        run: |
+          sudo apt-get install -y --no-install-recommends xvfb
+          set +e
+          xvfb-run -a timeout 8s ./target/debug/borrow-app
+          code=$?
+          set -e
+          if [ "$code" -ne 124 ]; then
+            echo "borrow-app exited with status $code before the 8s timeout"
+            exit 1
+          fi
+          db="$HOME/.local/share/borrow/borrow.db"
+          if [ ! -f "$db" ]; then
+            echo "expected the database at $db"
+            exit 1
+          fi
+          echo "started, stayed up, and wrote $db"

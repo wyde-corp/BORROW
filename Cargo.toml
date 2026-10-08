@@ -61,3 +61,79 @@ gpui-kit = { version = "0.7.1", features = [
 strip = "symbols"
 lto = "thin"
 codegen-units = 1
+
+# ── Installers ────────────────────────────────────────────────────────────────
+# `cargo packager` turns the desktop binary into what people actually install:
+# deb + AppImage on Linux, dmg on macOS, NSIS on Windows. It never builds, so
+# the hook below does. Run it per platform:
+#
+#     cargo packager --release --formats deb,appimage
+#     cargo packager --release --formats dmg
+#     cargo packager --release --formats nsis
+#
+# No `resources`: the fonts, the theme and the migrations are compiled into
+# the binary, so there is no file tree to stage next to it.
+[package.metadata.packager]
+product-name = "BORROW_"
+identifier = "com.gusdgoat.borrow"
+publisher = "Gus-D-Goat"
+authors = ["Gus-D-Goat"]
+description = "Learn Rust without the 700-page detour."
+homepage = "https://github.com/Gus-D-Goat/BORROW"
+category = "Education"
+copyright = "Copyright (c) 2026 Gus-D-Goat"
+icons = ["assets/icon/borrow-512.png"]
+binaries = [{ path = "borrow-app", main = true }]
+out-dir = "target/bundle"
+before-packaging-command = "./tools/before-package.sh"
+
+[package.metadata.packager.macos]
+# gpui needs Metal and the modern text stack; anything older than Big Sur
+# is not a target this binary was ever run on.
+minimum-system-version = "11.0"
+
+[package.metadata.packager.nsis]
+# Per-user by default: no administrator prompt for an app that writes
+# nothing outside its own directory and the user's data folder.
+installer-mode = "currentUser"
+# The same path `config::data_dir_for` computes, so the uninstaller can
+# offer to take the progress database with it.
+appdata-paths = ["$APPDATA/BORROW"]
+
+# Every soname `ldd target/release/borrow-app` reports, mapped to its Debian
+# package. Fonts and SQLite are inside the binary, so they are not here —
+# this list is the whole dynamic surface of a gpui build on X11.
+[package.metadata.packager.deb]
+section = "education"
+priority = "optional"
+depends = [
+    "libc6",
+    "libgcc-s1",
+    "libxau6",
+    "libxcb1",
+    "libxcb-xkb1",
+    "libxdmcp6",
+    "libxkbcommon0",
+    "libxkbcommon-x11-0",
+]
+
+# The same set as sonames, for the AppImage to carry: an AppImage that
+# assumes the host has the xkb stack is an AppImage that does not run.
+# `excluded-libs` keeps linuxdeploy from re-processing them — it strips what
+# it deploys, and its bundled `strip` predates the RELR sections modern
+# distros ship, so an unexcluded copy fails with `unknown type [0x13]`.
+[package.metadata.packager.appimage]
+excluded-libraries = [
+    "libXau*",
+    "libXdmcp*",
+    "libxcb*",
+    "libxkbcommon*",
+]
+libs = [
+    "libXau.so.6",
+    "libxcb.so.1",
+    "libxcb-xkb.so.1",
+    "libXdmcp.so.6",
+    "libxkbcommon.so.0",
+    "libxkbcommon-x11.so.0",
+]
