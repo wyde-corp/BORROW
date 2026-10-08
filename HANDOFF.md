@@ -237,11 +237,27 @@ Notes earned while building it:
   package names — ten lines, no guesswork. Fonts and SQLite are inside the
   binary.
 
+Verified by the first release run (`v0.1.0-rc.1`, all three package jobs
+green, artifacts attached with SHA256SUMS):
+
+- **deb and AppImage** — built and unpacked here: control file, Depends,
+  `.desktop` entry, six bundled xkb libs.
+- **macOS dmg** — `BORROW_.app/Contents/MacOS/borrow-app` is a *universal*
+  binary (`lipo -info`: x86_64 arm64); `Info.plist` carries
+  `com.gusdgoat.borrow`, `BORROW_`, `LSMinimumSystemVersion 11.0`, and the
+  `.icns` is inside.
+- **Windows NSIS** — `borrow-app.exe` (PE32+ x86-64) plus `uninstall.exe`
+  in the installer, built through `bash tools/before-package.sh` (packager
+  shells the hook with `cmd /C` on Windows, where `./…` is not a command).
+- A release build on Windows was a *console* binary — `file` said so — so
+  `src/bin/app.rs` now sets `windows_subsystem = "windows"` for release
+  builds; the debug build keeps its terminal.
+
 What has never run yet:
 
-- **macOS dmg and Windows NSIS.** The config is written; no macOS or Windows
-  package has been produced. The first `workflow_dispatch` run of
-  `release.yml` is the test — expect to fix something.
+- **The installers on a real machine.** Everything above was unpacked and
+  inspected, not launched: nobody has installed the dmg or the .exe, and
+  the AppImage has never been run where the xkb stack is absent.
 - **Signing.** v0.1 ships unsigned: macOS Gatekeeper blocks it
   (`xattr -d com.apple.quarantine`, or right-click → Open) and Windows
   SmartScreen warns. Apple signing + notarization needs a $99/yr Developer

@@ -1,3 +1,9 @@
+// A release build on Windows must not open a console window next to the
+// app — `file` on the first NSIS installer said "console", which is a
+// terminal popping up on every launch. Debug keeps it: `eprintln!` is the
+// only logging this binary has.
+#![cfg_attr(all(windows, not(debug_assertions)), windows_subsystem = "windows")]
+
 //! Phase 3 — the screens: `cargo run --bin borrow-app`
 //!
 //! Phase 1 proved the stack opens a window; phase 2 proved BORROW_'s tokens
