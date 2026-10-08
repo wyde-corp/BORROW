@@ -84,6 +84,9 @@ pub(crate) struct PlaygroundState {
     /// The in-flight run. Dropping it cancels, which is how a second press of
     /// RUN stops a compile — the web aborts its fetch the same way.
     run: Option<Task<RunResult>>,
+    /// The editor's Enter subscription, made on the first draw. Kept for as
+    /// long as the view lives: a dropped subscription is a silent shortcut.
+    shortcut: Option<Subscription>,
     /// The single open "WHY THIS HAPPENS" disclosure.
     pub(crate) explanation_open: bool,
 }
@@ -662,6 +665,28 @@ impl AppView {
                 .line_number(true)
         });
         self.playground.editor = Some(editor.clone());
+
+        // The shortcut listens to what the editor *emits*, not to the key
+        // itself. `secondary-enter` — ⌘ on macOS, CTRL elsewhere — is the
+        // editor's own binding: where that binding matches, the keystroke is
+        // consumed as an action and never reaches a raw key listener, which
+        // is exactly why a key handler passed on Linux and failed on macOS.
+        // PressEnter with `secondary` set is the same combination everywhere.
+        if self.playground.shortcut.is_none() {
+            let subscription = cx.subscribe(&editor, move |view, entity, event, cx| {
+                if matches!(
+                    event,
+                    crate::component::input::InputEvent::PressEnter {
+                        secondary: true,
+                        ..
+                    }
+                ) {
+                    let code = entity.read(cx).value().to_string();
+                    begin_run(view, &code, cx);
+                }
+            });
+            self.playground.shortcut = Some(subscription);
+        }
 
         // Taken after the keyed state above, which needs `&mut cx`: the theme
         // borrows it too, and the two cannot overlap.
@@ -1720,26 +1745,34 @@ fn discard_run(cx: &App, run_id: i64) -> bool {
 /// practice runner's entry point, and two of them in one module is one too
 /// many.
 pub(crate) fn run_program(view: Entity<AppView>, editor: &Entity<EditorState>, cx: &mut App) {
+    let code = editor.read(cx).value().to_string();
+    view.update(cx, |view, cx| begin_run(view, &code, cx));
+}
+
+/// The state half of a run, with the view already open.
+///
+/// The Enter subscription hands us `&mut AppView`, so nothing here may read
+/// or update the entity again — a second lease panics at runtime rather than
+/// failing politely.
+fn begin_run(view: &mut AppView, code: &str, cx: &mut Context<AppView>) {
     // A second press while one is in flight cancels it. The button stays live
     // in the loading state for exactly this reason — greying it out would
     // take away the only control the learner has over a long compile.
-    if view.read(cx).playground.running {
-        view.update(cx, |view, cx| {
-            view.playground.run.take();
-            view.playground.running = false;
-            cx.notify();
-        });
+    if view.playground.running {
+        view.playground.run.take();
+        view.playground.running = false;
+        cx.notify();
         return;
     }
 
-    let code = editor.read(cx).value().to_string();
     if code.trim().is_empty() {
         return;
     }
 
+    let code = code.to_string();
     let executor = cx.background_executor().clone();
-    let runner = view.clone();
-    let task = cx.spawn(async move |cx| {
+    let runner = cx.entity();
+    let task = cx.spawn(async move |_this, cx| {
         let started = std::time::Instant::now();
         let result = executor.spawn(async move { sandbox::run(&code) }).await;
         let elapsed = started.elapsed().as_millis();
@@ -1756,14 +1789,12 @@ pub(crate) fn run_program(view: Entity<AppView>, editor: &Entity<EditorState>, c
         result
     });
 
-    view.update(cx, |view, cx| {
-        view.playground.result = None;
-        view.playground.elapsed_ms = None;
-        view.playground.explanation_open = false;
-        view.playground.running = true;
-        view.playground.run = Some(task);
-        cx.notify();
-    });
+    view.playground.result = None;
+    view.playground.elapsed_ms = None;
+    view.playground.explanation_open = false;
+    view.playground.running = true;
+    view.playground.run = Some(task);
+    cx.notify();
 }
 
 /// Restores the starter program and clears every trace of the last run —
@@ -2199,7 +2230,9 @@ mod ui_tests {
             editor.update(cx, |state, cx| state.focus(window, cx));
         });
 
-        press(cx, "cmd-enter");
+        // `secondary` is ⌘ on macOS and CTRL elsewhere — the same word the
+        // editor's binding uses, so the test presses the real combination.
+        press(cx, "secondary-enter");
         cx.run_until_parked();
 
         let ran = cx.update(|_, cx| view.read(cx).playground.result.is_some());

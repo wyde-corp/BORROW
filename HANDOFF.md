@@ -152,6 +152,23 @@ gpui's single-line input exposes no change hook reachable from a render. The
 site marks a wrong blank only on blur anyway, so the difference a learner
 sees is that a correct blank turns green on CHECK rather than while typing.
 
+**8a. A keystroke an inner binding has claimed never reaches a key listener.**
+
+`secondary-enter` (⌘ on macOS, CTRL elsewhere) is gpui-base's own Input
+binding. Where it matches, the key is dispatched as an *action* and stops
+there — so `div().on_key_down` sees it on Linux (where ⌘ is unbound) and
+misses it on macOS. The playground's shortcut therefore listens to
+`InputEvent::PressEnter { secondary: true }`, the event the editor emits
+after its own binding runs. Same combination, same behaviour everywhere.
+The test presses `"secondary-enter"` for the same reason.
+
+**8b. A subscription callback already holds the view open.**
+
+`cx.subscribe(&editor, |view, ...| ...)` hands you `&mut AppView`; calling
+`view.read(cx)` or `view.update(cx, ...)` inside it panics with
+"cannot read AppView while it is already being updated". Use the `&mut
+AppView` you were given — see `begin_run` in `screen.rs`.
+
 **8. Input element state is keyed, and the key must carry the lesson.**
 
 `window.use_keyed_state("gap-{lesson}-{block}-{blank}", ...)` — without the

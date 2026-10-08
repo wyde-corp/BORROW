@@ -34,21 +34,6 @@ pub fn body(
         .flex()
         .flex_col()
         .gap_4()
-        // A key handler on the wrapper rather than a global binding: the
-        // shortcut only means anything while the learner is in this screen,
-        // and the event has to bubble from the focused editor anyway.
-        .id("playground")
-        .on_key_down({
-            let view = view.clone();
-            let editor = editor.clone();
-            move |event, _window, cx| {
-                let key = event.keystroke.key.as_str();
-                let mods = &event.keystroke.modifiers;
-                if key == "enter" && (mods.platform || mods.control) {
-                    crate::screen::run_program(view.clone(), &editor, cx);
-                }
-            }
-        })
         .child(
             Editor::new(editor)
                 .w_full()
@@ -135,7 +120,14 @@ fn actions(
             div()
                 .text_size(px(11.))
                 .text_color(theme.muted_foreground)
-                .child("⌘/CTRL + ENTER"),
+                // The primary modifier is ⌘ on macOS and CTRL elsewhere — the
+                // same split the editor's own `secondary-enter` binding makes,
+                // which is the combination the shortcut rides on.
+                .child(if cfg!(target_os = "macos") {
+                    "⌘ + ENTER"
+                } else {
+                    "CTRL + ENTER"
+                }),
         )
         .child(
             div()
