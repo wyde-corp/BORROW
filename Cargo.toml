@@ -85,7 +85,10 @@ copyright = "Copyright (c) 2026 Gus-D-Goat"
 icons = ["assets/icon/borrow-512.png"]
 binaries = [{ path = "borrow-app", main = true }]
 out-dir = "target/bundle"
-before-packaging-command = "./tools/before-package.sh"
+# `bash`, not `./…`: packager runs this through `cmd /C` on Windows and
+# `sh -c` everywhere else, and `./tools/before-package.sh` is only valid in
+# the second of those. Git Bash satisfies it on a Windows runner.
+before-packaging-command = "bash tools/before-package.sh"
 
 [package.metadata.packager.macos]
 # gpui needs Metal and the modern text stack; anything older than Big Sur
