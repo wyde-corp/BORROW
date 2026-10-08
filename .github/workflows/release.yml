@@ -115,3 +115,6 @@ jobs:
         with:
           files: bundle/*
           generate_release_notes: true
+          # `v0.1.0-rc.1` and friends are prereleases: the artifacts are there
+          # to be tested, not recommended to anybody yet.
+          prerelease: auto
