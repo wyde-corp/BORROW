@@ -16,12 +16,18 @@
 mod components;
 #[path = "../content/mod.rs"]
 mod content;
+#[path = "app/dashboard.rs"]
+mod dashboard;
 #[path = "app/lesson.rs"]
 mod lesson;
 #[path = "../models/mod.rs"]
 mod models;
+#[path = "app/playground.rs"]
+mod playground;
 #[path = "app/screen.rs"]
 mod screen;
+#[path = "app/widgets.rs"]
+mod widgets;
 // The web's host/port and playground-guard helpers; the desktop app binds no
 // listener. Allowed here rather than in shared code, so the web target keeps
 // the lint.
@@ -90,6 +96,7 @@ mod sweep_tests {
     use crate::lesson::render_section;
     use crate::models::{LessonContent, LessonSection};
     use crate::theme::test_theme;
+    use crate::widgets::{BlockState, WidgetCtx};
 
     /// Every block in every lesson renders.
     ///
@@ -105,6 +112,9 @@ mod sweep_tests {
         let mut lessons = 0;
         let mut blocks = 0;
         let mut parse_failures = Vec::new();
+        // One state for every block: the sweep has no view, so the widgets
+        // take the fallback path and this is only ever read.
+        let state = BlockState::default();
 
         for seed in &modules {
             for record in &seed.lessons {
@@ -112,7 +122,7 @@ mod sweep_tests {
                 match serde_json::from_str::<LessonContent>(&record.content) {
                     Ok(content) => {
                         for section in &content.sections {
-                            let _ = render_section(&theme, section);
+                            let _ = render_section(&theme, section, &WidgetCtx::detached(&state));
                             blocks += 1;
                         }
                     }
@@ -147,6 +157,7 @@ mod sweep_tests {
     #[test]
     fn every_block_type_is_exercised_by_real_content() {
         let theme = test_theme();
+        let state = BlockState::default();
         let mut seen = [false; 14];
 
         for seed in &crate::content::all() {
@@ -157,7 +168,7 @@ mod sweep_tests {
                 for section in &content.sections {
                     let index = variant_index(section);
                     seen[index] = true;
-                    let _ = render_section(&theme, section);
+                    let _ = render_section(&theme, section, &WidgetCtx::detached(&state));
                 }
             }
         }

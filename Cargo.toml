@@ -23,9 +23,20 @@ tower-http = { version = "0.5", features = ["fs"] }
 # Importing crates.io `gpui` directly gives you a different, incompatible type
 # universe: same names, different `App`/`Window`, and errors that look like
 # "expected `App`, found `App`".
-gpui-kit = "0.7.1"
+#
+# tree-sitter + tree-sitter-rust are the playground's Rust colouring: the
+# grammar feeds both the highlighter and the editor's string/comment
+# classification. Without them the editor still works, it just shows plain text.
+gpui-kit = { version = "0.7.1", features = [
+    "tree-sitter",
+    "tree-sitter-rust",
+] }
 
 # Headless UI tests: render real views and drive focus/keys with no window
 # behind it. Dev-only so the shipped binary does not carry the test harness.
 [dev-dependencies]
-gpui-kit = { version = "0.7.1", features = ["test-support"] }
+gpui-kit = { version = "0.7.1", features = [
+    "test-support",
+    "tree-sitter",
+    "tree-sitter-rust",
+] }

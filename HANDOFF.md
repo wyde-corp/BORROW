@@ -1,8 +1,8 @@
 # BORROW_ desktop app — handoff
 
 This covers what is left to build. Read **How to work here** first — it
-contains four traps that cost real time when this was written, and each of
-them looks like a compiler bug rather than a mistake.
+contains traps that cost real time when this was written, and each of them
+looks like a compiler bug rather than a mistake.
 
 ---
 
@@ -12,19 +12,17 @@ Everything is on branch **`app`**. `master` still holds the working Axum web
 app, untouched and deployable.
 
 ```
-c660915  Phase 1  gpui-kit spike, CI matrix
-62e358c  Phase 1  playground works on Windows, honest about macOS
-ccbe466  Phase 2  BORROW_ design tokens applied to gpui-component
-656efb0  Phase 3  lesson screens + all 14 block types        (partial)
+834c40d  Add HANDOFF.md for the remaining phases
+9d2708e  Correct a debt that did not exist, and a label that did
+4450d02  Put hints behind disclosures (debt)
+1ba2c08  Render the practice screens under test (debt)
+35d56ce  Lock the test-support dependency graph
+a5ecbab  Make cards keyboard-reachable, and prove it headlessly
+ba060b0  Add the practice runner (phase 4, second half)
 c9a75b5  Phase 4  exercise screen, XP recording
-ba060b0  Phase 4  practice runner (builder / run / results)
-a5ecbab  ..       cards keyboard-reachable + headless tests
-1ba2c08  ..       practice screens rendered under test
-4450d02  ..       hints behind disclosures
-9d2708e  ..       corrected a false debt, fixed submit labels
 ```
 
-**Current state: build clean, clippy clean, 150 tests green** (72 in the
+**Current state: build clean, clippy clean, 160 tests green** (82 in the
 desktop target, 78 in the web target), CI green on Linux, macOS and Windows.
 
 ### What already works on desktop
@@ -34,6 +32,10 @@ desktop target, 78 in the web target), CI green on Linux, macOS and Windows.
 | Home → module → lesson | all 14 block types render, swept over all 284 lessons |
 | Exercise screen | grades, records XP, feedback with explanation |
 | Practice runner | builder → run → results, resumable, never touches XP |
+| **Dashboard** | continue card, module list with bars, overall XP (phase 3 complete) |
+| **Progress** | totals, stats grid, curriculum (phase 3 complete) |
+| **Playground** | Rust editor with line numbers and tree-sitter colouring, RUN in all eight states, console, diagnostics with jump-to-line, ⌘/CTRL+ENTER, RESET, cancel a run in flight |
+| **Five widgets** | gap-fill, step-through, dispatch, pipeline, guess-then-run — all interactive, per-line highlighting included |
 | Design system | `borrow.theme.json`, generated from `static/style.css` |
 | Database | migrations, seeding, `block_on` for local queries |
 | Keyboard | cards focusable, Tab + Enter proven by tests |
@@ -44,10 +46,13 @@ desktop target, 78 in the web target), CI green on Linux, macOS and Windows.
 
 ```
 src/bin/app.rs        crate root, module declarations, main()
-src/bin/app/screen.rs     1694 lines — every screen, navigation, loaders
-src/bin/app/components.rs  373 — shared div() builders
+src/bin/app/screen.rs     ~2300 lines — every screen, navigation, loaders, ui_tests
+src/bin/app/components.rs  ~410 — shared div() builders, progress bar, status glyphs
+src/bin/app/dashboard.rs   ~430 — dashboard + progress bodies (phase 3)
+src/bin/app/playground.rs  ~400 — editor screen, RUN states, console, diagnostics
+src/bin/app/widgets.rs     ~1100 — the five interactive lesson widgets
 src/bin/app/exercise.rs    309 — grading, prompts, option lists
-src/bin/app/lesson.rs      238 — LessonSection → elements (exhaustive match)
+src/bin/app/lesson.rs      132 — LessonSection → elements, delegates widgets
 src/bin/app/theme.rs       240 — BORROW_ theme config + apply()
 src/bin/app/db.rs           69 — tokio runtime + pool, as a gpui Global
 src/bin/app/borrow.theme.json  135 colour tokens, 31 syntax scopes
@@ -61,7 +66,7 @@ src/bin/app/borrow.theme.json  135 colour tokens, 31 syntax scopes
 
 ```bash
 cargo build --bin borrow --bin app   # both targets
-cargo test                           # 150 tests
+cargo test                           # 160 tests
 cargo clippy --all-targets           # must be clean
 cargo run --bin app                  # launch the desktop app
 ```
@@ -69,7 +74,7 @@ cargo run --bin app                  # launch the desktop app
 CI is `.github/workflows/app.yml` — builds both binaries and runs tests on
 ubuntu, macos and windows. Push to `app` to trigger it. All three must pass.
 
-### The four traps
+### The traps
 
 **1. `use gpui_kit::*` shadows Rust's `#[test]`.**
 
@@ -84,7 +89,7 @@ Import exactly what you need:
 ```rust
 #[cfg(test)]
 mod tests {
-    use super::{AppView, Screen, /* whatever you need */};
+    use super::matches;
     use gpui_kit::{TestAppContext, TestDispatcher, VisualTestContext};
 ```
 
@@ -126,18 +131,48 @@ touching app files only:
 rustfmt --edition 2021 --config skip_children=true src/bin/app.rs src/bin/app/*.rs
 ```
 
+**5. Never read the view while it is rendering.**
+
+`cannot read app::screen::AppView while it is already being updated` — a
+runtime panic, from `view.read(cx)` inside anything called by `render`. Pass
+what a renderer needs through the `WidgetCtx` instead of reaching for the
+entity. The same applies to any `Entity::read` inside a closure that runs
+under `view.update`.
+
+**6. `--accent` in `style.css` is `theme.primary`, not `theme.accent`.**
+
+`gen_theme.py` maps `--accent` to `primary.background`; gpui's own
+`accent.background` is the *elevated surface* colour. Using `theme.accent`
+where the site means `--accent` gives you a dark grey bar on a dark grey
+track — invisible, not broken. `theme::tests` asserts the mapping.
+
+**7. Gap-fill verdicts are graded on CHECK, not per keystroke.**
+
+gpui's single-line input exposes no change hook reachable from a render. The
+site marks a wrong blank only on blur anyway, so the difference a learner
+sees is that a correct blank turns green on CHECK rather than while typing.
+
+**8. Input element state is keyed, and the key must carry the lesson.**
+
+`window.use_keyed_state("gap-{lesson}-{block}-{blank}", ...)` — without the
+lesson id, lesson B's blanks pick up lesson A's text. The lesson screen
+creates these (it needs `&mut Window`); the renderer only uses them.
+
 ### Conventions
 
 - `content::all()` is compiled in — reading lessons needs no DB and no async.
   The database is for **progress and XP only**.
 - Database access goes through `crate::app_db::Db` and `with_db()`. Queries use
   `block_on`; it is deliberately synchronous and the constraint is documented
-  on the method. If anything could ever take a lock or touch a network, move it
-  to `cx.background_executor()`.
-- Cards and any clickable row are **`Button`**, never `div().on_click` — that is
-  how keyboard access is kept. Proven by `ui_tests`.
+  on the method. Anything that could take a lock or touch a network goes to
+  `cx.background_executor()` — `run_program` in `screen.rs` is the model:
+  `sandbox::run` blocks for seconds and must never run on the UI thread.
+- Cards and any clickable row are **`Button`**, never `div().on_click` — that
+  is how keyboard access is kept. Proven by `ui_tests`.
 - Lesson block types are matched **exhaustively** in `lesson.rs`. Adding a type
   to `LessonSection` without a renderer is a compile error. Same for `Screen`.
+- Interactive widgets keep their state in `AppView::widgets`, indexed by the
+  block's position in its lesson, cleared in `clear_answer()`.
 - Exercise screens branch on `options.is_empty()`, **not** on exercise type.
   All 528 exercises carry options; branching on type once made 41 look
   unanswerable. Guarded by `every_seeded_exercise_carries_options`.
@@ -156,101 +191,44 @@ dev-dependency.
 
 ## Remaining work
 
-### A. Dashboard + progress screens (Phase 3 remainder)
-
-Phase 3 built home, module and lesson. Two screens are missing.
-
-| Need | Call | Reference |
-|---|---|---|
-| Dashboard data | `services::progress::dashboard_data(pool)` | `views/dashboard.rs` (166 lines) |
-| Progress totals | `services::progress::progress_summary(pool)` | `views/progress.rs` (59 lines) |
-
-What they show: module cards with per-module completion, overall XP, lessons
-completed, segmented progress bars. Port the layout from the web views; reuse
-`components.rs` for bars, labels and cards.
-
-Add `Screen::Dashboard` and `Screen::Progress`, a nav entry for each, and load
-with `with_db(cx, ...)` on click (the pattern already used by practice). Assert
-both with a headless render test like `practice_builder_renders_with_seeded_data`.
-
-### B. Phase 5 — editor and console
-
-The compiler already works. `services::sandbox.rs` (1612 lines) is untouched and
-verified: `run(code) -> RunResult` with `Status`, `stdout`, `stderr`,
-`diagnostics` (code, level, spans, explanation), `line_offset`.
-
-What is missing is everything around it.
-
-- **Editor.** gpui-component's `InputState` in code-editor mode:
-  `InputState::new(window, cx).code_editor("rust").line_number(true)`.
-  It needs `&mut Window`, which `render` has and the screen methods do not —
-  create it there with `window.use_keyed_state(id, cx, |window, cx| ...)`,
-  the same pattern Button uses for its focus handle.
-- **The RUN button's eight states** — default, hover, focus-visible, active,
-  disabled, loading, error, success. CSS rules for all eight already exist in
-  `static/style.css` under `.run-btn`; port them, don't reinvent.
-- **Console**: stdout, stderr, timing, truncation notice.
-- **Diagnostics**: the structured ones — error code, message, jump-to-line
-  (use `line_offset`), `help`/`note` children, and the collapsible official
-  explanation. The web's `static/editor.js` is the reference implementation.
-- **Guard**: on desktop `sandbox::is_enabled()` is not used; execution is local.
-  Keep the timeouts. Show a clear message if `rustc` is missing — Phase 4 chose
-  "require rustup" rather than bundling a toolchain.
-
-Test it the way phase 4 did: assert on `RunResult` directly (the sandbox already
-has 30 tests, most of them against a real `rustc`), then a headless render test for the UI.
-
-**Also blocked by this:** the 41 `fill_gap`/`refactor` exercises are currently
-answered by picking an option. If you want typed answers instead, that needs
-this input too — but read `every_seeded_exercise_carries_options` first, the
-options path already works.
-
-### C. Phase 6 — the five interactive widgets
-
-`static/interactive.js` (458 lines) to port. Each is state plus a `render`
-variant in `lesson.rs`, which currently renders their readable content only.
-
-| Widget | Source function | What it needs |
-|---|---|---|
-| gap-fill | `initGapFill`, `markGap`, `checkAllGaps`, `matches` | per-blank inputs, per-blank feedback |
-| step-through | `initStepThrough` | current step, highlight its `lines` |
-| dispatch | `initDispatch` | step index, two notes per step |
-| pipeline | `initPipeline` | step index, `lazy`/`eager` badge |
-| guess-run | `initGuessRun` | chosen option, compare to `correct`, show `explanation` |
-
-`models/content.rs` defines each variant's fields (`GapBlank`, `Step`,
-`DispatchStep`, `PipelineStep`). Keep the per-line highlight behaviour — each
-step highlights the `lines` it talks about; that is the point of the widget.
-
-State belongs on `AppView`, cleared in `clear_answer()`. Test each by rendering
-against seeded content (a sweep like `every_block_in_the_course_renders` will
-catch a missing branch).
-
-### D. Phase 7 — packaging
+### Phase 7 — packaging (the only phase left)
 
 No release artifacts exist yet. CI builds binaries but uploads nothing.
 
 - **Installers:** Linux AppImage + .deb, macOS universal .dmg, Windows .msi
-  (`cargo-wix`). Needs a `[[bin]]`/bundle config in `Cargo.toml`.
+  (`cargo-wix`). Needs `[[bin]]`/bundle config in `Cargo.toml`.
 - **Fonts.** `assets/fonts/` is **empty**. IBM Plex Mono and VT323 are not
   bundled, so the app falls back to system fonts — the same gap the web has.
   `borrow.theme.json` deliberately omits `font.family`, because gpui uses an
   explicitly named family *as-is* and naming an absent one renders no glyphs.
-  Bundle the fonts, register them through the asset source, then set
-  `font.family` and `mono_font.family` in the theme.
+  Bundle the fonts, register them through gpui-kit's asset source, then set
+  `font.family` and `mono_font.family` in the theme — and verify in a headless
+  draw that text still shapes (a missing family renders nothing).
 - **Signing.** macOS needs an Apple Developer account ($99/yr) or Gatekeeper
   blocks installers. Windows Authenticode is optional but SmartScreen warns.
-- Release build: `cargo build --release --bin app` (the debug binary is 756 MB).
+- **Release build:** `cargo build --release --bin app` (the debug binary is
+  756 MB; tree-sitter adds to this, so check the release size too).
+- **Desktop integration:** an icon (there is none yet), `.desktop` file on
+  Linux, bundle id / Info.plist on macOS, ProductName on Windows.
+
+Do **not** enable `cargo-wix`/`cargo-bundle` until the fonts land: an
+installer that ships an app with no course text is worse than no installer.
 
 ---
 
 ## Known gaps
 
-- **Appearance of the card conversion is unverified.** Cards became `Button`s,
-  which changed which layer owns hover. The tests cover behaviour, not paint —
-  nobody has seen the module list rendered since. Check it first.
+- **The new screens have never been seen.** Dashboard, Progress, Playground and
+  the five widgets pass headless draws — that proves they render, not that they
+  look right. The same is true of the card conversion from phase 4: cards
+  became `Button`s, which changed which layer owns hover. Open the app and look
+  at the module list first.
+- **Gap verdicts do not update while typing** (trap 7) and the verdict rides
+  next to the input rather than colouring it — gpui's `Input` owns its border.
 - **Hints render but are not styled as disclosures in every state** — check the
   ▸/▾ affordance at 320px.
+- **Guess-then-run has no cancellation**; the button is disabled while a
+  compile is in flight. The playground's RUN does cancel.
 - **The web app still exists on `master`** and is deployable. Nothing here
   deletes it.
 - **Playground memory cap is Linux-only.** `ulimit -v` is not enforced on macOS
@@ -267,8 +245,8 @@ No release artifacts exist yet. CI builds binaries but uploads nothing.
 | `BORROW_UI_DESIGN.md` | locked design spec — palette, type, components |
 | `CONTENT_STYLE.md` | how lesson content is written |
 | `static/style.css` | the CSS the desktop theme is generated from |
-| `static/editor.js` | RUN states, console, diagnostics rendering |
-| `static/interactive.js` | the five widgets, to port |
-| `src/views/*.rs` | web markup to port as `div()` builders |
+| `static/editor.js` | RUN states, console, diagnostics — ported in phase 5 |
+| `static/interactive.js` | the five widgets — ported in phase 6 |
+| `src/views/*.rs` | web markup, the reference for anything still to port |
 | `tools/gen_theme.py` | regenerates `borrow.theme.json` after CSS changes |
 | `~/.cargo/registry/src/*/gpui-kit-0.7.1/` | gpui-component source; `TESTING.md` and `src/button/button.rs` answer most API questions |

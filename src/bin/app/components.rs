@@ -341,6 +341,51 @@ pub fn table(theme: &Theme, headers: &[String], rows: &[Vec<String>]) -> Div {
         .child(body)
 }
 
+/// The four states the site's `.status-icon` distinguishes.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum StatusState {
+    Locked,
+    Available,
+    InProgress,
+    Completed,
+}
+
+/// The glyph for one state — `✓`, `●`, `○` on the site.
+pub fn status_glyph(state: StatusState) -> &'static str {
+    match state {
+        StatusState::Locked | StatusState::Available => "○",
+        StatusState::InProgress => "●",
+        StatusState::Completed => "✓",
+    }
+}
+
+/// Its colour, from the same tokens `style.css` gives `.status-icon`.
+pub fn status_color(theme: &Theme, state: StatusState) -> Hsla {
+    match state {
+        StatusState::Locked | StatusState::Available => theme.muted_foreground,
+        StatusState::InProgress => theme.primary,
+        StatusState::Completed => theme.success,
+    }
+}
+
+/// `.progress-bar` — an elevated track with an accent fill at `percent`.
+///
+/// `large` is `.progress-bar.large`: full width instead of the 120px inline
+/// bar. The track colour is `--elevated` and the fill `--accent`, as in
+/// `style.css`.
+pub fn progress_bar(theme: &Theme, percent: i64, large: bool) -> AnyElement {
+    let bar = component::progress::Progress::new(format!("progress-{percent}-{large}"))
+        .value(percent.clamp(0, 100) as f32)
+        .color(theme.primary)
+        .h(if large { px(8.) } else { px(6.) });
+
+    if large {
+        bar.w_full().into_any_element()
+    } else {
+        bar.w(px(120.)).into_any_element()
+    }
+}
+
 /// An ordered list of steps.
 pub fn steps(theme: &Theme, items: &[String]) -> Div {
     let mut list = div().flex().flex_col().gap_3().pl_1();

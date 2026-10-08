@@ -10,9 +10,13 @@ use crate::components::label;
 use crate::content::ModuleSeed;
 use crate::exercise as exercise_view;
 use crate::lesson::render_section;
-use crate::models::{Exercise, LessonContent};
+use crate::models::{Exercise, GapBlank, LessonContent, LessonSection};
 use crate::services::practice;
+use crate::services::progress::{self, DashboardData, ProgressSummary};
+use crate::services::sandbox::{self, RunResult};
+use crate::widgets::{BlockState, WidgetCtx};
 use gpui_kit::component::button::{Button, ButtonVariants};
+use gpui_kit::component::input::{EditorState, InputState};
 use gpui_kit::component::*;
 // `overflow_y_scroll` is on StatefulInteractiveElement, not InteractiveElement,
 // and a stateful element needs an id to hang its state on.
@@ -45,6 +49,12 @@ pub enum Screen {
     PracticeResults {
         module: usize,
     },
+    /// Module completion, XP, and the continue card.
+    Dashboard,
+    /// Totals across the whole course.
+    Progress,
+    /// The code editor and its console.
+    Playground,
 }
 
 /// Everything the practice screens need between renders, all loaded once on
@@ -56,6 +66,26 @@ struct PracticeState {
     results: Option<practice::ResultsData>,
     position: usize,
     selected: Option<usize>,
+}
+
+/// Everything the playground keeps between renders.
+///
+/// The editor buffer itself lives in its own keyed element state — it needs
+/// `&mut Window` to create, which only `render` has — so this holds the handle
+/// plus what the run produced.
+#[derive(Default)]
+pub(crate) struct PlaygroundState {
+    /// Created on the first draw of the screen and reused after that.
+    pub(crate) editor: Option<Entity<EditorState>>,
+    pub(crate) result: Option<RunResult>,
+    /// Click-to-result wall clock, for the "round trip" line.
+    pub(crate) elapsed_ms: Option<u128>,
+    pub(crate) running: bool,
+    /// The in-flight run. Dropping it cancels, which is how a second press of
+    /// RUN stops a compile — the web aborts its fetch the same way.
+    run: Option<Task<RunResult>>,
+    /// The single open "WHY THIS HAPPENS" disclosure.
+    pub(crate) explanation_open: bool,
 }
 
 /// Which of the two answer fields an option row writes to.
@@ -79,6 +109,16 @@ pub struct AppView {
     /// site's hints are independent `<details>` — a learner can open the third
     /// without reading the first.
     hints_open: std::collections::HashSet<usize>,
+    /// Loaded once when the nav entry is clicked, then kept until the next
+    /// click reloads it — never re-queried per frame.
+    dashboard: Option<DashboardData>,
+    progress: Option<ProgressSummary>,
+    pub(crate) playground: PlaygroundState,
+    /// Interaction state for the lesson on screen, one entry per block.
+    pub(crate) widgets: Vec<BlockState>,
+    /// Which lesson `widgets` belongs to — entering another one starts clean
+    /// even if some navigation path forgot to clear.
+    widgets_lesson: Option<i64>,
 }
 
 impl AppView {
@@ -90,6 +130,11 @@ impl AppView {
             result: None,
             practice: PracticeState::default(),
             hints_open: std::collections::HashSet::new(),
+            dashboard: None,
+            progress: None,
+            playground: PlaygroundState::default(),
+            widgets: Vec::new(),
+            widgets_lesson: None,
         }
     }
 
@@ -97,10 +142,20 @@ impl AppView {
         self.selected = None;
         self.result = None;
         self.hints_open.clear();
+        self.widgets.clear();
     }
 
     fn clear_practice(&mut self) {
         self.practice = PracticeState::default();
+    }
+
+    /// Leaves for `screen`, closing hints and any graded result on the way.
+    ///
+    /// The field stays private so nothing changes screens without clearing the
+    /// transient state first; `dashboard.rs` uses this to navigate.
+    pub(crate) fn navigate(&mut self, screen: Screen) {
+        self.clear_answer();
+        self.screen = screen;
     }
 
     /// Parses one lesson's stored JSON.
@@ -123,6 +178,21 @@ impl AppView {
 
     fn module(&self, index: usize) -> Option<&ModuleSeed> {
         self.modules.get(index)
+    }
+
+    /// The screen position of a database module id.
+    fn module_index(&self, id: i64) -> Option<usize> {
+        self.modules.iter().position(|seed| seed.module.id == id)
+    }
+
+    /// The screen position of a database lesson id — `(module, lesson)`.
+    fn lesson_index(&self, id: i64) -> Option<(usize, usize)> {
+        self.modules.iter().enumerate().find_map(|(module, seed)| {
+            seed.lessons
+                .iter()
+                .position(|lesson| lesson.id == id)
+                .map(|lesson| (module, lesson))
+        })
     }
 
     fn home(&self, theme: &Theme, view: Entity<AppView>) -> Div {
@@ -343,27 +413,80 @@ impl AppView {
         self.shell(theme, view, &title, "", Some(index), body)
     }
 
+    /// One lesson.
+    ///
+    /// `&mut self` because the widgets keep their state here rather than in
+    /// the elements, and gap-fill's inputs have to exist before anything can
+    /// render them.
     fn lesson_screen(
-        &self,
-        theme: &Theme,
+        &mut self,
         view: Entity<AppView>,
+        window: &mut Window,
+        cx: &mut Context<Self>,
         module: usize,
         lesson: usize,
     ) -> Div {
         let Some(seed) = self.module(module) else {
-            return self.shell(theme, view, "Lesson not found", "", None, div());
+            return self.shell(cx.theme(), view, "Lesson not found", "", None, div());
         };
         let total = seed.lessons.len();
         let Some(record) = seed.lessons.get(lesson) else {
-            return self.shell(theme, view, "Lesson not found", "", Some(module), div());
+            return self.shell(
+                cx.theme(),
+                view,
+                "Lesson not found",
+                "",
+                Some(module),
+                div(),
+            );
         };
 
+        // Taken by value before anything below mutates `self`.
+        let title = record.title.clone();
+        let lesson_id = record.id;
+        let parsed = Self::parse(record);
+
+        if self.widgets_lesson != Some(lesson_id) {
+            self.widgets.clear();
+            self.widgets_lesson = Some(lesson_id);
+        }
+        let blocks = parsed
+            .as_ref()
+            .map(|content| content.sections.len())
+            .unwrap_or(0);
+        // A grow-and-trim rather than `Vec::resize`, which would want
+        // `BlockState: Clone` — and a clone of an in-flight run task is not
+        // something this state should ever have.
+        while self.widgets.len() < blocks {
+            self.widgets.push(BlockState::default());
+        }
+        self.widgets.truncate(blocks);
+
+        // Gap-fill's inputs need a window, so they are made here rather than
+        // in the renderer: the same key hands back the same input on every
+        // draw, and the key carries the lesson so one lesson's blanks never
+        // pick up another's text.
+        if let Some(content) = parsed.as_ref() {
+            for (position, section) in content.sections.iter().enumerate() {
+                if let LessonSection::GapFill { blanks, .. } = section {
+                    self.ensure_gap_inputs(position, blanks, lesson_id, window, cx);
+                }
+            }
+        }
+
+        // After the keyed state above, which needs `&mut cx`.
+        let theme = cx.theme();
         let mut sections = div().flex().flex_col().gap_6();
 
-        match Self::parse(record) {
+        match parsed {
             Some(content) => {
-                for section in &content.sections {
-                    sections = sections.child(render_section(theme, section));
+                for (position, section) in content.sections.iter().enumerate() {
+                    let ctx = WidgetCtx {
+                        index: position,
+                        state: &self.widgets[position],
+                        view: Some(view.clone()),
+                    };
+                    sections = sections.child(render_section(theme, section, &ctx));
                 }
             }
             None => {
@@ -379,32 +502,40 @@ impl AppView {
 
         if lesson > 0 {
             let to = view.clone();
-            pager = pager.child(Button::new("prev").secondary().label("← PREV").on_click(
-                move |_, _, cx| {
-                    to.update(cx, |v, cx| {
-                        v.screen = Screen::Lesson {
-                            module,
-                            lesson: lesson - 1,
-                        };
-                        cx.notify();
-                    });
-                },
-            ));
+            pager = pager.child(
+                Button::new("prev")
+                    .secondary()
+                    .label("\u{2190} PREV")
+                    .on_click(move |_, _, cx| {
+                        to.update(cx, |v, cx| {
+                            v.clear_answer();
+                            v.screen = Screen::Lesson {
+                                module,
+                                lesson: lesson - 1,
+                            };
+                            cx.notify();
+                        });
+                    }),
+            );
         }
 
         if lesson + 1 < total {
             let to = view.clone();
-            pager = pager.child(Button::new("next").primary().label("NEXT →").on_click(
-                move |_, _, cx| {
-                    to.update(cx, |v, cx| {
-                        v.screen = Screen::Lesson {
-                            module,
-                            lesson: lesson + 1,
-                        };
-                        cx.notify();
-                    });
-                },
-            ));
+            pager = pager.child(
+                Button::new("next")
+                    .primary()
+                    .label("NEXT \u{2192}")
+                    .on_click(move |_, _, cx| {
+                        to.update(cx, |v, cx| {
+                            v.clear_answer();
+                            v.screen = Screen::Lesson {
+                                module,
+                                lesson: lesson + 1,
+                            };
+                            cx.notify();
+                        });
+                    }),
+            );
         }
 
         let body = div()
@@ -422,13 +553,128 @@ impl AppView {
                             .text_size(px(24.))
                             .font_weight(FontWeight::BOLD)
                             .text_color(theme.foreground)
-                            .child(record.title.clone()),
+                            .child(title.clone()),
                     ),
             )
             .child(sections)
             .child(pager);
 
-        self.shell(theme, view, &record.title, "", Some(module), body)
+        self.shell(theme, view, &title, "", Some(module), body)
+    }
+
+    /// Makes gap-fill's inputs for one block — one per blank.
+    ///
+    /// Called from the lesson screen rather than the renderer because
+    /// creating input state needs `&mut Window`. A block that has never been
+    /// drawn starts empty, so navigating away and back starts the learner
+    /// over, the way the site does.
+    fn ensure_gap_inputs(
+        &mut self,
+        block: usize,
+        blanks: &[GapBlank],
+        lesson: i64,
+        window: &mut Window,
+        cx: &mut Context<Self>,
+    ) {
+        let fresh = self
+            .widgets
+            .get(block)
+            .map(|state| state.inputs.is_empty())
+            .unwrap_or(true);
+
+        let mut inputs = Vec::with_capacity(blanks.len());
+        for position in 0..blanks.len() {
+            inputs.push(window.use_keyed_state(
+                format!("gap-{lesson}-{block}-{position}"),
+                cx,
+                InputState::new,
+            ));
+        }
+
+        if fresh {
+            for input in &inputs {
+                input.update(cx, |state, cx| state.set_value("", window, cx));
+            }
+        }
+
+        if let Some(state) = self.widgets.get_mut(block) {
+            state.inputs = inputs;
+        }
+    }
+
+    /// The dashboard. Data is loaded by the nav entry, so an empty state here
+    /// means the read failed — the same "could not be loaded" shape practice
+    /// uses rather than a spinner that never resolves.
+    fn dashboard_screen(&self, theme: &Theme, view: Entity<AppView>) -> Div {
+        let Some(data) = self.dashboard.as_ref() else {
+            return self.shell(
+                theme,
+                view,
+                "Dashboard",
+                "Your progress could not be loaded.",
+                None,
+                div(),
+            );
+        };
+
+        let body = crate::dashboard::dashboard(
+            theme,
+            view.clone(),
+            data,
+            |id| self.module_index(id),
+            |id| self.lesson_index(id),
+        );
+        self.shell(theme, view, "Dashboard", "", None, body)
+    }
+
+    /// The progress totals screen.
+    fn progress_screen(&self, theme: &Theme, view: Entity<AppView>) -> Div {
+        let Some(data) = self.progress.as_ref() else {
+            return self.shell(
+                theme,
+                view,
+                "Progress",
+                "Your progress could not be loaded.",
+                None,
+                div(),
+            );
+        };
+
+        let body = crate::dashboard::progress(theme, data);
+        self.shell(theme, view, "Progress", "", None, body)
+    }
+
+    /// The playground.
+    ///
+    /// The editor's element state is keyed rather than kept on the view
+    /// because creating it needs `&mut Window`, which only `render` has — the
+    /// same shape Button uses for its focus handle.
+    fn playground_screen(
+        &mut self,
+        view: Entity<AppView>,
+        window: &mut Window,
+        cx: &mut Context<Self>,
+    ) -> Div {
+        let editor = window.use_keyed_state("playground-code", cx, |window, cx| {
+            EditorState::new(window, cx)
+                .default_value(crate::playground::STARTER_CODE)
+                .language("rust")
+                .line_number(true)
+        });
+        self.playground.editor = Some(editor.clone());
+
+        // Taken after the keyed state above, which needs `&mut cx`: the theme
+        // borrows it too, and the two cannot overlap.
+        let theme = cx.theme();
+        let body = crate::playground::body(theme, view.clone(), &self.playground, &editor, cx);
+        self.shell(
+            theme,
+            view,
+            "Playground",
+            "Write Rust, press RUN, and read what the compiler says.",
+            None,
+            body,
+        )
     }
 
     /// The frame every screen shares: navbar, scrollable content column.
@@ -439,7 +685,7 @@ impl AppView {
         title: &str,
         subtitle: &str,
         active_module: Option<usize>,
-        body: Div,
+        body: impl IntoElement,
     ) -> Div {
         let to_home = view.clone();
         // An `Option` rather than a usize, because module index 0 is the
@@ -1249,6 +1495,10 @@ impl AppView {
 
 /// The top strip: wordmark back to home, and where you are.
 fn navbar(theme: &Theme, to_home: Entity<AppView>, module_name: String) -> Div {
+    let to_dashboard = to_home.clone();
+    let to_progress = to_home.clone();
+    let to_playground = to_home.clone();
+
     let mut bar = div()
         .flex()
         .flex_row()
@@ -1272,6 +1522,50 @@ fn navbar(theme: &Theme, to_home: Entity<AppView>, module_name: String) -> Div {
                         cx.notify();
                     });
                 }),
+        )
+        .child(
+            Button::new("nav-dashboard")
+                .ghost()
+                .text_size(px(13.))
+                .text_color(theme.muted_foreground)
+                .child("DASHBOARD")
+                .on_click(move |_, _, cx| {
+                    let data = load_dashboard(cx);
+                    to_dashboard.update(cx, |view, cx| {
+                        view.dashboard = data;
+                        view.screen = Screen::Dashboard;
+                        cx.notify();
+                    });
+                }),
+        )
+        .child(
+            Button::new("nav-progress")
+                .ghost()
+                .text_size(px(13.))
+                .text_color(theme.muted_foreground)
+                .child("PROGRESS")
+                .on_click(move |_, _, cx| {
+                    let data = load_progress(cx);
+                    to_progress.update(cx, |view, cx| {
+                        view.progress = data;
+                        view.screen = Screen::Progress;
+                        cx.notify();
+                    });
+                }),
+        )
+        .child(
+            Button::new("nav-playground")
+                .ghost()
+                .text_size(px(13.))
+                .text_color(theme.muted_foreground)
+                .child("PLAYGROUND")
+                .on_click(move |_, _, cx| {
+                    to_playground.update(cx, |view, cx| {
+                        view.clear_answer();
+                        view.screen = Screen::Playground;
+                        cx.notify();
+                    });
+                }),
         );
 
     if !module_name.is_empty() {
@@ -1287,20 +1581,25 @@ fn navbar(theme: &Theme, to_home: Entity<AppView>, module_name: String) -> Div {
 }
 
 impl Render for AppView {
-    fn render(&mut self, _: &mut Window, cx: &mut Context<Self>) -> impl IntoElement {
+    fn render(&mut self, window: &mut Window, cx: &mut Context<Self>) -> impl IntoElement {
         let theme = cx.theme();
         let view = cx.entity();
 
         match self.screen.clone() {
             Screen::Home => self.home(theme, view),
             Screen::Module(index) => self.module_screen(theme, view, index),
-            Screen::Lesson { module, lesson } => self.lesson_screen(theme, view, module, lesson),
+            Screen::Lesson { module, lesson } => {
+                self.lesson_screen(view, window, cx, module, lesson)
+            }
             Screen::Exercise { module, exercise } => {
                 self.exercise_screen(theme, view, module, exercise)
             }
             Screen::Practice { module } => self.practice_screen(theme, view, module),
             Screen::PracticeRun { module } => self.practice_run_screen(theme, view, module),
             Screen::PracticeResults { module } => self.practice_results_screen(theme, view, module),
+            Screen::Dashboard => self.dashboard_screen(theme, view),
+            Screen::Progress => self.progress_screen(theme, view),
+            Screen::Playground => self.playground_screen(view, window, cx),
         }
     }
 }
@@ -1320,6 +1619,20 @@ fn load_builder(cx: &App, module_id: i64) -> Option<practice::BuilderData> {
         db.block_on(practice::builder_data(db.pool(), module_id))
             .ok()
             .flatten()
+    })
+}
+
+/// The dashboard's data, or nothing if it cannot be read.
+fn load_dashboard(cx: &App) -> Option<DashboardData> {
+    with_db(cx, |db| {
+        db.block_on(progress::dashboard_data(db.pool())).ok()
+    })
+}
+
+/// The progress totals, or nothing if they cannot be read.
+fn load_progress(cx: &App) -> Option<ProgressSummary> {
+    with_db(cx, |db| {
+        db.block_on(progress::progress_summary(db.pool())).ok()
     })
 }
 
@@ -1396,6 +1709,103 @@ fn discard_run(cx: &App, run_id: i64) -> bool {
     })
 }
 
+/// Compiles and runs the editor's buffer — or cancels the run in flight.
+///
+/// One entry point for the RUN button, the ⌘/CTRL+ENTER handler and the test
+/// that drives the same path. The compile itself goes to the background
+/// executor: `sandbox::run` waits on `rustc` for seconds, and doing that on
+/// the UI thread would freeze the window for the whole timeout.
+///
+/// Named for what it runs, not for where: `start_run` was already the
+/// practice runner's entry point, and two of them in one module is one too
+/// many.
+pub(crate) fn run_program(view: Entity<AppView>, editor: &Entity<EditorState>, cx: &mut App) {
+    // A second press while one is in flight cancels it. The button stays live
+    // in the loading state for exactly this reason — greying it out would
+    // take away the only control the learner has over a long compile.
+    if view.read(cx).playground.running {
+        view.update(cx, |view, cx| {
+            view.playground.run.take();
+            view.playground.running = false;
+            cx.notify();
+        });
+        return;
+    }
+
+    let code = editor.read(cx).value().to_string();
+    if code.trim().is_empty() {
+        return;
+    }
+
+    let executor = cx.background_executor().clone();
+    let runner = view.clone();
+    let task = cx.spawn(async move |cx| {
+        let started = std::time::Instant::now();
+        let result = executor.spawn(async move { sandbox::run(&code) }).await;
+        let elapsed = started.elapsed().as_millis();
+
+        cx.update(|cx| {
+            runner.update(cx, |view, cx| {
+                view.playground.result = Some(result.clone());
+                view.playground.elapsed_ms = Some(elapsed);
+                view.playground.running = false;
+                cx.notify();
+            });
+        });
+
+        result
+    });
+
+    view.update(cx, |view, cx| {
+        view.playground.result = None;
+        view.playground.elapsed_ms = None;
+        view.playground.explanation_open = false;
+        view.playground.running = true;
+        view.playground.run = Some(task);
+        cx.notify();
+    });
+}
+
+/// Restores the starter program and clears every trace of the last run —
+/// back to a clean slate, not just clean output.
+pub(crate) fn reset_editor(
+    view: Entity<AppView>,
+    editor: &Entity<EditorState>,
+    window: &mut Window,
+    cx: &mut App,
+) {
+    editor.update(cx, |state, cx| {
+        state.set_value(crate::playground::STARTER_CODE, window, cx);
+    });
+    view.update(cx, |view, cx| {
+        view.playground.run.take();
+        view.playground.result = None;
+        view.playground.elapsed_ms = None;
+        view.playground.running = false;
+        view.playground.explanation_open = false;
+        cx.notify();
+    });
+}
+
+/// Puts the caret on the line a diagnostic points at and focuses the editor.
+///
+/// The sandbox shifts diagnostics back onto the learner's numbering before
+/// they reach us, so `line` is already a line in the buffer as shown.
+pub(crate) fn jump_to_line(
+    editor: &Entity<EditorState>,
+    line: usize,
+    window: &mut Window,
+    cx: &mut App,
+) {
+    let target = crate::component::input::Position {
+        line: line.saturating_sub(1) as u32,
+        character: 0,
+    };
+    editor.update(cx, |state, cx| {
+        state.set_cursor_position(target, window, cx);
+    });
+}
+
 fn heading(theme: &Theme, title: &str, subtitle: &str) -> Div {
     let mut head = div().flex().flex_col().gap_1();
     head = head.child(
@@ -1440,7 +1850,8 @@ fn callout(theme: &Theme, title: &str, text: &str) -> Div {
 #[cfg(test)]
 mod ui_tests {
     use super::{
-        answer_question, exercise_view, finish_run, load_builder, start_run, AppView, Screen,
+        answer_question, exercise_view, finish_run, load_builder, load_dashboard, load_progress,
+        run_program, start_run, AppView, LessonContent, LessonSection, Screen,
     };
     use gpui_kit::{TestAppContext, TestDispatcher, VisualTestContext};
 
@@ -1514,11 +1925,13 @@ mod ui_tests {
 
         assert_eq!(screen_of(&view, cx), "Home");
 
-        // First stop is the BORROW_ wordmark in the navbar, second the first
-        // module card. If the cards were plain divs again the second stop
-        // would not be a card, and Enter would leave us on Home.
-        cx.update(|window, cx| window.focus_next(cx));
-        cx.update(|window, cx| window.focus_next(cx));
+        // First stop is the BORROW_ wordmark in the navbar, then the three
+        // nav entries, then the first module card. If the cards were plain
+        // divs again the last stop would not be a card, and Enter would leave
+        // us on Home.
+        for _ in 0..5 {
+            cx.update(|window, cx| window.focus_next(cx));
+        }
         press(cx, "enter");
         cx.run_until_parked();
         cx.update(|window, cx| window.draw(cx).clear(cx));
@@ -1528,6 +1941,519 @@ mod ui_tests {
             "Module(0)",
             "Enter on a focused module card should navigate"
         );
+    }
+
+    /// The nav entries reach both new screens with data behind them.
+    ///
+    /// Walking focus rather than setting `screen` directly is the point: it
+    /// proves the buttons are in the focus order and that clicking them loads
+    /// the data. `draw` is the assertion, as everywhere else here.
+    #[test]
+    fn nav_opens_the_dashboard_and_the_progress_screen() {
+        let mut cx = TestAppContext::build(TestDispatcher::new(0), Some("nav_dashboard"));
+        let (view, cx) = open_with_db(&mut cx, "nav_dashboard");
+
+        // Wordmark, then DASHBOARD.
+        for _ in 0..2 {
+            cx.update(|window, cx| window.focus_next(cx));
+        }
+        press(cx, "enter");
+        cx.run_until_parked();
+        cx.update(|window, cx| window.draw(cx).clear(cx));
+
+        assert_eq!(screen_of(&view, cx), "Dashboard");
+        let loaded = cx.update(|_, cx| view.read(cx).dashboard.is_some());
+        assert!(loaded, "the nav entry should load the dashboard data");
+
+        // Focus is still on DASHBOARD, so the next stop is PROGRESS.
+        cx.update(|window, cx| window.focus_next(cx));
+        press(cx, "enter");
+        cx.run_until_parked();
+        cx.update(|window, cx| window.draw(cx).clear(cx));
+
+        assert_eq!(screen_of(&view, cx), "Progress");
+        let totals = cx.update(|_, cx| view.read(cx).progress.clone());
+        let totals = totals.expect("the nav entry should load the progress totals");
+        assert!(totals.total_lessons > 0, "seeded course has lessons");
+        assert!(totals.total_modules > 0, "seeded course has modules");
+    }
+
+    /// Both screens must draw against the seeded database, not an empty state.
+    #[test]
+    fn dashboard_and_progress_render_with_seeded_data() {
+        let mut cx = TestAppContext::build(TestDispatcher::new(0), Some("dash_progress"));
+        let (view, cx) = open_with_db(&mut cx, "dash_progress");
+
+        cx.update(|_, cx| {
+            let dashboard = load_dashboard(cx);
+            let progress = load_progress(cx);
+            view.update(cx, |view, cx| {
+                view.dashboard = dashboard;
+                view.progress = progress;
+                view.screen = Screen::Dashboard;
+                cx.notify();
+            });
+        });
+        cx.update(|window, cx| window.draw(cx).clear(cx));
+
+        assert_eq!(screen_of(&view, cx), "Dashboard");
+        let data = cx.update(|_, cx| view.read(cx).dashboard.clone());
+        let data = data.expect("dashboard data loaded");
+        assert!(!data.modules.is_empty(), "the curriculum has modules");
+        assert_eq!(
+            data.lessons_per_module.len(),
+            data.modules.len(),
+            "every module carries its lessons"
+        );
+
+        // The continue card needs a target: the first incomplete lesson must
+        // resolve to a screen position, or the card renders with no buttons.
+        if let Some(lesson_id) = data.first_incomplete_lesson {
+            let target = cx.update(|_, cx| view.read(cx).lesson_index(lesson_id));
+            assert!(
+                target.is_some(),
+                "lesson {lesson_id} should be on the screen somewhere"
+            );
+        }
+
+        cx.update(|_, cx| {
+            view.update(cx, |view, cx| {
+                view.screen = Screen::Progress;
+                cx.notify();
+            });
+        });
+        cx.update(|window, cx| window.draw(cx).clear(cx));
+
+        assert_eq!(screen_of(&view, cx), "Progress");
+        let totals = cx.update(|_, cx| view.read(cx).progress.clone());
+        let totals = totals.expect("progress data loaded");
+        assert!(totals.total_lessons > 0);
+        assert!(totals.total_xp >= 0);
+    }
+
+    /// The playground must draw with a real editor behind it.
+    ///
+    /// The editor's state only exists after the first draw — it is keyed on
+    /// the window — so this is also what proves the buffer carries the
+    /// starter program and that RUN therefore starts out usable.
+    #[test]
+    fn playground_draws_with_the_starter_program() {
+        let mut cx = TestAppContext::build(TestDispatcher::new(0), Some("playground"));
+        let (view, cx) = open(&mut cx);
+
+        cx.update(|_, cx| {
+            view.update(cx, |view, cx| {
+                view.navigate(Screen::Playground);
+                cx.notify();
+            });
+        });
+        cx.update(|window, cx| window.draw(cx).clear(cx));
+        assert_eq!(screen_of(&view, cx), "Playground");
+
+        let buffer = cx.update(|_, cx| {
+            view.read(cx)
+                .playground
+                .editor
+                .as_ref()
+                .map(|editor| editor.read(cx).value().to_string())
+        });
+        let buffer = buffer.expect("the first draw creates the editor state");
+        assert_eq!(
+            buffer,
+            crate::playground::STARTER_CODE,
+            "the editor opens on the site's starter program"
+        );
+        assert!(!buffer.trim().is_empty(), "RUN is enabled for it");
+    }
+
+    /// Compile-and-run through the same entry point the button calls, then
+    /// draw the console with the result behind it.
+    ///
+    /// `draw` is the assertion again: the timing line, stdout and the status
+    /// all have to survive a real render, and a panic here is a screen that
+    /// would break on a learner's machine.
+    #[test]
+    fn a_program_runs_and_the_console_reports_it() {
+        use crate::services::sandbox::Status;
+
+        let mut cx = TestAppContext::build(TestDispatcher::new(0), Some("playground_run"));
+        let (view, cx) = open(&mut cx);
+
+        cx.update(|_, cx| {
+            view.update(cx, |view, cx| {
+                view.navigate(Screen::Playground);
+                cx.notify();
+            });
+        });
+        cx.update(|window, cx| window.draw(cx).clear(cx));
+
+        cx.update(|_, cx| {
+            let editor = view
+                .read(cx)
+                .playground
+                .editor
+                .clone()
+                .expect("the first draw creates the editor state");
+            run_program(view.clone(), &editor, cx);
+        });
+        cx.run_until_parked();
+
+        let result = cx.update(|_, cx| view.read(cx).playground.result.clone());
+        let result = result.expect("the run should have finished");
+        assert_eq!(result.status, Status::Ok, "the starter program runs");
+        assert!(
+            result.stdout.contains("hello"),
+            "its output should reach the console, got {:?}",
+            result.stdout
+        );
+
+        cx.update(|window, cx| window.draw(cx).clear(cx));
+    }
+
+    /// A program that will not compile has to arrive as structured
+    /// diagnostics, and the disclosure that hides the long explanation has to
+    /// toggle without taking the screen down.
+    #[test]
+    fn a_compile_error_renders_diagnostics_and_its_disclosure() {
+        let mut cx = TestAppContext::build(TestDispatcher::new(0), Some("playground_error"));
+        let (view, cx) = open(&mut cx);
+
+        cx.update(|_, cx| {
+            view.update(cx, |view, cx| {
+                view.navigate(Screen::Playground);
+                cx.notify();
+            });
+        });
+        cx.update(|window, cx| window.draw(cx).clear(cx));
+
+        // Replace the buffer through the setter RESET uses, so the editor and
+        // the run see the same text a learner would type.
+        cx.update(|window, cx| {
+            let editor = view
+                .read(cx)
+                .playground
+                .editor
+                .clone()
+                .expect("the first draw creates the editor state");
+            editor.update(cx, |state, cx| {
+                state.set_value("fn main() { let x: i32 = \"nope\"; }", window, cx);
+            });
+        });
+
+        cx.update(|_, cx| {
+            let editor = view.read(cx).playground.editor.clone().expect("editor");
+            run_program(view.clone(), &editor, cx);
+        });
+        cx.run_until_parked();
+
+        let count = cx.update(|_, cx| {
+            view.read(cx)
+                .playground
+                .result
+                .as_ref()
+                .map(|result| result.diagnostics.len())
+        });
+        assert!(
+            count.unwrap_or(0) > 0,
+            "a type error should reach the console as a diagnostic, got {count:?}"
+        );
+        cx.update(|window, cx| window.draw(cx).clear(cx));
+
+        // Open the "WHY THIS HAPPENS" disclosure and draw again: it hides the
+        // long write-up, and rendering it is the part that can break.
+        cx.update(|_, cx| {
+            view.update(cx, |view, cx| {
+                view.playground.explanation_open = true;
+                cx.notify();
+            });
+        });
+        cx.update(|window, cx| window.draw(cx).clear(cx));
+    }
+
+    /// The shortcut the hint promises: ⌘/CTRL+ENTER runs what is in the
+    /// buffer while the editor has focus.
+    ///
+    /// The key event reaches the wrapper because the editor sits inside it —
+    /// if that ever stops being true the hint is lying, and this is the test
+    /// that would say so.
+    #[test]
+    fn the_run_shortcut_fires_from_the_editor() {
+        let mut cx = TestAppContext::build(TestDispatcher::new(0), Some("playground_shortcut"));
+        let (view, cx) = open(&mut cx);
+
+        cx.update(|_, cx| {
+            view.update(cx, |view, cx| {
+                view.navigate(Screen::Playground);
+                cx.notify();
+            });
+        });
+        cx.update(|window, cx| window.draw(cx).clear(cx));
+
+        cx.update(|window, cx| {
+            let editor = view
+                .read(cx)
+                .playground
+                .editor
+                .clone()
+                .expect("the first draw creates the editor state");
+            editor.update(cx, |state, cx| state.focus(window, cx));
+        });
+
+        press(cx, "cmd-enter");
+        cx.run_until_parked();
+
+        let ran = cx.update(|_, cx| view.read(cx).playground.result.is_some());
+        assert!(ran, "the shortcut should have started a run");
+    }
+
+    /// The first lesson carrying a widget of each kind, straight out of the
+    /// seeded content — a content edit that drops a widget would fail here
+    /// rather than leave the widget's renderer unexercised.
+    fn widget_lessons(
+        view: &gpui_kit::Entity<AppView>,
+        cx: &gpui_kit::App,
+    ) -> Vec<(&'static str, usize, usize)> {
+        let wanted = ["gap", "step", "guess", "dispatch", "pipeline"];
+        let mut found: Vec<(&'static str, usize, usize)> = Vec::new();
+
+        for (module, seed) in view.read(cx).modules.iter().enumerate() {
+            for (lesson, record) in seed.lessons.iter().enumerate() {
+                let Ok(content) = serde_json::from_str::<LessonContent>(&record.content) else {
+                    continue;
+                };
+                for section in &content.sections {
+                    let kind = match section {
+                        LessonSection::GapFill { .. } => "gap",
+                        LessonSection::StepThrough { .. } => "step",
+                        LessonSection::GuessRun { .. } => "guess",
+                        LessonSection::Dispatch { .. } => "dispatch",
+                        LessonSection::Pipeline { .. } => "pipeline",
+                        _ => continue,
+                    };
+                    if wanted.contains(&kind) && !found.iter().any(|(k, ..)| *k == kind) {
+                        found.push((kind, module, lesson));
+                    }
+                }
+            }
+        }
+
+        found
+    }
+
+    /// The first gap-fill block: where it is, which block it is, its answers.
+    fn first_gap(
+        view: &gpui_kit::Entity<AppView>,
+        cx: &gpui_kit::App,
+    ) -> Option<(usize, usize, usize, Vec<String>)> {
+        for (module, seed) in view.read(cx).modules.iter().enumerate() {
+            for (lesson, record) in seed.lessons.iter().enumerate() {
+                let Ok(content) = serde_json::from_str::<LessonContent>(&record.content) else {
+                    continue;
+                };
+                for (block, section) in content.sections.iter().enumerate() {
+                    if let LessonSection::GapFill { blanks, .. } = section {
+                        if blanks.is_empty() {
+                            continue;
+                        }
+                        return Some((
+                            module,
+                            lesson,
+                            block,
+                            blanks.iter().map(|blank| blank.answer.clone()).collect(),
+                        ));
+                    }
+                }
+            }
+        }
+        None
+    }
+
+    /// The first guess-then-run block: where it is, which block it is, its
+    /// program.
+    fn first_guess(
+        view: &gpui_kit::Entity<AppView>,
+        cx: &gpui_kit::App,
+    ) -> Option<(usize, usize, usize, String)> {
+        for (module, seed) in view.read(cx).modules.iter().enumerate() {
+            for (lesson, record) in seed.lessons.iter().enumerate() {
+                let Ok(content) = serde_json::from_str::<LessonContent>(&record.content) else {
+                    continue;
+                };
+                for (block, section) in content.sections.iter().enumerate() {
+                    if let LessonSection::GuessRun { code, .. } = section {
+                        return Some((module, lesson, block, code.clone()));
+                    }
+                }
+            }
+        }
+        None
+    }
+
+    /// Every interactive widget, rendered with a view behind it.
+    ///
+    /// The course sweep takes the fallback path — no view, no window. This is
+    /// the path a learner takes: inputs created by the lesson screen, then
+    /// each widget's state driven to an edge and drawn again. `draw` is the
+    /// assertion throughout; the step counter goes to `usize::MAX` on purpose,
+    /// because a clamped step must not panic the frame counter.
+    #[test]
+    fn every_interactive_widget_renders_against_seeded_content() {
+        let mut cx = TestAppContext::build(TestDispatcher::new(0), Some("widgets"));
+        let (view, cx) = open(&mut cx);
+
+        let found = cx.update(|_, cx| widget_lessons(&view, cx));
+        assert_eq!(
+            found.len(),
+            5,
+            "the seeded course should teach with every widget, got {found:?}"
+        );
+
+        for (kind, module, lesson) in found {
+            cx.update(|_, cx| {
+                view.update(cx, |view, cx| {
+                    view.navigate(Screen::Lesson { module, lesson });
+                    cx.notify();
+                });
+            });
+            cx.update(|window, cx| window.draw(cx).clear(cx));
+            assert_eq!(
+                screen_of(&view, cx),
+                format!("Lesson {{ module: {module}, lesson: {lesson} }}")
+            );
+
+            if kind == "gap" {
+                let inputs = cx.update(|_, cx| {
+                    view.read(cx)
+                        .widgets
+                        .iter()
+                        .map(|state| state.inputs.len())
+                        .sum::<usize>()
+                });
+                assert!(inputs > 0, "a gap lesson should create its inputs");
+            }
+
+            cx.update(|_, cx| {
+                view.update(cx, |view, cx| {
+                    for state in &mut view.widgets {
+                        state.step = usize::MAX;
+                        state.checked = true;
+                        state.verdicts = vec![Some(true), Some(false), None];
+                        state.revealed = true;
+                        state.choice = Some(0);
+                    }
+                    cx.notify();
+                });
+            });
+            cx.update(|window, cx| window.draw(cx).clear(cx));
+        }
+    }
+
+    /// The gap-fill loop end to end: type, check, read the verdict, reset.
+    ///
+    /// Driven through the same functions the buttons call, because a button's
+    /// closure is not reachable from a test without simulating a focus walk
+    /// through a lesson full of controls.
+    #[test]
+    fn gaps_grade_what_was_typed_and_reset_clears_it() {
+        use crate::widgets::{check_gaps, reset_gaps};
+
+        let mut cx = TestAppContext::build(TestDispatcher::new(0), Some("gap_fill"));
+        let (view, cx) = open(&mut cx);
+
+        let (module, lesson, block, answers) = cx
+            .update(|_, cx| first_gap(&view, cx))
+            .expect("the course has a gap-fill block");
+
+        cx.update(|_, cx| {
+            view.update(cx, |view, cx| {
+                view.navigate(Screen::Lesson { module, lesson });
+                cx.notify();
+            });
+        });
+        cx.update(|window, cx| window.draw(cx).clear(cx));
+
+        let inputs = cx.update(|_, cx| {
+            view.read(cx)
+                .widgets
+                .get(block)
+                .map(|state| state.inputs.clone())
+                .unwrap_or_default()
+        });
+        assert_eq!(
+            inputs.len(),
+            answers.len(),
+            "one input per blank, from the lesson screen"
+        );
+
+        // The first blank gets the right answer, the second — if there is
+        // one — something that is not it.
+        cx.update(|window, cx| {
+            inputs[0].update(cx, |state, cx| {
+                state.set_value(answers[0].clone(), window, cx)
+            });
+            if let Some(second) = inputs.get(1) {
+                second.update(cx, |state, cx| {
+                    state.set_value("definitely wrong", window, cx)
+                });
+            }
+        });
+
+        cx.update(|_, cx| check_gaps(view.clone(), block, &answers, cx));
+        let verdicts = cx.update(|_, cx| view.read(cx).widgets[block].verdicts.clone());
+        assert_eq!(verdicts.first().copied().flatten(), Some(true));
+        if answers.len() > 1 {
+            assert_eq!(verdicts.get(1).copied().flatten(), Some(false));
+        }
+        cx.update(|window, cx| window.draw(cx).clear(cx));
+
+        cx.update(|window, cx| reset_gaps(view.clone(), block, window, cx));
+        let cleared = cx.update(|_, cx| {
+            let state = &view.read(cx).widgets[block];
+            (state.checked, state.verdicts.len())
+        });
+        assert_eq!(cleared, (false, 0), "RESET forgets the last verdict");
+        let text = cx.update(|_, cx| inputs[0].read(cx).value().to_string());
+        assert!(text.is_empty(), "RESET empties the field, got {text:?}");
+        cx.update(|window, cx| window.draw(cx).clear(cx));
+    }
+
+    /// The guess widget compiles through the same path its button takes, and
+    /// the graded result renders.
+    #[test]
+    fn a_guess_compiles_and_the_widget_reports_it() {
+        use crate::widgets::run_guess;
+
+        let mut cx = TestAppContext::build(TestDispatcher::new(0), Some("guess_run"));
+        let (view, cx) = open(&mut cx);
+
+        let (module, lesson, block, code) = cx
+            .update(|_, cx| first_guess(&view, cx))
+            .expect("the course has a guess-then-run block");
+
+        cx.update(|_, cx| {
+            view.update(cx, |view, cx| {
+                view.navigate(Screen::Lesson { module, lesson });
+                cx.notify();
+            });
+        });
+        cx.update(|window, cx| window.draw(cx).clear(cx));
+
+        cx.update(|_, cx| {
+            view.update(cx, |view, cx| {
+                if let Some(state) = view.widgets.get_mut(block) {
+                    state.choice = Some(0);
+                }
+                cx.notify();
+            });
+        });
+        cx.update(|window, cx| window.draw(cx).clear(cx));
+
+        cx.update(|_, cx| run_guess(view.clone(), block, code, cx));
+        cx.run_until_parked();
+
+        let graded = cx.update(|_, cx| view.read(cx).widgets[block].guess.is_some());
+        assert!(graded, "the program should have been run and reported");
+        cx.update(|window, cx| window.draw(cx).clear(cx));
     }
 
     /// The practice builder must draw against real seeded data, not an empty

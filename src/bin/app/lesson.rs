@@ -2,14 +2,14 @@
 //!
 //! The match is exhaustive on purpose: adding a block type to the content model
 //! without adding a renderer here is a compile error, not a blank spot in the
-//! lesson. The 5 interactive widgets render their readable content for now —
-//! prompt, code and explanation — and gain interaction later, rather than
-//! shipping a control that does nothing.
+//! lesson. The 5 interactive widgets hand off to `widgets`, which needs the
+//! block's state and, for controls, a view to write to.
 
 use crate::components::{
-    breakdown, callout, checklist, code_panel, diagram, label, steps, table, CalloutTone,
+    breakdown, callout, checklist, code_panel, diagram, steps, table, CalloutTone,
 };
 use crate::models::LessonSection;
+use crate::widgets::{self, WidgetCtx};
 use gpui_kit::component::Theme;
 use gpui_kit::*;
 
@@ -30,7 +30,7 @@ pub fn tone_for(title: &str) -> CalloutTone {
 }
 
 /// Renders one block.
-pub fn render_section(theme: &Theme, section: &LessonSection) -> Div {
+pub fn render_section(theme: &Theme, section: &LessonSection, ctx: &WidgetCtx<'_>) -> Div {
     match section {
         LessonSection::Text { text } => paragraphs(theme, text),
         LessonSection::Paragraphs { items } => {
@@ -59,56 +59,38 @@ pub fn render_section(theme: &Theme, section: &LessonSection) -> Div {
 
         LessonSection::Steps { items } => steps(theme, items),
 
-        // ── interactive widgets, rendered as their readable content ──
+        // ── the five interactive widgets ──
         LessonSection::GapFill {
             intro,
             language,
             code,
             blanks,
             after,
-        } => widget(
-            theme,
-            "Fill the blanks",
-            intro,
-            language,
-            code,
-            &blanks
-                .iter()
-                .map(|b| b.hint.clone())
-                .filter(|h| !h.is_empty())
-                .collect::<Vec<_>>(),
-            after,
-        ),
+        } => widgets::gap_fill(theme, ctx, intro, language, code, blanks, after),
 
         LessonSection::StepThrough {
             title,
             language,
             code,
             steps,
-        } => widget(
-            theme,
-            title,
-            "",
-            language,
-            code,
-            &steps.iter().map(|s| s.note.clone()).collect::<Vec<_>>(),
-            "",
-        ),
+        } => widgets::step_through(theme, ctx, title, language, code, steps),
 
         LessonSection::GuessRun {
             prompt,
             language,
             code,
             options,
+            correct,
             explanation,
             ..
-        } => widget(
+        } => widgets::guess_run(
             theme,
-            "Guess what it does",
+            ctx,
             prompt,
             language,
             code,
-            &options.clone(),
+            options,
+            *correct,
             explanation,
         ),
 
@@ -117,33 +99,14 @@ pub fn render_section(theme: &Theme, section: &LessonSection) -> Div {
             language,
             code,
             steps,
-        } => widget(
-            theme,
-            title,
-            "",
-            language,
-            code,
-            &steps
-                .iter()
-                .map(|s| format!("static: {} — dynamic: {}", s.static_note, s.dynamic_note))
-                .collect::<Vec<_>>(),
-            "",
-        ),
+        } => widgets::dispatch(theme, ctx, title, language, code, steps),
 
         LessonSection::Pipeline {
             title,
             language,
             code,
             steps,
-        } => widget(
-            theme,
-            title,
-            "",
-            language,
-            code,
-            &steps.iter().map(|s| s.note.clone()).collect::<Vec<_>>(),
-            "",
-        ),
+        } => widgets::pipeline(theme, ctx, title, language, code, steps),
     }
 }
 
@@ -166,73 +129,4 @@ fn plain_text(theme: &Theme, text: &str) -> Div {
         .text_size(px(13.5))
         .text_color(theme.foreground)
         .child(text.to_string())
-}
-
-/// A heading, an optional intro, the code, an optional list of points, and
-/// closing text.
-///
-/// Used by all five interactive widgets until they gain their own controls —
-/// the point is that the lesson still reads in order, with nothing missing but
-/// the interaction itself.
-fn widget(
-    theme: &Theme,
-    title: &str,
-    intro: &str,
-    language: &str,
-    code: &str,
-    points: &[String],
-    after: &str,
-) -> Div {
-    let mut out = div()
-        .my_4()
-        .rounded_md()
-        .border_1()
-        .border_color(theme.border)
-        .bg(theme.secondary)
-        .p_4()
-        .flex()
-        .flex_col()
-        .gap_3()
-        .child(label(theme, title));
-
-    if !intro.trim().is_empty() {
-        out = out.child(plain_text(theme, intro.trim()));
-    }
-
-    out = out.child(
-        code_panel(theme, language, code, crate::models::CodeStatus::Valid)
-            .mx_0()
-            .my_0(),
-    );
-
-    if !points.is_empty() {
-        let mut list = div().flex().flex_col().gap_2();
-        for point in points {
-            list = list.child(
-                div()
-                    .flex()
-                    .flex_row()
-                    .gap_2()
-                    .child(
-                        div()
-                            .text_size(px(12.))
-                            .text_color(theme.primary)
-                            .child("›"),
-                    )
-                    .child(
-                        div()
-                            .text_size(px(13.))
-                            .text_color(theme.foreground)
-                            .child(point.clone()),
-                    ),
-            );
-        }
-        out = out.child(list);
-    }
-
-    if !after.trim().is_empty() {
-        out = out.child(plain_text(theme, after.trim()));
-    }
-
-    out
 }
