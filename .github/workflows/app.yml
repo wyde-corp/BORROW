@@ -60,7 +60,12 @@ jobs:
       - name: Smoke-test the desktop app
         if: runner.os == 'Linux'
         run: |
-          sudo apt-get install -y --no-install-recommends xvfb
+          # xvfb for a display, mesa for software Vulkan and GL behind it:
+          # the runner has no GPU, and gpui will not open a window it cannot
+          # create a surface for — which is exactly what the first run of
+          # this step reported.
+          sudo apt-get install -y --no-install-recommends \
+            xvfb mesa-vulkan-drivers libgl1-mesa-dri
           set +e
           xvfb-run -a timeout 8s ./target/debug/borrow-app
           code=$?
