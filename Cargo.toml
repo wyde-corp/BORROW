@@ -51,3 +51,13 @@ gpui-kit = { version = "0.7.1", features = [
     "tree-sitter",
     "tree-sitter-rust",
 ] }
+
+# Release artifacts only. The debug binary already runs to hundreds of
+# megabytes, and tree-sitter added to it; an installer carrying an unstripped
+# gpui build is measured the same way. `strip` takes most of the weight, thin
+# LTO and a single codegen unit buy some of the build time back — a build that
+# runs on tags, not on every save.
+[profile.release]
+strip = "symbols"
+lto = "thin"
+codegen-units = 1

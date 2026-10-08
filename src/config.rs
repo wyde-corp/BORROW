@@ -229,9 +229,19 @@ mod data_dir_tests {
         .expect("appdata is set")
         .join("borrow.db");
 
+        // Compared as paths, not as strings: Windows writes `\\` where the
+        // fixture writes `/`, and a string comparison fails on the platform
+        // the rule is actually for. What the test is really about is that the
+        // space survives the whole way to the file.
         assert_eq!(
-            path.to_string_lossy(),
-            "C:/Users/Ada Lovelace/AppData/Roaming/BORROW/borrow.db"
+            path,
+            PathBuf::from("C:/Users/Ada Lovelace/AppData/Roaming")
+                .join("BORROW")
+                .join("borrow.db")
+        );
+        assert!(
+            path.to_string_lossy().contains("Ada Lovelace"),
+            "the space in the home directory survives: {path:?}"
         );
     }
 }
