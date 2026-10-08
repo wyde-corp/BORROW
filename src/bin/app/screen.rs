@@ -219,9 +219,6 @@ impl AppView {
                 .border_color(theme.border)
                 .bg(theme.secondary)
                 .p_4()
-                .flex()
-                .flex_col()
-                .gap_1()
                 .on_click(move |_, _, cx| {
                     jump_to.update(cx, |view, cx| {
                         view.screen = Screen::Module(index);
@@ -231,28 +228,34 @@ impl AppView {
                 .child(
                     div()
                         .flex()
-                        .flex_row()
-                        .items_baseline()
-                        .justify_between()
+                        .flex_col()
+                        .gap_1()
                         .child(
                             div()
-                                .text_size(px(15.))
-                                .text_color(theme.foreground)
-                                .font_weight(FontWeight::BOLD)
-                                .child(title),
+                                .flex()
+                                .flex_row()
+                                .items_baseline()
+                                .justify_between()
+                                .child(
+                                    div()
+                                        .text_size(px(15.))
+                                        .text_color(theme.foreground)
+                                        .font_weight(FontWeight::BOLD)
+                                        .child(title),
+                                )
+                                .child(
+                                    div()
+                                        .text_size(px(11.))
+                                        .text_color(theme.muted_foreground)
+                                        .child(format!("{lesson_count} lessons")),
+                                ),
                         )
                         .child(
                             div()
-                                .text_size(px(11.))
+                                .text_size(px(13.))
                                 .text_color(theme.muted_foreground)
-                                .child(format!("{lesson_count} lessons")),
+                                .child(description),
                         ),
-                )
-                .child(
-                    div()
-                        .text_size(px(13.))
-                        .text_color(theme.muted_foreground)
-                        .child(description),
                 );
 
             list = list.child(card);
@@ -268,7 +271,7 @@ impl AppView {
         )
     }
 
-    fn module_screen(&self, theme: &Theme, view: Entity<AppView>, index: usize) -> Div {
+    fn module_screen(&self, theme: &Theme, view: Entity<AppView>, index: usize, cx: &App) -> Div {
         let Some(seed) = self.module(index) else {
             return self.shell(theme, view, "Module not found", "", None, div());
         };
@@ -300,22 +303,26 @@ impl AppView {
                             cx.notify();
                         });
                     })
-                    .flex()
-                    .flex_row()
-                    .items_center()
-                    .gap_3()
                     .child(
                         div()
-                            .w(px(28.))
-                            .text_size(px(11.))
-                            .text_color(theme.muted_foreground)
-                            .child(format!("{:02}", position + 1)),
-                    )
-                    .child(
-                        div()
-                            .text_size(px(14.))
-                            .text_color(theme.foreground)
-                            .child(lesson_title),
+                            .flex()
+                            .flex_row()
+                            .items_center()
+                            .gap_3()
+                            .child(
+                                div()
+                                    .w(px(28.))
+                                    .text_size(px(11.))
+                                    .text_color(theme.muted_foreground)
+                                    .child(format!("{:02}", position + 1)),
+                            )
+                            .child(
+                                div()
+                                    .text_size(px(14.))
+                                    .text_color(theme.foreground)
+                                    .font_weight(FontWeight::BOLD)
+                                    .child(lesson_title),
+                            ),
                     ),
             );
         }
@@ -352,22 +359,25 @@ impl AppView {
                             cx.notify();
                         });
                     })
-                    .flex()
-                    .flex_row()
-                    .items_center()
-                    .gap_3()
                     .child(
                         div()
-                            .w(px(28.))
-                            .text_size(px(11.))
-                            .text_color(theme.muted_foreground)
-                            .child(format!("{:02}", position + 1)),
-                    )
-                    .child(
-                        div()
-                            .text_size(px(13.5))
-                            .text_color(theme.foreground)
-                            .child(prompt),
+                            .flex()
+                            .flex_row()
+                            .items_center()
+                            .gap_3()
+                            .child(
+                                div()
+                                    .w(px(28.))
+                                    .text_size(px(11.))
+                                    .text_color(theme.muted_foreground)
+                                    .child(format!("{:02}", position + 1)),
+                            )
+                            .child(
+                                div()
+                                    .text_size(px(13.5))
+                                    .text_color(theme.foreground)
+                                    .child(prompt),
+                            ),
                     ),
             );
         }
@@ -390,12 +400,10 @@ impl AppView {
             ))
             .child(exercise_list);
 
-        // Practice is reached from here rather than from the nav: it is
-        // per-module by nature, and its builder needs the module's id to find
-        // the runs belonging to it.
         let target = view.clone();
         let practice_module = index;
         let module_id = seed.module.id;
+        let next_module_target = target.clone();
         body = body.child(
             Button::new("practice")
                 .primary()
@@ -412,6 +420,41 @@ impl AppView {
                     });
                 }),
         );
+
+        let completed = with_db(cx, |db| {
+            db.block_on(progress::completed_lesson_ids(db.pool()))
+                .unwrap_or_default()
+        });
+
+        let all_lessons_done = !seed.lessons.is_empty()
+            && seed.lessons.iter().all(|lesson| completed.contains(&lesson.id));
+
+        if all_lessons_done && index + 1 < self.modules.len() {
+            let next_index = index + 1;
+            let next_title = self.modules[next_index].module.title.clone();
+            let jump_to_module = next_module_target.clone();
+            body = body.child(
+                div()
+                    .flex()
+                    .flex_row()
+                    .justify_center()
+                    .pt_4()
+                    .child(
+                        Button::new("next-module")
+                            .primary()
+                            .text_size(px(15.))
+                            .px_5()
+                            .py_3()
+                            .label(format!("NEXT MODULE: {next_title} \u{2192}"))
+                            .on_click(move |_, _, cx| {
+                                jump_to_module.update(cx, |view, cx| {
+                                    view.screen = Screen::Module(next_index);
+                                    cx.notify();
+                                });
+                            }),
+                    ),
+            );
+        }
 
         self.shell(theme, view, &title, "", Some(index), body)
     }
@@ -1612,7 +1655,7 @@ impl Render for AppView {
 
         match self.screen.clone() {
             Screen::Home => self.home(theme, view),
-            Screen::Module(index) => self.module_screen(theme, view, index),
+            Screen::Module(index) => self.module_screen(theme, view, index, cx),
             Screen::Lesson { module, lesson } => {
                 self.lesson_screen(view, window, cx, module, lesson)
             }
