@@ -7,3 +7,8 @@
 
 # Compiled playground helper binary
 /fragment
+
+.env.local
+
+# JS toolchain (Convex backend + tests)
+node_modules/
