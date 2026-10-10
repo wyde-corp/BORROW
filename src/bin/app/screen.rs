@@ -17,6 +17,7 @@ use crate::services::sandbox::{self, RunResult};
 use crate::widgets::{BlockState, WidgetCtx};
 use gpui_kit::component::button::{Button, ButtonVariants};
 use gpui_kit::component::input::{EditorState, InputState};
+use gpui_kit::component::Size;
 use gpui_kit::component::*;
 // `overflow_y_scroll` is on StatefulInteractiveElement, not InteractiveElement,
 // and a stateful element needs an id to hang its state on.
@@ -207,18 +208,22 @@ impl AppView {
             let lesson_count = seed.lessons.len();
             let jump_to = view.clone();
 
-            // A Button rather than a div with on_click: gpui-component's Button
+            // Button rather than a div with on_click: gpui-component's Button
             // owns focus, so the card is reachable with Tab and activates on
-            // Enter or Space without a second focus path to maintain. Its
-            // content stays ours — ParentElement lets the card hold the same
-            // title/description layout the div had.
+            // Enter or Space. The custom size avoids the fixed h_8 height the
+            // default Medium size imposes — that clips multi-line card content
+            // to zero height.
             let card = Button::new(format!("module-{index}"))
                 .ghost()
+                .with_size(Size::Size(px(200.)))
                 .rounded_md()
                 .border_1()
                 .border_color(theme.border)
                 .bg(theme.secondary)
                 .p_4()
+                .flex()
+                .flex_col()
+                .gap_1()
                 .on_click(move |_, _, cx| {
                     jump_to.update(cx, |view, cx| {
                         view.screen = Screen::Module(index);
@@ -228,34 +233,28 @@ impl AppView {
                 .child(
                     div()
                         .flex()
-                        .flex_col()
-                        .gap_1()
+                        .flex_row()
+                        .items_baseline()
+                        .justify_between()
                         .child(
                             div()
-                                .flex()
-                                .flex_row()
-                                .items_baseline()
-                                .justify_between()
-                                .child(
-                                    div()
-                                        .text_size(px(15.))
-                                        .text_color(theme.foreground)
-                                        .font_weight(FontWeight::BOLD)
-                                        .child(title),
-                                )
-                                .child(
-                                    div()
-                                        .text_size(px(11.))
-                                        .text_color(theme.muted_foreground)
-                                        .child(format!("{lesson_count} lessons")),
-                                ),
+                                .text_size(px(15.))
+                                .text_color(theme.foreground)
+                                .font_weight(FontWeight::BOLD)
+                                .child(title),
                         )
                         .child(
                             div()
-                                .text_size(px(13.))
+                                .text_size(px(11.))
                                 .text_color(theme.muted_foreground)
-                                .child(description),
+                                .child(format!("{lesson_count} lessons")),
                         ),
+                )
+                .child(
+                    div()
+                        .text_size(px(13.))
+                        .text_color(theme.muted_foreground)
+                        .child(description),
                 );
 
             list = list.child(card);
@@ -289,6 +288,7 @@ impl AppView {
             list = list.child(
                 Button::new(format!("lesson-{id}"))
                     .ghost()
+                    .with_size(Size::Size(px(200.)))
                     .p_3()
                     .rounded_md()
                     .border_1()
@@ -344,6 +344,7 @@ impl AppView {
             exercise_list = exercise_list.child(
                 Button::new(format!("exercise-{id}"))
                     .ghost()
+                    .with_size(Size::Size(px(200.)))
                     .p_3()
                     .rounded_md()
                     .border_1()
@@ -421,10 +422,13 @@ impl AppView {
                 }),
         );
 
-        let completed = with_db(cx, |db| {
-            db.block_on(progress::completed_lesson_ids(db.pool()))
-                .unwrap_or_default()
-        });
+        let completed = cx
+            .try_global::<Db>()
+            .map(|db| {
+                db.block_on(progress::completed_lesson_ids(db.pool()))
+                    .unwrap_or_default()
+            })
+            .unwrap_or_default();
 
         let all_lessons_done = !seed.lessons.is_empty()
             && seed.lessons.iter().all(|lesson| completed.contains(&lesson.id));
