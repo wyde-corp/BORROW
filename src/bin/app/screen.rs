@@ -23,6 +23,7 @@ use gpui_kit::component::*;
 // and a stateful element needs an id to hang its state on.
 use gpui_kit::*;
 use gpui_kit::{InteractiveElement, StatefulInteractiveElement};
+use std::sync::atomic::Ordering;
 
 /// Where the app is showing. Module and lesson indices point into
 /// [`AppView::modules`], which is fixed for the process's lifetime.
@@ -82,9 +83,12 @@ pub(crate) struct PlaygroundState {
     /// Click-to-result wall clock, for the "round trip" line.
     pub(crate) elapsed_ms: Option<u128>,
     pub(crate) running: bool,
-    /// The in-flight run. Dropping it cancels, which is how a second press of
-    /// RUN stops a compile — the web aborts its fetch the same way.
+    /// The in-flight run. Dropping it abandons the result — not the process:
+    /// the sandbox owns the child, so [`Self::cancel`] is what kills it.
     run: Option<Task<RunResult>>,
+    /// The flag that stops the child behind the in-flight run. Raised on
+    /// cancel and cleared when the run finishes or is replaced.
+    cancel: Option<sandbox::CancelFlag>,
     /// The editor's Enter subscription, made on the first draw. Kept for as
     /// long as the view lives: a dropped subscription is a silent shortcut.
     shortcut: Option<Subscription>,
@@ -942,7 +946,15 @@ impl AppView {
                 .language("rust")
                 .line_number(true)
         });
-        self.playground.editor = Some(editor.clone());
+        // The advertised ⌘/CTRL+ENTER lives in the editor's key context, so it
+        // only fires while the editor holds focus — and nothing else in the
+        // app focuses it. A new entity means a fresh visit (the keyed state is
+        // dropped while the screen is not drawn), so focus is taken once on
+        // entry and left alone for the rest of the visit.
+        if self.playground.editor.as_ref() != Some(&editor) {
+            self.playground.editor = Some(editor.clone());
+            editor.update(cx, |state, cx| state.focus(window, cx));
+        }
 
         // The shortcut listens to what the editor *emits*, not to the key
         // itself. `secondary-enter` — ⌘ on macOS, CTRL elsewhere — is the
@@ -2054,13 +2066,10 @@ pub(crate) fn run_program(view: Entity<AppView>, editor: &Entity<EditorState>, c
 /// or update the entity again — a second lease panics at runtime rather than
 /// failing politely.
 fn begin_run(view: &mut AppView, code: &str, cx: &mut Context<AppView>) {
-    // A second press while one is in flight cancels it. The button stays live
-    // in the loading state for exactly this reason — greying it out would
-    // take away the only control the learner has over a long compile.
+    // A second press while one is in flight cancels it — the same toggle the
+    // web's RUN button has, and the Esc shortcut routes here too.
     if view.playground.running {
-        view.playground.run.take();
-        view.playground.running = false;
-        cx.notify();
+        cancel_run(view, cx);
         return;
     }
 
@@ -2069,11 +2078,15 @@ fn begin_run(view: &mut AppView, code: &str, cx: &mut Context<AppView>) {
     }
 
     let code = code.to_string();
+    let cancel = sandbox::CancelFlag::default();
+    let flag = cancel.clone();
     let executor = cx.background_executor().clone();
     let runner = cx.entity();
     let task = cx.spawn(async move |_this, cx| {
         let started = std::time::Instant::now();
-        let result = executor.spawn(async move { sandbox::run(&code) }).await;
+        let result = executor
+            .spawn(async move { sandbox::run_cancellable(&code, &flag) })
+            .await;
         let elapsed = started.elapsed().as_millis();
 
         cx.update(|cx| {
@@ -2081,6 +2094,7 @@ fn begin_run(view: &mut AppView, code: &str, cx: &mut Context<AppView>) {
                 view.playground.result = Some(result.clone());
                 view.playground.elapsed_ms = Some(elapsed);
                 view.playground.running = false;
+                view.playground.cancel = None;
                 cx.notify();
             });
         });
@@ -2092,7 +2106,26 @@ fn begin_run(view: &mut AppView, code: &str, cx: &mut Context<AppView>) {
     view.playground.elapsed_ms = None;
     view.playground.explanation_open = false;
     view.playground.running = true;
+    view.playground.cancel = Some(cancel);
     view.playground.run = Some(task);
+    cx.notify();
+}
+
+/// Stops the run in flight.
+///
+/// Raising the flag kills the child in the sandbox within one 8 ms poll tick;
+/// dropping the task only abandons the result, so the flag is what actually
+/// ends the run. The stop is reported immediately rather than waiting for the
+/// kill to land — the learner pressed a button and the UI must answer now.
+pub(crate) fn cancel_run(view: &mut AppView, cx: &mut Context<AppView>) {
+    if let Some(flag) = view.playground.cancel.take() {
+        flag.store(true, Ordering::Relaxed);
+    }
+    view.playground.run.take();
+    view.playground.result = Some(sandbox::RunResult::cancelled());
+    view.playground.elapsed_ms = None;
+    view.playground.running = false;
+    view.playground.explanation_open = false;
     cx.notify();
 }
 
@@ -2108,6 +2141,9 @@ pub(crate) fn reset_editor(
         state.set_value(crate::playground::STARTER_CODE, window, cx);
     });
     view.update(cx, |view, cx| {
+        if let Some(flag) = view.playground.cancel.take() {
+            flag.store(true, Ordering::Relaxed);
+        }
         view.playground.run.take();
         view.playground.result = None;
         view.playground.elapsed_ms = None;
@@ -2180,8 +2216,9 @@ fn callout(theme: &Theme, title: &str, text: &str) -> Div {
 #[cfg(test)]
 mod ui_tests {
     use super::{
-        answer_question, exercise_view, finish_run, load_builder, load_dashboard, load_progress,
-        run_program, start_run, AppView, LessonContent, LessonSection, Screen,
+        answer_question, begin_run, cancel_run, exercise_view, finish_run, load_builder,
+        load_dashboard, load_progress, run_program, start_run, AppView, LessonContent,
+        LessonSection, Screen,
     };
     use gpui_kit::{TestAppContext, TestDispatcher, VisualTestContext};
 
@@ -2558,6 +2595,78 @@ mod ui_tests {
 
         let ran = cx.update(|_, cx| view.read(cx).playground.result.is_some());
         assert!(ran, "the shortcut should have started a run");
+    }
+
+    /// Entering the Playground focuses the editor, so the advertised shortcut
+    /// works without a click first — the state issue #6 reported.
+    #[test]
+    fn the_shortcut_works_on_entry_without_a_click() {
+        let mut cx =
+            TestAppContext::build(TestDispatcher::new(0), Some("playground_shortcut_autofocus"));
+        let (view, cx) = open(&mut cx);
+
+        cx.update(|_, cx| {
+            view.update(cx, |view, cx| {
+                view.navigate(Screen::Playground);
+                cx.notify();
+            });
+        });
+        cx.update(|window, cx| window.draw(cx).clear(cx));
+
+        // No manual focus here — that is the whole point. The draw above ran
+        // playground_screen, which takes focus on a fresh editor.
+        press(cx, "secondary-enter");
+        cx.run_until_parked();
+
+        let ran = cx.update(|_, cx| view.read(cx).playground.result.is_some());
+        assert!(
+            ran,
+            "the shortcut should fire on entry, with the editor focused for the learner"
+        );
+    }
+
+    /// Cancelling mid-run: the flag is raised, the task is dropped, and the
+    /// console reports the stop rather than waiting out the wall clock.
+    #[test]
+    fn a_run_can_be_cancelled_and_the_console_reports_it() {
+        use crate::services::sandbox::Status;
+
+        let mut cx = TestAppContext::build(TestDispatcher::new(0), Some("playground_cancel"));
+        let (view, cx) = open(&mut cx);
+
+        cx.update(|_, cx| {
+            view.update(cx, |view, cx| {
+                view.navigate(Screen::Playground);
+                cx.notify();
+            });
+        });
+        cx.update(|window, cx| window.draw(cx).clear(cx));
+
+        cx.update(|_, cx| {
+            view.update(cx, |view, cx| {
+                begin_run(view, "fn main() { let mut i = 0u64; loop { i = i.wrapping_add(1); } }", cx);
+            });
+        });
+
+        let started = cx.update(|_, cx| view.read(cx).playground.running);
+        assert!(started, "the run should be in flight");
+
+        cx.update(|_, cx| {
+            view.update(cx, |view, cx| {
+                cancel_run(view, cx);
+            });
+        });
+
+        let (running, status) = cx.update(|_, cx| {
+            let playground = &view.read(cx).playground;
+            let status = playground.result.as_ref().map(|result| result.status);
+            (playground.running, status)
+        });
+        assert!(!running, "cancel must clear the running state at once");
+        assert_eq!(status, Some(Status::Cancelled), "the console reports the stop");
+
+        cx.run_until_parked();
+        cx.update(|window, cx| window.draw(cx).clear(cx));
     }
 
     /// The first lesson carrying a widget of each kind, straight out of the

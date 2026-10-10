@@ -23,6 +23,11 @@ pub const STARTER_CODE: &str = r#"fn main() {
 }"#;
 
 /// The playground body: the editor, the actions row, the console.
+///
+/// The root div carries the Esc listener: the editor's own key context
+/// consumes Escape for its dismissal actions but propagates it when there is
+/// nothing to dismiss, so the handler on this ancestor sees it — the same
+/// focus-path shape the Enter shortcut uses, one level up.
 pub fn body(
     theme: &Theme,
     view: Entity<AppView>,
@@ -30,10 +35,21 @@ pub fn body(
     editor: &Entity<EditorState>,
     cx: &App,
 ) -> AnyElement {
+    let cancel_view = view.clone();
     div()
+        .id("playground-body")
         .flex()
         .flex_col()
         .gap_4()
+        .on_key_down(move |event: &KeyDownEvent, _window, cx| {
+            if event.keystroke.key == "escape" {
+                cancel_view.update(cx, |view, cx| {
+                    if view.playground.running {
+                        crate::screen::cancel_run(view, cx);
+                    }
+                });
+            }
+        })
         .child(
             Editor::new(editor)
                 .w_full()
@@ -62,33 +78,37 @@ fn actions(
     let running = state.running;
 
     // Label as the site has it: the outcome changes the word, not just the
-    // colour, so success and error never ride on colour alone.
+    // colour, so success and error never ride on colour alone. While a run is
+    // in flight the button becomes STOP — a live control with one job.
     let label = if running {
-        "RUNNING…"
+        "STOP"
     } else if state.result.is_some() {
         "RUN AGAIN"
     } else {
         "RUN"
     };
 
-    // Disabled is for an empty buffer, never for busy: cancelling a run in
-    // flight is the second press of a live button.
+    // No `.loading(running)`: a loading Button is inert — it swallows clicks
+    // before `on_click` sees them — and this button is the cancel control.
     let mut run = Button::new("run")
         .label(label)
         .disabled(empty && !running)
-        .loading(running)
         .rounded_md()
         .min_w(px(132.))
         .min_h(px(44.))
         .text_size(px(13.))
         .font_weight(FontWeight::BOLD);
 
-    run = match state.result.as_ref().map(|result| result.status) {
-        // Success fills; error keeps the elevated surface and says so in the
-        // console, exactly as the two `[data-state]` rules do.
-        Some(Status::Ok) => run.success(),
-        Some(_) => run.secondary().text_color(theme.primary),
-        None => run.primary(),
+    run = if running {
+        run.secondary().text_color(theme.warning)
+    } else {
+        match state.result.as_ref().map(|result| result.status) {
+            // Success fills; error keeps the elevated surface and says so in
+            // the console, exactly as the two `[data-state]` rules do.
+            Some(Status::Ok) => run.success(),
+            Some(_) => run.secondary().text_color(theme.primary),
+            None => run.primary(),
+        }
     };
 
     let running_view = view.clone();
@@ -120,10 +140,13 @@ fn actions(
             div()
                 .text_size(px(11.))
                 .text_color(theme.muted_foreground)
-                // The primary modifier is ⌘ on macOS and CTRL elsewhere — the
-                // same split the editor's own `secondary-enter` binding makes,
-                // which is the combination the shortcut rides on.
-                .child(if cfg!(target_os = "macos") {
+                .child(if running {
+                    "ESC TO STOP"
+                } else if cfg!(target_os = "macos") {
+                    // The primary modifier is ⌘ on macOS and CTRL elsewhere —
+                    // the same split the editor's own `secondary-enter`
+                    // binding makes, which is the combination the shortcut
+                    // rides on.
                     "⌘ + ENTER"
                 } else {
                     "CTRL + ENTER"
@@ -189,25 +212,28 @@ fn console(
     };
 
     // Timing first, as the site does — it is the one line that is always
-    // there when something ran.
-    let timing = if result.status == Status::Ok {
-        format!(
+    // there when something ran. A cancelled run never finished, so a timing
+    // line would report zeroes as if they were measurements.
+    let timing = match result.status {
+        Status::Cancelled => String::new(),
+        Status::Ok => format!(
             "compiled in {}ms · ran in {}ms",
             result.compile_ms, result.run_ms
-        )
-    } else {
-        format!("compiled in {}ms", result.compile_ms)
+        ),
+        _ => format!("compiled in {}ms", result.compile_ms),
     };
     let timing = match state.elapsed_ms {
-        Some(elapsed) => format!("{timing} · {elapsed}ms round trip"),
-        None => timing,
+        Some(elapsed) if !timing.is_empty() => format!("{timing} · {elapsed}ms round trip"),
+        _ => timing,
     };
-    panel = panel.child(
-        div()
-            .text_size(px(11.))
-            .text_color(theme.muted_foreground)
-            .child(timing),
-    );
+    if !timing.is_empty() {
+        panel = panel.child(
+            div()
+                .text_size(px(11.))
+                .text_color(theme.muted_foreground)
+                .child(timing),
+        );
+    }
 
     if let Some(message) = &result.message {
         panel = panel.child(notice(theme, message));

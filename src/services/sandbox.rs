@@ -43,7 +43,9 @@
 use std::io::Read;
 use std::path::Path;
 use std::process::{Command, Stdio};
+use std::sync::atomic::{AtomicBool, Ordering};
 use std::sync::mpsc;
+use std::sync::Arc;
 use std::time::{Duration, Instant, SystemTime, UNIX_EPOCH};
 
 use serde::{Deserialize, Serialize};
@@ -74,6 +76,20 @@ const RSS_MEMORY_CEILING_KB: u64 = MEMORY_LIMIT_KB * 9 / 10;
 /// rest so the child never blocks on a full pipe.
 pub const MAX_OUTPUT_BYTES: usize = 256 * 1024;
 
+/// Per-stream line cap, alongside the byte cap. 256 KB of short lines is tens
+/// of thousands of rows, and the desktop console renders the whole stream as
+/// one text element that gpui re-shapes every frame — enough lines there is a
+/// multi-second stall per frame, not a full window. The cap keeps the console
+/// cheap to draw; the byte cap stays for streams with few newlines.
+pub const MAX_OUTPUT_LINES: usize = 2000;
+
+/// A cancellation flag for an in-flight run. The caller flips it from
+/// anywhere — a UI thread, another task — and the sandbox's 8 ms wait loop
+/// kills the child within one tick. Dropping the *task* that awaits `run` is
+/// not enough on its own: the blocking call owns the child, so the flag is
+/// what actually stops the process.
+pub type CancelFlag = Arc<AtomicBool>;
+
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize)]
 #[serde(rename_all = "snake_case")]
 pub enum Status {
@@ -87,6 +103,9 @@ pub enum Status {
     Timeout,
     /// Compiled, then asked for more memory than the cap allows.
     MemoryLimit,
+    /// The learner asked us to stop it — the STOP control, a second press of
+    /// RUN, or Esc while a run is in flight.
+    Cancelled,
     /// We could not run it at all — no `rustc`, disk full, etc.
     Unavailable,
 }
@@ -168,6 +187,23 @@ impl RunResult {
             output_truncated: false,
             line_offset: 0,
             message: Some(message.to_string()),
+        }
+    }
+
+    /// What a cancelled run reports when nobody is left to observe the real
+    /// result — the UI drops the task on cancel, so it synthesises this.
+    pub fn cancelled() -> Self {
+        Self {
+            status: Status::Cancelled,
+            stdout: String::new(),
+            stderr: String::new(),
+            diagnostics: Vec::new(),
+            exit_code: None,
+            compile_ms: 0,
+            run_ms: 0,
+            output_truncated: false,
+            line_offset: 0,
+            message: Some("run stopped".to_string()),
         }
     }
 }
@@ -267,8 +303,9 @@ fn scratch_name() -> String {
     format!("borrow-pg-{}-{}", std::process::id(), nanos)
 }
 
-/// Reads a pipe on a thread, keeping the first `MAX_OUTPUT_BYTES` and
-/// discarding the rest.
+/// Reads a pipe on a thread, keeping the first `MAX_OUTPUT_LINES` lines and
+/// `MAX_OUTPUT_BYTES` bytes — whichever runs out first — and discarding the
+/// rest.
 ///
 /// Discarding rather than stopping matters: if we stopped reading, a program
 /// printing in a loop would block on a full pipe and never exit, turning a
@@ -279,19 +316,21 @@ fn drain<R: Read + Send + 'static>(mut reader: R) -> mpsc::Receiver<(String, boo
     std::thread::spawn(move || {
         let mut buf = [0u8; 8192];
         let mut kept: Vec<u8> = Vec::new();
+        let mut lines = 0usize;
         let mut truncated = false;
 
         loop {
             match reader.read(&mut buf) {
                 Ok(0) | Err(_) => break,
                 Ok(n) => {
-                    if kept.len() < MAX_OUTPUT_BYTES {
+                    if lines >= MAX_OUTPUT_LINES || kept.len() >= MAX_OUTPUT_BYTES {
+                        truncated = true;
+                    } else {
                         let room = MAX_OUTPUT_BYTES - kept.len();
                         let take = room.min(n);
                         kept.extend_from_slice(&buf[..take]);
+                        lines += buf[..take].iter().filter(|&&b| b == b'\n').count();
                         truncated |= take < n;
-                    } else {
-                        truncated = true;
                     }
                 }
             }
@@ -303,43 +342,69 @@ fn drain<R: Read + Send + 'static>(mut reader: R) -> mpsc::Receiver<(String, boo
     rx
 }
 
-/// Polls `child` until it exits, the clock runs out, or it approaches the
-/// memory cap.
+/// Why `wait_with_timeout` stopped waiting. The kill reasons are kept apart
+/// because the learner is told different things: a memory diagnosis must not
+/// arrive wearing a timeout's message, and a cancel is neither.
+enum WaitOutcome {
+    /// The child exited on its own; `None` is a signal death with no code.
+    Exited(Option<i32>),
+    /// We killed it because peak memory crossed the ceiling.
+    MemoryKill,
+    /// We killed it because the cancel flag was raised.
+    Cancelled,
+    /// We killed it because the wall clock ran out.
+    TimedOut,
+}
+
+/// How long to wait for a drain thread to report EOF after the child is gone.
+///
+/// The child's death closes its end of the pipe, so this normally returns at
+/// once. A grandchild that inherited the pipe and outlives the kill would keep
+/// it open forever — the wait is bounded so that case degrades to empty output
+/// instead of a background worker stuck for the life of the process.
+const DRAIN_JOIN_TIMEOUT: Duration = Duration::from_secs(1);
+
+/// Polls `child` until it exits, the clock runs out, it approaches the memory
+/// cap, or the cancel flag is raised.
 ///
 /// The memory check matters for honesty. A program that grows its heap slowly
 /// takes longer to reach the address-space cap than the run timeout allows, so
 /// without this the learner is told "ran too long" when the real cause was
 /// memory. Reading peak RSS closes that gap and reports the actual reason.
-///
-/// Returns the exit code, or `None` if we had to kill it. `killed_for_memory`
-/// distinguishes the two kill reasons.
 fn wait_with_timeout(
     child: &mut std::process::Child,
     timeout: Duration,
-) -> (Option<i32>, bool) {
+    cancel: &CancelFlag,
+) -> WaitOutcome {
     let start = Instant::now();
 
     loop {
+        if cancel.load(Ordering::Relaxed) {
+            let _ = child.kill();
+            let _ = child.wait();
+            return WaitOutcome::Cancelled;
+        }
+
         match child.try_wait() {
-            Ok(Some(status)) => return (status.code(), false),
+            Ok(Some(status)) => return WaitOutcome::Exited(status.code()),
             Ok(None) => {
                 if peak_rss_kb(child.id()).is_some_and(|kb| kb >= RSS_MEMORY_CEILING_KB) {
                     let _ = child.kill();
                     let _ = child.wait();
-                    return (None, true);
+                    return WaitOutcome::MemoryKill;
                 }
 
                 if start.elapsed() >= timeout {
                     let _ = child.kill();
                     let _ = child.wait();
-                    return (None, false);
+                    return WaitOutcome::TimedOut;
                 }
 
                 std::thread::sleep(Duration::from_millis(8));
             }
             Err(_) => {
                 let _ = child.kill();
-                return (None, false);
+                return WaitOutcome::Exited(None);
             }
         }
     }
@@ -403,6 +468,13 @@ fn run_with_limits(bin: &Path, dir: &Path) -> std::io::Result<std::process::Chil
 
 /// Compiles and runs one program. Always cleans up its scratch directory.
 pub fn run(code: &str) -> RunResult {
+    run_cancellable(code, &CancelFlag::default())
+}
+
+/// [`run`] with a cancellation flag threaded through. Raise the flag from
+/// anywhere and the current phase's child is killed within one poll tick
+/// (8 ms); the result comes back as [`Status::Cancelled`].
+pub fn run_cancellable(code: &str, cancel: &CancelFlag) -> RunResult {
     let dir = std::env::temp_dir().join(scratch_name());
     let created = std::fs::create_dir_all(&dir).is_ok();
 
@@ -411,7 +483,7 @@ pub fn run(code: &str) -> RunResult {
     }
 
     let prepared = prepare_for_run(code);
-    let mut result = run_in(&dir, &prepared.code);
+    let mut result = run_in(&dir, &prepared.code, cancel);
 
     // Diagnostics point into the program we compiled, which for a fragment is
     // not quite what the learner is looking at. Shift them back so a jump-to-
@@ -544,12 +616,16 @@ fn gutter_text_len(line: &str) -> usize {
 }
 
 
-fn run_in(dir: &Path, code: &str) -> RunResult {
+fn run_in(dir: &Path, code: &str, cancel: &CancelFlag) -> RunResult {
     let src = dir.join("main.rs");
     let bin = dir.join("program");
 
     if let Err(e) = std::fs::write(&src, code) {
         return RunResult::unavailable(&format!("could not write the program: {e}"));
+    }
+
+    if cancel.load(Ordering::Relaxed) {
+        return RunResult::cancelled();
     }
 
     // ── compile ──────────────────────────────────────────────────────
@@ -575,16 +651,22 @@ fn run_in(dir: &Path, code: &str) -> RunResult {
         Err(e) => return RunResult::unavailable(&format!("could not start rustc: {e}")),
     };
 
-    let compile_err = match drain(compile.stderr.take().expect("stderr piped")).recv() {
-        Ok((text, _)) => text,
-        Err(_) => String::new(),
-    };
-
+    // The wait runs first and the pipe is collected after it. The other order
+    // — drain to EOF, then wait — makes the timeout unreachable: a rustc that
+    // hangs keeps its stderr open, `recv()` never returns, and the "compiling"
+    // state never ends. Killing the child closes the pipe, so the drain
+    // finishes once the wait has decided the outcome.
+    let compile_err_rx = drain(compile.stderr.take().expect("stderr piped"));
+    let compile_wait = wait_with_timeout(&mut compile, COMPILE_TIMEOUT, cancel);
     let compile_ms = compile_start.elapsed().as_millis() as u64;
+    let compile_err = compile_err_rx
+        .recv_timeout(DRAIN_JOIN_TIMEOUT)
+        .map(|(text, _)| text)
+        .unwrap_or_default();
 
-    match wait_with_timeout(&mut compile, COMPILE_TIMEOUT) {
-        (Some(0), _) => {}
-        (Some(_), _) => {
+    match compile_wait {
+        WaitOutcome::Exited(Some(0)) => {}
+        WaitOutcome::Exited(Some(_)) => {
             // Non-zero exit. Warnings alone still exit 0, so anything here is
             // either an error or rustc itself failing.
             let diagnostics = parse_diagnostics(&compile_err);
@@ -603,7 +685,13 @@ fn run_in(dir: &Path, code: &str) -> RunResult {
                 };
             }
         }
-        (_, _) => {
+        WaitOutcome::Cancelled => {
+            return RunResult {
+                message: Some("cancelled before it finished compiling".to_string()),
+                ..RunResult::cancelled()
+            };
+        }
+        WaitOutcome::TimedOut | WaitOutcome::Exited(None) => {
             return RunResult {
                 status: Status::Timeout,
                 stdout: String::new(),
@@ -618,7 +706,24 @@ fn run_in(dir: &Path, code: &str) -> RunResult {
                     "compilation ran past {} seconds and was stopped",
                     COMPILE_TIMEOUT.as_secs()
                 )),
-            }
+            };
+        }
+        WaitOutcome::MemoryKill => {
+            return RunResult {
+                status: Status::MemoryLimit,
+                stdout: String::new(),
+                stderr: String::new(),
+                diagnostics: Vec::new(),
+                exit_code: None,
+                compile_ms,
+                run_ms: 0,
+                output_truncated: false,
+                line_offset: 0,
+                message: Some(
+                    "the compiler was stopped for using more memory than the limit allows"
+                        .to_string(),
+                ),
+            };
         }
     }
 
@@ -631,6 +736,10 @@ fn run_in(dir: &Path, code: &str) -> RunResult {
         .filter(|d| d.level == "warning" || d.level == "error")
         .collect();
 
+    if cancel.load(Ordering::Relaxed) {
+        return RunResult::cancelled();
+    }
+
     // ── run ──────────────────────────────────────────────────────────
     let run_start = Instant::now();
 
@@ -642,11 +751,14 @@ fn run_in(dir: &Path, code: &str) -> RunResult {
     let out_rx = drain(child.stdout.take().expect("stdout piped"));
     let err_rx = drain(child.stderr.take().expect("stderr piped"));
 
-    let (exit, killed_for_memory) = wait_with_timeout(&mut child, RUN_TIMEOUT);
+    // Same order as the compile phase: decide the outcome first, then collect
+    // what the drain threads kept. After a kill the pipes reach EOF at once,
+    // unless a grandchild inherited them — hence the bounded wait below.
+    let outcome = wait_with_timeout(&mut child, RUN_TIMEOUT, cancel);
     let run_ms = run_start.elapsed().as_millis() as u64;
 
-    let (stdout, out_trunc) = out_rx.recv().unwrap_or_default();
-    let (stderr, err_trunc) = err_rx.recv().unwrap_or_default();
+    let (stdout, out_trunc) = out_rx.recv_timeout(DRAIN_JOIN_TIMEOUT).unwrap_or_default();
+    let (stderr, err_trunc) = err_rx.recv_timeout(DRAIN_JOIN_TIMEOUT).unwrap_or_default();
 
     // An allocation failure under `ulimit -v` aborts the process, which means
     // `status.code()` is `None` — indistinguishable from a kill at the exit-code
@@ -655,40 +767,36 @@ fn run_in(dir: &Path, code: &str) -> RunResult {
     let allocator_failed =
         stderr.contains("memory allocation of") && stderr.contains("failed");
 
-    let (status, message) = if exit == Some(0) {
-        (Status::Ok, None)
-    } else if allocator_failed {
-        (
+    let (status, message) = match outcome {
+        WaitOutcome::Cancelled => (Status::Cancelled, Some("run stopped".to_string())),
+        WaitOutcome::Exited(Some(0)) => (Status::Ok, None),
+        _ if allocator_failed => (
             Status::MemoryLimit,
             Some(format!(
                 "this program tried to use more than {} MB of memory, so it was stopped",
                 MEMORY_LIMIT_KB / 1024
             )),
-        )
-    } else if killed_for_memory {
-        // Killed by us because peak memory crossed the ceiling while it was
-        // still within the wall clock.
-        (
+        ),
+        WaitOutcome::MemoryKill => (
+            // Killed by us because peak memory crossed the ceiling while it was
+            // still within the wall clock.
             Status::MemoryLimit,
             Some(format!(
                 "this program was using more than {} MB of memory, so it was stopped",
                 RSS_MEMORY_CEILING_KB / 1024
             )),
-        )
-    } else {
-        match exit {
-            Some(_) => (Status::RuntimeError, None),
-            // A genuine timeout: it kept running, using modest memory, and ran
-            // out of clock. Reporting this as anything else would send the
-            // learner hunting in the wrong place.
-            None => (
-                Status::Timeout,
-                Some(format!(
-                    "this program ran for {} seconds without finishing, so it was stopped",
-                    RUN_TIMEOUT.as_secs()
-                )),
-            ),
-        }
+        ),
+        WaitOutcome::Exited(Some(_)) => (Status::RuntimeError, None),
+        // A genuine timeout: it kept running, using modest memory, and ran
+        // out of clock. Reporting this as anything else would send the
+        // learner hunting in the wrong place.
+        WaitOutcome::Exited(None) | WaitOutcome::TimedOut => (
+            Status::Timeout,
+            Some(format!(
+                "this program ran for {} seconds without finishing, so it was stopped",
+                RUN_TIMEOUT.as_secs()
+            )),
+        ),
     };
 
     RunResult {
@@ -696,7 +804,10 @@ fn run_in(dir: &Path, code: &str) -> RunResult {
         stdout,
         stderr,
         diagnostics: compile_diagnostics,
-        exit_code: exit,
+        exit_code: match outcome {
+            WaitOutcome::Exited(code) => code,
+            _ => None,
+        },
         compile_ms,
         run_ms,
         output_truncated: out_trunc || err_trunc,
@@ -1137,6 +1248,65 @@ fn main() {
         assert!(r.stdout.contains("line 0"));
         assert!(r.stdout.contains("line 49"));
         assert!(!r.output_truncated);
+    }
+
+    /// The flood the desktop console froze on, at a size that still finishes
+    /// inside the run clock: the cap trips at `MAX_OUTPUT_LINES` either way,
+    /// so a million lines and a hundred thousand behave the same from here
+    /// down.
+    #[test]
+    fn a_flood_of_output_is_capped_and_truncation_is_reported() {
+        let r = run("fn main() { for i in 0..100_000 { println!(\"line {i}\"); } }");
+
+        assert_eq!(r.status, Status::Ok, "stderr was: {}", r.stderr);
+        assert!(r.output_truncated, "a flood must report truncation");
+        assert!(
+            r.stdout.lines().count() <= MAX_OUTPUT_LINES + 1,
+            "kept {} lines, the cap is {MAX_OUTPUT_LINES}",
+            r.stdout.lines().count()
+        );
+        assert!(
+            r.stdout.len() <= MAX_OUTPUT_BYTES,
+            "kept {} bytes, the cap is {MAX_OUTPUT_BYTES}",
+            r.stdout.len()
+        );
+        assert!(r.stdout.contains("line 0"), "the beginning must be kept");
+    }
+
+    /// Raising the flag stops a runaway well before the wall clock — the
+    /// learner pressed STOP and the process must die on the next poll tick,
+    /// not in five seconds.
+    #[test]
+    fn cancelling_a_run_stops_it_before_the_timeout() {
+        let cancel = CancelFlag::default();
+        let flag = cancel.clone();
+        std::thread::spawn(move || {
+            std::thread::sleep(Duration::from_millis(50));
+            flag.store(true, Ordering::SeqCst);
+        });
+
+        let started = Instant::now();
+        let r = run_cancellable(
+            "fn main() { let mut i = 0u64; loop { i = i.wrapping_add(1); } }",
+            &cancel,
+        );
+        let elapsed = started.elapsed();
+
+        assert_eq!(r.status, Status::Cancelled);
+        assert!(
+            elapsed < RUN_TIMEOUT,
+            "cancel took {elapsed:?}, which is the timeout rather than the flag"
+        );
+    }
+
+    /// A flag raised before anything starts must not compile at all.
+    #[test]
+    fn a_cancel_before_the_start_short_circuits() {
+        let cancel = CancelFlag::default();
+        cancel.store(true, Ordering::SeqCst);
+
+        let r = run_cancellable("fn main() {}", &cancel);
+        assert_eq!(r.status, Status::Cancelled);
     }
 }
 
