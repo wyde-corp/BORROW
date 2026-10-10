@@ -162,6 +162,76 @@ describe("applyWebhookEvent", () => {
     expect(state.entitlement).toMatchObject({ premium: true, reason: "grace" });
   });
 
+  test("a repeat non-entitled delivery does not restart the grace window", async () => {
+    const t = makeTest();
+    const userId = await makeUser(t);
+    // Cancelled with a period end six days ago: one day of grace left.
+    await apply(
+      t,
+      "evt_1",
+      "customer.subscription.updated",
+      subscriptionEvent({ status: "canceled", current_period_end: iso(-6 * DAY) }),
+    );
+    // A later no-op delivery of the same non-entitled status — dunning
+    // retries send these — must leave the anchor where it was. Re-anchoring
+    // to "now" would hand out a fresh seven days on every redelivery.
+    await apply(
+      t,
+      "evt_2",
+      "customer.subscription.updated",
+      subscriptionEvent({ status: "canceled", current_period_end: undefined }),
+    );
+
+    const state = await t.query(internal.subscriptions.state, { userId });
+    expect(state.entitlement).toMatchObject({ premium: true, reason: "grace" });
+    expect(state.entitlement.accessEndsAt!).toBeLessThan(Date.now() + 2 * DAY);
+  });
+
+  test("re-subscribing re-anchors the next grace window", async () => {
+    const t = makeTest();
+    const userId = await makeUser(t);
+    await apply(
+      t,
+      "evt_1",
+      "customer.subscription.updated",
+      subscriptionEvent({ status: "canceled", current_period_end: iso(-6 * DAY) }),
+    );
+    // Renewal: back to active — the old anchor must not linger.
+    await apply(t, "evt_2", "customer.subscription.updated", subscriptionEvent());
+    expect(
+      (await t.query(internal.subscriptions.state, { userId })).entitlement,
+    ).toMatchObject({ premium: true, reason: "active" });
+
+    // Second cancellation, this time with no period end in the payload:
+    // the window opens from *this* end, not the first one.
+    await apply(
+      t,
+      "evt_3",
+      "customer.subscription.updated",
+      subscriptionEvent({ status: "canceled", current_period_end: undefined }),
+    );
+    const state = await t.query(internal.subscriptions.state, { userId });
+    expect(state.entitlement).toMatchObject({ premium: true, reason: "grace" });
+    expect(state.entitlement.accessEndsAt!).toBeGreaterThan(Date.now() + 6 * DAY);
+  });
+
+  test("billing history means a subscription, not an abandoned checkout", async () => {
+    const t = makeTest();
+    const userId = await makeUser(t);
+    // Checkout started: a customer id is saved before any payment.
+    await t.mutation(internal.subscriptions.saveCustomer, {
+      userId,
+      customerId: "cust_1",
+    });
+    let billing = await t.query(internal.subscriptions.customerOf, { userId });
+    expect(billing).toEqual({ customerId: "cust_1", hasBilling: false });
+
+    // Payment landed: the webhook carried a subscription id.
+    await apply(t, "evt_1", "customer.subscription.created", subscriptionEvent());
+    billing = await t.query(internal.subscriptions.customerOf, { userId });
+    expect(billing).toMatchObject({ customerId: "cust_1", hasBilling: true });
+  });
+
   test("invoice.payment_failed moves an entitled subscription to past_due", async () => {
     const t = makeTest();
     const userId = await makeUser(t);

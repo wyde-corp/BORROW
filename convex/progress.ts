@@ -9,8 +9,8 @@ const rowValidator = v.object({
 });
 
 /**
- * One device's completions, as the desktop sends them: the whole local set,
- * every push.
+ * The account's completions for one user — the pull half of sync, as the
+ * desktop merges them into its local database on launch.
  */
 export const pull = internalQuery({
   args: { userId: v.id("users") },

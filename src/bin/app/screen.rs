@@ -6,6 +6,7 @@
 //! than a query.
 
 use crate::app_db::Db;
+use crate::auth::{self, StoredSession};
 use crate::components::label;
 use crate::content::ModuleSeed;
 use crate::exercise as exercise_view;
@@ -13,6 +14,7 @@ use crate::lesson::render_section;
 use crate::models::{Exercise, GapBlank, LessonContent, LessonSection};
 use crate::services::practice;
 use crate::services::progress::{self, DashboardData, ProgressSummary};
+use crate::services::remote::{self as api, FetchError, Me};
 use crate::services::sandbox::{self, RunResult};
 use crate::widgets::{BlockState, WidgetCtx};
 use gpui_kit::component::button::{Button, ButtonVariants};
@@ -24,11 +26,14 @@ use gpui_kit::component::*;
 use gpui_kit::*;
 use gpui_kit::{InteractiveElement, StatefulInteractiveElement};
 use std::sync::atomic::Ordering;
+use std::time::{Duration, Instant};
 
 /// Where the app is showing. Module and lesson indices point into
 /// [`AppView::modules`], which is fixed for the process's lifetime.
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub enum Screen {
+    /// The login gate — the only screen a signed-out app can reach.
+    Login,
     Home,
     Module(usize),
     Lesson {
@@ -57,6 +62,46 @@ pub enum Screen {
     Progress,
     /// The code editor and its console.
     Playground,
+    /// The $5/month paywall, reached from a locked module.
+    Upgrade,
+    /// Signed-in identity: plan status, billing, sign out.
+    Account,
+}
+
+/// Why a module is closed, so the UI can offer the right door.
+///
+/// A progression lock is study advice — wait your turn. A premium lock is a
+/// paywall — here is the way through.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum ModuleLock {
+    Open,
+    Progression,
+    Premium,
+}
+
+/// Modules 1–3 are free; everything from 4 on needs a subscription.
+/// Zero-based: index 3 is "module 4".
+pub const FREE_MODULES: usize = 3;
+
+/// What the login and billing flows are doing between clicks. Tasks are
+/// held so a flow survives its own awaits — dropping a `Task` cancels it.
+#[derive(Default)]
+pub(crate) struct AuthUi {
+    login_pending: bool,
+    login_task: Option<Task<()>>,
+    /// The one-shot entitlement refresh, held so it is not cancelled
+    /// mid-flight by its own drop. `pub(crate)` because the launch path
+    /// arms it from `app.rs` inside the same entity update it adopts the
+    /// session in.
+    pub(crate) refresh_task: Option<Task<()>>,
+    login_error: Option<String>,
+    /// Hosted checkout is open in the browser; the app polls entitlement
+    /// until it lands or the window gives up.
+    checkout_pending: bool,
+    checkout_task: Option<Task<()>>,
+    billing_error: Option<String>,
+    /// The daily entitlement refresh, running for the app's whole life.
+    pub(crate) daily_task: Option<Task<()>>,
 }
 
 /// Everything the practice screens need between renders, all loaded once on
@@ -127,6 +172,12 @@ pub struct AppView {
     /// Which lesson `widgets` belongs to — entering another one starts clean
     /// even if some navigation path forgot to clear.
     widgets_lesson: Option<i64>,
+    /// The signed-in account, or `None` behind the login gate. The
+    /// entitlement inside it is the cached last-known state — see
+    /// [`StoredSession::premium`]: never recomputed locally, never expired
+    /// offline.
+    pub(crate) session: Option<StoredSession>,
+    pub(crate) auth: AuthUi,
 }
 
 impl AppView {
@@ -143,7 +194,71 @@ impl AppView {
             playground: PlaygroundState::default(),
             widgets: Vec::new(),
             widgets_lesson: None,
+            session: None,
+            auth: AuthUi::default(),
         }
+    }
+
+    /// Adopts (or drops) the account and moves the screen to match: a login
+    /// lands on Home, a sign-out falls back to the gate. Refreshes go
+    /// through [`Self::session`] directly so they never yank the screen
+    /// out from under the learner.
+    pub(crate) fn adopt_session(&mut self, session: Option<StoredSession>) {
+        self.session = session;
+        self.screen = if self.session.is_some() {
+            Screen::Home
+        } else {
+            Screen::Login
+        };
+    }
+
+    /// The cached premium flag — see [`StoredSession::premium`].
+    pub(crate) fn premium(&self) -> bool {
+        self.session
+            .as_ref()
+            .map(auth::StoredSession::premium)
+            .unwrap_or(false)
+    }
+
+    /// What stands between the learner and module `index`.
+    ///
+    /// Premium *adds to* the course's sequential design rather than
+    /// replacing it: paying unlocks the paywall, not the ability to skip
+    /// module 4 before finishing module 3.
+    pub(crate) fn module_lock(
+        &self,
+        index: usize,
+        completed_lessons: &[i64],
+        completed_exercises: &[i64],
+    ) -> ModuleLock {
+        let progression_ok = index == 0
+            || self.module_is_complete(index - 1, completed_lessons, completed_exercises);
+        if !progression_ok {
+            return ModuleLock::Progression;
+        }
+        if index >= FREE_MODULES && !self.premium() {
+            return ModuleLock::Premium;
+        }
+        ModuleLock::Open
+    }
+
+    /// Whether module `index` can be opened at all. The `bool` face of
+    /// [`Self::module_lock`] — what the gating tests speak.
+    #[allow(dead_code)] // read by `ui_tests`; the UI asks for the lock itself
+    fn module_is_unlocked(
+        &self,
+        index: usize,
+        completed_lessons: &[i64],
+        completed_exercises: &[i64],
+    ) -> bool {
+        self.module_lock(index, completed_lessons, completed_exercises) == ModuleLock::Open
+    }
+
+    /// Whether a screen that belongs to `module_index` should hand over to
+    /// the paywall instead. Progression is irrelevant here: if the module
+    /// needs premium and there is no premium, that is the answer.
+    fn needs_premium(&self, module_index: usize) -> bool {
+        module_index >= FREE_MODULES && !self.premium()
     }
 
     fn clear_answer(&mut self) {
@@ -218,22 +333,14 @@ impl AppView {
             return false;
         };
         !seed.lessons.is_empty()
-            && seed.lessons.iter().all(|l| completed_lessons.contains(&l.id))
+            && seed
+                .lessons
+                .iter()
+                .all(|l| completed_lessons.contains(&l.id))
             && seed
                 .exercises
                 .iter()
                 .all(|e| completed_exercises.contains(&e.id))
-    }
-
-    /// Progressive gating: module 0 is always open; module N opens once
-    /// module N-1 is complete.
-    fn module_is_unlocked(
-        &self,
-        index: usize,
-        completed_lessons: &[i64],
-        completed_exercises: &[i64],
-    ) -> bool {
-        index == 0 || self.module_is_complete(index - 1, completed_lessons, completed_exercises)
     }
 
     /// The landing screen: what BORROW_ is and why it is worth starting.
@@ -266,7 +373,10 @@ impl AppView {
                         .on_click(move |_, _, cx| {
                             jump.update(cx, |view, cx| {
                                 view.clear_answer();
-                                view.screen = Screen::Lesson { module: m, lesson: l };
+                                view.screen = Screen::Lesson {
+                                    module: m,
+                                    lesson: l,
+                                };
                                 cx.notify();
                             });
                         }),
@@ -412,22 +522,26 @@ impl AppView {
                 "INTERACTIVE LESSONS".to_string(),
                 "Fill-in-the-gap code, step-through walkthroughs, and \
                  guess-then-run exercises that compile your answer with the \
-                 real compiler.".to_string(),
+                 real compiler."
+                    .to_string(),
             ))
             .child(feature(
                 "PRACTICE RUNS".to_string(),
                 "Graded question sets taken one at a time. Jump anywhere, \
-                 skip freely, and get a scored result at the end.".to_string(),
+                 skip freely, and get a scored result at the end."
+                    .to_string(),
             ))
             .child(feature(
                 "CODE PLAYGROUND".to_string(),
                 "A full Rust editor backed by real rustc. Write, run, and \
-                 read the compiler's actual diagnostics.".to_string(),
+                 read the compiler's actual diagnostics."
+                    .to_string(),
             ))
             .child(feature(
                 "PROGRESS TRACKING".to_string(),
                 "XP, completion bars, and a dashboard that always shows \
-                 exactly where you left off.".to_string(),
+                 exactly where you left off."
+                    .to_string(),
             ));
 
         let body = div()
@@ -602,25 +716,20 @@ impl AppView {
             let next_title = self.modules[next_index].module.title.clone();
             let jump_to_module = next_module_target.clone();
             body = body.child(
-                div()
-                    .flex()
-                    .flex_row()
-                    .justify_center()
-                    .pt_4()
-                    .child(
-                        Button::new("next-module")
-                            .primary()
-                            .text_size(px(15.))
-                            .px_5()
-                            .py_3()
-                            .label(format!("NEXT MODULE: {next_title} \u{2192}"))
-                            .on_click(move |_, _, cx| {
-                                jump_to_module.update(cx, |view, cx| {
-                                    view.screen = Screen::Module(next_index);
-                                    cx.notify();
-                                });
-                            }),
-                    ),
+                div().flex().flex_row().justify_center().pt_4().child(
+                    Button::new("next-module")
+                        .primary()
+                        .text_size(px(15.))
+                        .px_5()
+                        .py_3()
+                        .label(format!("NEXT MODULE: {next_title} \u{2192}"))
+                        .on_click(move |_, _, cx| {
+                            jump_to_module.update(cx, |view, cx| {
+                                view.screen = Screen::Module(next_index);
+                                cx.notify();
+                            });
+                        }),
+                ),
             );
         }
 
@@ -769,12 +878,15 @@ impl AppView {
                     .label("MARK COMPLETE \u{2192}")
                     .on_click(move |_, _, cx| {
                         if let Some(db) = cx.try_global::<Db>() {
-                            let _ = db.block_on(progress::mark_lesson_complete(db.pool(), lesson_id));
+                            let _ =
+                                db.block_on(progress::mark_lesson_complete(db.pool(), lesson_id));
                         }
                         to.update(cx, |v, cx| {
                             v.clear_answer();
                             cx.notify();
                         });
+                        // The row exists locally now; tell the account.
+                        spawn_push_now(to.read(cx), cx);
                     }),
             );
         } else {
@@ -897,19 +1009,381 @@ impl AppView {
         };
 
         let (completed_lessons, completed_exercises) = completed_progress(cx);
-        let unlocked: Vec<bool> = (0..self.modules.len())
-            .map(|i| self.module_is_unlocked(i, &completed_lessons, &completed_exercises))
+        let locks: Vec<ModuleLock> = (0..self.modules.len())
+            .map(|i| self.module_lock(i, &completed_lessons, &completed_exercises))
             .collect();
 
         let body = crate::dashboard::dashboard(
             theme,
             view.clone(),
             data,
-            &unlocked,
+            &locks,
             |id| self.module_index(id),
             |id| self.lesson_index(id),
         );
         self.shell(theme, view, "Dashboard", "", None, body)
+    }
+
+    /// The login gate: wordmark, the two providers, and nothing else. The
+    /// hard gate from the design — no account, no app — so this screen has
+    /// no navbar to wander off with.
+    fn login_screen(&self, theme: &Theme, view: Entity<AppView>, _cx: &App) -> Div {
+        let configured = crate::config::convex_site_url().is_some();
+        let google_ready = crate::config::google_client_id().is_some();
+        let github_ready = crate::config::github_client_id().is_some();
+        let pending = self.auth.login_pending;
+
+        let mut buttons = div().flex().flex_col().gap_3().w(px(300.));
+        for (key, text, ready) in [
+            ("google", "CONTINUE WITH GOOGLE", google_ready),
+            ("github", "CONTINUE WITH GITHUB", github_ready),
+        ] {
+            let enabled = configured && ready && !pending;
+            let jump = view.clone();
+            buttons = buttons.child(
+                Button::new(format!("login-{key}"))
+                    .primary()
+                    .label(text)
+                    .disabled(!enabled)
+                    .on_click(move |_, _, cx| {
+                        jump.update(cx, |view, cx| start_login(view, cx, key));
+                    }),
+            );
+        }
+
+        let mut status = div().flex().flex_col().gap_2().items_center();
+        if pending {
+            status = status.child(
+                div()
+                    .text_size(px(12.))
+                    .text_color(theme.muted_foreground)
+                    .child("WAITING FOR THE BROWSER…"),
+            );
+        }
+        if let Some(error) = &self.auth.login_error {
+            status = status.child(
+                div()
+                    .text_size(px(12.))
+                    .text_color(theme.warning)
+                    .child(error.clone()),
+            );
+        }
+        if !configured {
+            status = status.child(
+                div()
+                    .text_size(px(12.))
+                    .text_color(theme.warning)
+                    .child("Sign-in is not configured for this build. See SETUP.md."),
+            );
+        }
+
+        let card = div()
+            .rounded_md()
+            .border_1()
+            .border_color(theme.border)
+            .bg(theme.secondary)
+            .p_8()
+            .flex()
+            .flex_col()
+            .gap_5()
+            .items_center()
+            .child(
+                div()
+                    .text_size(px(26.))
+                    .font_weight(FontWeight::BOLD)
+                    .text_color(theme.primary)
+                    .child("BORROW_"),
+            )
+            .child(
+                div()
+                    .text_size(px(16.))
+                    .font_weight(FontWeight::BOLD)
+                    .text_color(theme.foreground)
+                    .child("SIGN IN TO CONTINUE"),
+            )
+            .child(
+                div()
+                    .text_size(px(13.))
+                    .text_color(theme.muted_foreground)
+                    .text_align(TextAlign::Center)
+                    .child("Modules 1–3 are free. Premium unlocks modules 4–11 for $5/month."),
+            )
+            .child(buttons)
+            .child(status);
+
+        div()
+            .size_full()
+            .bg(theme.background)
+            .text_color(theme.foreground)
+            .flex()
+            .flex_row()
+            .items_center()
+            .justify_center()
+            .child(card)
+    }
+
+    /// The paywall. Reached from a locked module, or offered as
+    /// confirmation once premium lands — same screen, two states.
+    fn upgrade_screen(&self, theme: &Theme, view: Entity<AppView>, _cx: &App) -> Div {
+        let premium = self.premium();
+        let has_billing = self
+            .session
+            .as_ref()
+            .map(|session| session.has_billing)
+            .unwrap_or(false);
+        let entitlement = self
+            .session
+            .as_ref()
+            .and_then(|session| session.entitlement.as_ref().cloned());
+        let checkout_pending = self.auth.checkout_pending;
+
+        let mut body = div().flex().flex_col().gap_5();
+
+        if premium {
+            body = body
+                .child(
+                    div()
+                        .text_size(px(22.))
+                        .font_weight(FontWeight::BOLD)
+                        .text_color(theme.primary)
+                        .child("YOU'RE PREMIUM"),
+                )
+                .child(
+                    div()
+                        .text_size(px(14.))
+                        .text_color(theme.muted_foreground)
+                        .child("Modules 4–11 are unlocked. Your progress syncs to your account."),
+                );
+
+            let jump = view.clone();
+            body = body.child(
+                Button::new("upgrade-start")
+                    .primary()
+                    .label("START LEARNING")
+                    .on_click(move |_, _, cx| {
+                        jump.update(cx, |view, cx| {
+                            view.navigate(Screen::Home);
+                            cx.notify();
+                        });
+                    }),
+            );
+        } else {
+            body = body
+                .child(
+                    div()
+                        .flex()
+                        .flex_row()
+                        .items_baseline()
+                        .gap_3()
+                        .child(
+                            div()
+                                .text_size(px(34.))
+                                .font_weight(FontWeight::BOLD)
+                                .text_color(theme.foreground)
+                                .child("$5"),
+                        )
+                        .child(
+                            div()
+                                .text_size(px(13.))
+                                .text_color(theme.muted_foreground)
+                                .font_weight(FontWeight::BOLD)
+                                .child("/ MONTH"),
+                        ),
+                )
+                .child(
+                    div().flex().flex_col().gap_2().child(
+                        div()
+                            .flex()
+                            .flex_col()
+                            .gap_2()
+                            .child(premium_line(
+                                theme,
+                                "Modules 4–11: lessons, exercises, projects, practice",
+                            ))
+                            .child(premium_line(theme, "Progress synced to your account"))
+                            .child(premium_line(
+                                theme,
+                                "Cancel anytime from the billing portal",
+                            )),
+                    ),
+                );
+
+            // Where the last known window stands — grace counting down, or
+            // already closed.
+            if let Some(entitlement) = &entitlement {
+                let message = match entitlement.reason.as_str() {
+                    "grace" | "paid_through" => entitlement
+                        .access_ends_at
+                        .map(|ends| {
+                            format!("Premium access ends {}.", in_words(ends, auth::now_ms()))
+                        })
+                        .unwrap_or_default(),
+                    "expired" => {
+                        "Your subscription ended. Renewing brings every module back.".to_string()
+                    }
+                    _ => String::new(),
+                };
+                if !message.is_empty() {
+                    body = body.child(
+                        div()
+                            .text_size(px(13.))
+                            .text_color(theme.warning)
+                            .child(message),
+                    );
+                }
+            }
+
+            if let Some(error) = &self.auth.billing_error {
+                body = body.child(
+                    div()
+                        .text_size(px(13.))
+                        .text_color(theme.warning)
+                        .child(error.clone()),
+                );
+            }
+
+            let subscribe = view.clone();
+            let mut subscribe_button =
+                Button::new("upgrade-subscribe")
+                    .primary()
+                    .label(if checkout_pending {
+                        "WAITING FOR PAYMENT…"
+                    } else {
+                        "SUBSCRIBE — $5/MONTH"
+                    });
+            if checkout_pending {
+                subscribe_button = subscribe_button.loading(true);
+            }
+            body = body.child(subscribe_button.on_click(move |_, _, cx| {
+                subscribe.update(cx, start_checkout);
+            }));
+
+            if checkout_pending {
+                body = body.child(
+                    div()
+                        .text_size(px(12.))
+                        .text_color(theme.muted_foreground)
+                        .child(
+                            "Complete the checkout in your browser — this screen updates itself.",
+                        ),
+                );
+            }
+
+            // Manual check: the escape hatch for a browser tab the poll
+            // cannot see, and the only refresh control on the screen.
+            let refresh = view.clone();
+            body = body.child(
+                Button::new("upgrade-refresh")
+                    .secondary()
+                    .label("I'VE PAID — REFRESH")
+                    .on_click(move |_, _, cx| {
+                        let entity = refresh.clone();
+                        refresh.update(cx, |_, cx| spawn_refresh(entity, cx));
+                    }),
+            );
+        }
+
+        if has_billing {
+            let portal = view.clone();
+            body = body.child(
+                Button::new("upgrade-portal")
+                    .ghost()
+                    .text_color(theme.muted_foreground)
+                    .label("MANAGE BILLING")
+                    .on_click(move |_, _, cx| {
+                        portal.update(cx, start_portal);
+                    }),
+            );
+        }
+
+        self.shell(theme, view, "Premium", "", None, body)
+    }
+
+    /// Signed-in identity: who this is, what they have, and the door out.
+    fn account_screen(&self, theme: &Theme, view: Entity<AppView>, cx: &App) -> Div {
+        let Some(session) = self.session.as_ref() else {
+            return self.login_screen(theme, view, cx);
+        };
+
+        let plan = match &session.entitlement {
+            Some(entitlement) if entitlement.premium => match entitlement.reason.as_str() {
+                "grace" | "paid_through" => entitlement
+                    .access_ends_at
+                    .map(|ends| format!("Premium — ends {}", in_words(ends, auth::now_ms())))
+                    .unwrap_or_else(|| "Premium".to_string()),
+                _ => "Premium".to_string(),
+            },
+            Some(entitlement) if entitlement.reason == "expired" => {
+                "Free — subscription ended".to_string()
+            }
+            _ => "Free".to_string(),
+        };
+
+        let mut body = div().flex().flex_col().gap_5().child(
+            div()
+                .rounded_md()
+                .border_1()
+                .border_color(theme.border)
+                .bg(theme.secondary)
+                .p_5()
+                .flex()
+                .flex_col()
+                .gap_2()
+                .child(
+                    div()
+                        .text_size(px(13.))
+                        .text_color(theme.muted_foreground)
+                        .child("SIGNED IN AS"),
+                )
+                .child(
+                    div()
+                        .text_size(px(17.))
+                        .font_weight(FontWeight::BOLD)
+                        .text_color(theme.foreground)
+                        .child(session.email.clone()),
+                )
+                .child(
+                    div()
+                        .text_size(px(13.))
+                        .text_color(theme.primary)
+                        .font_weight(FontWeight::BOLD)
+                        .child(plan),
+                ),
+        );
+
+        if session.has_billing {
+            let portal = view.clone();
+            body = body.child(
+                Button::new("account-portal")
+                    .secondary()
+                    .label("MANAGE BILLING")
+                    .on_click(move |_, _, cx| {
+                        portal.update(cx, start_portal);
+                    }),
+            );
+        }
+
+        if let Some(error) = &self.auth.billing_error {
+            body = body.child(
+                div()
+                    .text_size(px(13.))
+                    .text_color(theme.warning)
+                    .child(error.clone()),
+            );
+        }
+
+        let out = view.clone();
+        body = body.child(
+            Button::new("account-signout")
+                .ghost()
+                .text_color(theme.warning)
+                .label("SIGN OUT")
+                .on_click(move |_, _, cx| {
+                    out.update(cx, sign_out);
+                }),
+        );
+
+        self.shell(theme, view, "Account", "", None, body)
     }
 
     /// The progress totals screen.
@@ -1013,12 +1487,7 @@ impl AppView {
         // An empty title means the body carries its own heading (the landing
         // hero), so no shell heading is added — an empty heading div would
         // still consume a flex gap.
-        let mut column = div()
-            .mx_auto()
-            .max_w(px(820.))
-            .flex()
-            .flex_col()
-            .gap_5();
+        let mut column = div().mx_auto().max_w(px(820.)).flex().flex_col().gap_5();
         if !title.is_empty() {
             column = column.child(heading(theme, title, subtitle));
         }
@@ -1032,7 +1501,13 @@ impl AppView {
             .child(navbar(theme, to_home, module_name))
             .child(
                 div()
-                    .id("screen-scroll")
+                    // Keyed by screen: gpui keeps a scrollable div's offset in
+                    // element state under its id, and a constant id carried
+                    // the old lesson's position onto the next one — the reader
+                    // landed partway down instead of at the top. A new id per
+                    // screen (lesson index included) starts at zero on every
+                    // navigation, whichever button did the navigating.
+                    .id(format!("screen-scroll-{:?}", self.screen))
                     .flex_1()
                     .min_h(px(0.))
                     .overflow_y_scroll()
@@ -1061,6 +1536,10 @@ impl AppView {
 
             let mut row = Button::new(format!("hint-{index}"))
                 .ghost()
+                // Same fixed-height clip as the option rows: an open hint is
+                // multi-line text inside Medium's h_8. Size::Size lets the
+                // disclosure grow with the hint behind it.
+                .with_size(Size::Size(px(200.)))
                 .rounded_sm()
                 .border_1()
                 .border_color(if open { theme.info } else { theme.border })
@@ -1102,6 +1581,7 @@ impl AppView {
                     div()
                         .text_size(px(13.))
                         .text_color(theme.foreground)
+                        .whitespace_normal()
                         .child(hint.clone()),
                 );
             }
@@ -1180,6 +1660,9 @@ impl AppView {
                                     view.result = Some(submission);
                                     cx.notify();
                                 });
+                                // New row (if any) goes to the account;
+                                // a failed push is caught by the next sync.
+                                spawn_push_now(reported.read(cx), cx);
                             }
                         }),
                 );
@@ -1213,6 +1696,12 @@ impl AppView {
             list = list.child(
                 Button::new(format!("option-{index}"))
                     .ghost()
+                    // Button's default Medium height is a fixed h_8, and with
+                    // our p_3 that leaves an 8px band for the text — the
+                    // bottom half of every option was clipped. Size::Size
+                    // drops the fixed height and keeps the keyboard reach,
+                    // which is the same fix the module cards needed.
+                    .with_size(Size::Size(px(200.)))
                     .on_click(move |_, _, cx| {
                         picked.update(cx, |view, cx| {
                             match slot {
@@ -1251,6 +1740,11 @@ impl AppView {
                         div()
                             .text_size(px(13.5))
                             .text_color(theme.foreground)
+                            // Button's label wrapper is whitespace_nowrap and
+                            // overflow_hidden; without this a long option is
+                            // cut at the right edge with no wrap and no
+                            // ellipsis.
+                            .whitespace_normal()
                             .child(text.clone()),
                     ),
             );
@@ -1812,11 +2306,461 @@ impl AppView {
     }
 }
 
+// ── Auth & billing flows ────────────────────────────────────────────────────
+//
+// Every network call below is spawned onto the database's tokio runtime
+// (`app_db::Db::runtime`) and awaited from a gpui task: sqlx and reqwest
+// need a reactor, gpui's executors are not one, and a `JoinHandle` is a
+// completion to wait on rather than a future bound to the wrong runtime.
+
+/// The fetch-and-apply half of a refresh, as a future both the launch path
+/// (inside an entity update, which already holds a `Context`) and the
+/// button paths (which build a task first) can share.
+async fn refresh_and_apply(
+    cx: &mut AsyncApp,
+    runner: Entity<AppView>,
+    site: String,
+    token: String,
+    runtime: std::sync::Arc<tokio::runtime::Runtime>,
+) {
+    let result = runtime
+        .spawn(async move { api::me(&site, &token).await })
+        .await;
+    cx.update(|cx| {
+        runner.update(cx, |view, cx| {
+            apply_refresh(view, result);
+            cx.notify();
+        });
+    });
+}
+
+/// Builds the one-shot refresh task without storing it — the caller is
+/// already inside an entity update and can assign the field itself.
+pub(crate) fn build_refresh_task(
+    view: Entity<AppView>,
+    cx: &mut Context<AppView>,
+) -> Option<Task<()>> {
+    let site = crate::config::convex_site_url()?;
+    let token = view.read(cx).session.as_ref()?.token.clone();
+    let runtime = cx.try_global::<Db>()?.runtime();
+    let runner = view.clone();
+    Some(cx.spawn(async move |_this, cx| {
+        refresh_and_apply(cx, runner, site, token, runtime).await;
+    }))
+}
+
+/// Pulls a fresh entitlement into the cached session, from a context that
+/// is *not* already inside an entity update (button handlers).
+///
+/// The only failures that change anything: a `401` means the session row is
+/// gone server-side, so this device signs out; everything else (offline,
+/// server hiccup) keeps the cache — no offline lockout.
+pub(crate) fn spawn_refresh(view: Entity<AppView>, cx: &mut Context<AppView>) {
+    let task = build_refresh_task(view.clone(), cx);
+    if task.is_some() {
+        view.update(cx, |view, _| view.auth.refresh_task = task);
+    }
+}
+
+fn apply_refresh(
+    view: &mut AppView,
+    result: Result<Result<Me, FetchError>, tokio::task::JoinError>,
+) {
+    match result {
+        Ok(Ok(me)) => {
+            if let Some(session) = view.session.as_mut() {
+                session.apply_me(&me);
+                let _ = auth::save(session);
+            }
+        }
+        Ok(Err(FetchError::Unauthorized)) => {
+            auth::clear();
+            view.adopt_session(None);
+        }
+        Ok(Err(err)) => eprintln!("entitlement refresh failed: {err}"),
+        Err(err) => eprintln!("entitlement refresh crashed: {err}"),
+    }
+}
+
+/// The launch session's daily re-check: grace windows end while the app is
+/// open, and the cache must notice. Stops itself if the user signs out or
+/// the build is unconfigured — there is nothing left to refresh for.
+pub(crate) fn spawn_daily_refresh(view: Entity<AppView>, cx: &mut Context<AppView>) {
+    if let Some(task) = build_daily_task(view.clone(), cx) {
+        view.update(cx, |view, _| view.auth.daily_task = Some(task));
+    }
+}
+
+pub(crate) fn build_daily_task(
+    view: Entity<AppView>,
+    cx: &mut Context<AppView>,
+) -> Option<Task<()>> {
+    let runner = view.clone();
+    Some(cx.spawn(async move |_this, cx| loop {
+        cx.background_executor()
+            .timer(Duration::from_secs(24 * 60 * 60))
+            .await;
+
+        let cycle = {
+            let site = crate::config::convex_site_url();
+            let token = cx.update(|cx| {
+                runner
+                    .read(cx)
+                    .session
+                    .as_ref()
+                    .map(|session| session.token.clone())
+            });
+            match (site, token) {
+                (Some(site), Some(token)) => (site, token),
+                _ => return,
+            }
+        };
+        let (site, token) = cycle;
+        let Some(db) = cx.update(|cx| cx.try_global::<Db>().map(|db| db.runtime())) else {
+            return;
+        };
+
+        let result = db.spawn(async move { api::me(&site, &token).await }).await;
+        cx.update(|cx| {
+            runner.update(cx, |view, cx| {
+                apply_refresh(view, result);
+                cx.notify();
+            });
+        });
+    }))
+}
+
+/// Sign-in button handler: binds the loopback, opens the browser, and
+/// finishes on the backend. Config problems are a message on the login
+/// screen, not a crash.
+fn start_login(view: &mut AppView, cx: &mut Context<AppView>, provider: &'static str) {
+    if view.auth.login_pending {
+        return;
+    }
+    view.auth.login_error = None;
+
+    let Some(site) = crate::config::convex_site_url() else {
+        view.auth.login_error =
+            Some("Sign-in is not configured for this build. See SETUP.md.".into());
+        cx.notify();
+        return;
+    };
+    let client_id = match provider {
+        "google" => crate::config::google_client_id(),
+        _ => crate::config::github_client_id(),
+    };
+    let Some(client_id) = client_id else {
+        view.auth.login_error = Some(format!(
+            "Sign-in with {provider} is not configured for this build."
+        ));
+        cx.notify();
+        return;
+    };
+    let Some(db) = cx.try_global::<Db>() else {
+        view.auth.login_error = Some("The local database is not open.".into());
+        cx.notify();
+        return;
+    };
+    let runtime = db.runtime();
+
+    view.auth.login_pending = true;
+    cx.notify();
+
+    let entity = cx.entity();
+    let task = cx.spawn(async move |_this, cx| {
+        let started = runtime
+            .spawn(async move { auth::begin(provider, &client_id).await })
+            .await;
+        let flow = match started {
+            Ok(Ok(flow)) => flow,
+            Ok(Err(err)) => {
+                fail_login(&entity, cx, format!("Could not start sign-in: {err:#}"));
+                return;
+            }
+            Err(err) => {
+                fail_login(&entity, cx, format!("Could not start sign-in: {err}"));
+                return;
+            }
+        };
+
+        cx.update(|cx| cx.open_url(&flow.authorize_url));
+
+        let exchanged = runtime
+            .spawn(async move {
+                let callback = flow.wait_for_code(auth::LOGIN_TIMEOUT).await?;
+                api::exchange(
+                    &site,
+                    provider,
+                    &callback.code,
+                    &callback.code_verifier,
+                    &callback.redirect_uri,
+                )
+                .await
+            })
+            .await;
+
+        cx.update(|cx| {
+            entity.update(cx, |view, cx| {
+                view.auth.login_pending = false;
+                match exchanged {
+                    Ok(Ok(response)) => match auth::StoredSession::from_exchange(response) {
+                        Ok(session) => {
+                            if let Err(err) = auth::save(&session) {
+                                eprintln!("could not persist the session: {err:#}");
+                            }
+                            view.adopt_session(Some(session));
+                            // Entitlement lands a beat later; the login
+                            // already opened the door to the free modules.
+                            spawn_refresh(entity.clone(), cx);
+                            spawn_daily_refresh(entity.clone(), cx);
+                            crate::sync::spawn_initial(&entity, cx);
+                        }
+                        Err(err) => {
+                            view.auth.login_error = Some(format!("{err:#}"));
+                        }
+                    },
+                    Ok(Err(err)) => {
+                        view.auth.login_error = Some(format!("{err}"));
+                    }
+                    Err(err) => {
+                        view.auth.login_error = Some(format!("Sign-in failed: {err}"));
+                    }
+                }
+                cx.notify();
+            });
+        });
+    });
+    view.auth.login_task = Some(task);
+}
+
+fn fail_login(entity: &Entity<AppView>, cx: &mut AsyncApp, message: String) {
+    cx.update(|cx| {
+        entity.update(cx, |view, cx| {
+            view.auth.login_pending = false;
+            view.auth.login_error = Some(message);
+            cx.notify();
+        });
+    });
+}
+
+/// SUBSCRIBE: mints hosted checkout, opens it in the browser, then polls
+/// entitlement until the webhook flips it (or the window gives up — the
+/// "REFRESH" button is the manual escape hatch for a slow tab).
+fn start_checkout(view: &mut AppView, cx: &mut Context<AppView>) {
+    if view.auth.checkout_pending {
+        return;
+    }
+    view.auth.billing_error = None;
+
+    let Some(site) = crate::config::convex_site_url() else {
+        view.auth.billing_error = Some("Billing is not configured for this build.".into());
+        cx.notify();
+        return;
+    };
+    let Some(token) = view.session.as_ref().map(|session| session.token.clone()) else {
+        return;
+    };
+    let Some(db) = cx.try_global::<Db>() else {
+        return;
+    };
+    let runtime = db.runtime();
+
+    view.auth.checkout_pending = true;
+    cx.notify();
+
+    let entity = cx.entity();
+    let task = cx.spawn(async move |_this, cx| {
+        let started = runtime
+            .spawn({
+                let site = site.clone();
+                let token = token.clone();
+                async move { api::checkout_url(&site, &token).await }
+            })
+            .await;
+
+        let url = match started {
+            Ok(Ok(url)) => url,
+            Ok(Err(err)) => {
+                billing_fail(&entity, cx, format!("{err}"));
+                return;
+            }
+            Err(err) => {
+                billing_fail(&entity, cx, format!("Checkout failed: {err}"));
+                return;
+            }
+        };
+
+        cx.update(|cx| cx.open_url(&url));
+
+        // The webhook is the source of truth; this loop only notices.
+        let deadline = Instant::now() + Duration::from_secs(15 * 60);
+        let mut unlocked = false;
+        let mut dead = false;
+        while !unlocked && !dead && Instant::now() < deadline {
+            cx.background_executor().timer(Duration::from_secs(2)).await;
+
+            let result = runtime
+                .spawn({
+                    let site = site.clone();
+                    let token = token.clone();
+                    async move { api::me(&site, &token).await }
+                })
+                .await;
+
+            cx.update(|cx| {
+                entity.update(cx, |view, cx| match &result {
+                    Ok(Ok(me)) if me.entitlement.premium => {
+                        if let Some(session) = view.session.as_mut() {
+                            session.apply_me(me);
+                            let _ = auth::save(session);
+                        }
+                        cx.notify();
+                    }
+                    _ => {}
+                });
+            });
+
+            match &result {
+                Ok(Ok(me)) if me.entitlement.premium => unlocked = true,
+                Ok(Err(FetchError::Unauthorized)) => dead = true,
+                _ => {}
+            }
+        }
+
+        cx.update(|cx| {
+            entity.update(cx, |view, cx| {
+                view.auth.checkout_pending = false;
+                if dead {
+                    auth::clear();
+                    view.adopt_session(None);
+                } else if !unlocked {
+                    view.auth.billing_error =
+                        Some("Payment not detected yet — if you have paid, press REFRESH.".into());
+                }
+                cx.notify();
+            });
+        });
+    });
+    view.auth.checkout_task = Some(task);
+}
+
+fn billing_fail(entity: &Entity<AppView>, cx: &mut AsyncApp, message: String) {
+    cx.update(|cx| {
+        entity.update(cx, |view, cx| {
+            view.auth.checkout_pending = false;
+            view.auth.billing_error = Some(message);
+            cx.notify();
+        });
+    });
+}
+
+/// MANAGE BILLING: a portal session, opened in the browser. Cancelling and
+/// card updates happen there — none of it is built in-app.
+fn start_portal(view: &mut AppView, cx: &mut Context<AppView>) {
+    view.auth.billing_error = None;
+
+    let Some(site) = crate::config::convex_site_url() else {
+        view.auth.billing_error = Some("Billing is not configured for this build.".into());
+        cx.notify();
+        return;
+    };
+    let Some(token) = view.session.as_ref().map(|session| session.token.clone()) else {
+        return;
+    };
+    let Some(db) = cx.try_global::<Db>() else {
+        return;
+    };
+    let runtime = db.runtime();
+
+    let entity = cx.entity();
+    let task = cx.spawn(async move |_this, cx| {
+        let opened = runtime
+            .spawn(async move { api::portal_url(&site, &token).await })
+            .await;
+        cx.update(|cx| {
+            entity.update(cx, |view, cx| {
+                match opened {
+                    Ok(Ok(url)) => cx.open_url(&url),
+                    Ok(Err(err)) => view.auth.billing_error = Some(format!("{err}")),
+                    Err(err) => view.auth.billing_error = Some(format!("Portal failed: {err}")),
+                }
+                cx.notify();
+            });
+        });
+    });
+    view.auth.checkout_task = Some(task);
+}
+
+/// SIGN OUT: revoke server-side (best-effort), drop the file, land on the
+/// gate. The local clear alone would already sign this device out.
+fn sign_out(view: &mut AppView, cx: &mut Context<AppView>) {
+    if let Some(session) = view.session.take() {
+        if let (Some(site), Some(db)) = (crate::config::convex_site_url(), cx.try_global::<Db>()) {
+            let runtime = db.runtime();
+            runtime.spawn(async move {
+                let _ = api::logout(&site, &session.token).await;
+            });
+        }
+    }
+    auth::clear();
+    view.adopt_session(None);
+    cx.notify();
+}
+
+/// Fire-and-forget push after a completion: the local row already exists,
+/// so a failed push just means the next launch's sync catches up.
+pub(crate) fn spawn_push_now(view: &AppView, cx: &App) {
+    let Some(site) = crate::config::convex_site_url() else {
+        return;
+    };
+    let Some(token) = view.session.as_ref().map(|session| session.token.clone()) else {
+        return;
+    };
+    let Some(db) = cx.try_global::<Db>() else {
+        return;
+    };
+    let runtime = db.runtime();
+    let pool = db.pool().clone();
+    runtime.spawn(async move {
+        if let Err(err) = crate::sync::push(&pool, &site, &token).await {
+            eprintln!("sync: push failed: {err:#}");
+        }
+    });
+}
+
+/// `1791600000000` → "in 6 days" / "3 days ago" — enough for a paywall
+/// status line, without a calendar library for one string.
+fn in_words(epoch_ms: u64, now_ms: u64) -> String {
+    let delta = epoch_ms as i64 - now_ms as i64;
+    let past = delta < 0;
+    let seconds = delta.unsigned_abs() / 1000;
+    let (value, unit) = if seconds >= 2 * 24 * 3600 {
+        (seconds / (24 * 3600), "days")
+    } else if seconds >= 24 * 3600 {
+        (1, "day")
+    } else if seconds >= 2 * 3600 {
+        (seconds / 3600, "hours")
+    } else if seconds >= 3600 {
+        (1, "hour")
+    } else if seconds >= 60 {
+        (seconds / 60, "minutes")
+    } else {
+        (1, "minute")
+    };
+    let plural = if value == 1 { "" } else { "s" };
+    if past {
+        format!("{value} {unit}{plural} ago")
+    } else {
+        format!("in {value} {unit}{plural}")
+    }
+}
+
 /// The top strip: wordmark back to home, and where you are.
 fn navbar(theme: &Theme, to_home: Entity<AppView>, module_name: String) -> Div {
     let to_dashboard = to_home.clone();
     let to_progress = to_home.clone();
     let to_playground = to_home.clone();
+    let to_account = to_home.clone();
 
     let mut bar = div()
         .flex()
@@ -1885,6 +2829,19 @@ fn navbar(theme: &Theme, to_home: Entity<AppView>, module_name: String) -> Div {
                         cx.notify();
                     });
                 }),
+        )
+        .child(
+            Button::new("nav-account")
+                .ghost()
+                .text_size(px(13.))
+                .text_color(theme.muted_foreground)
+                .child("ACCOUNT")
+                .on_click(move |_, _, cx| {
+                    to_account.update(cx, |view, cx| {
+                        view.navigate(Screen::Account);
+                        cx.notify();
+                    });
+                }),
         );
 
     if !module_name.is_empty() {
@@ -1905,6 +2862,30 @@ impl Render for AppView {
         let view = cx.entity();
 
         match self.screen.clone() {
+            Screen::Login => self.login_screen(theme, view, cx),
+            Screen::Upgrade => self.upgrade_screen(theme, view, cx),
+            Screen::Account => self.account_screen(theme, view, cx),
+            // A premium-locked module hands every one of its screens to the
+            // paywall — the guard sits above navigation so a direct jump
+            // (a restored screen, a test) still hits the gate.
+            Screen::Module(index) if self.needs_premium(index) => {
+                self.upgrade_screen(theme, view, cx)
+            }
+            Screen::Lesson { module, .. } if self.needs_premium(module) => {
+                self.upgrade_screen(theme, view, cx)
+            }
+            Screen::Exercise { module, .. } if self.needs_premium(module) => {
+                self.upgrade_screen(theme, view, cx)
+            }
+            Screen::Practice { module } if self.needs_premium(module) => {
+                self.upgrade_screen(theme, view, cx)
+            }
+            Screen::PracticeRun { module } if self.needs_premium(module) => {
+                self.upgrade_screen(theme, view, cx)
+            }
+            Screen::PracticeResults { module } if self.needs_premium(module) => {
+                self.upgrade_screen(theme, view, cx)
+            }
             Screen::Home => self.home(theme, view, cx),
             Screen::Module(index) => self.module_screen(theme, view, index, cx),
             Screen::Lesson { module, lesson } => {
@@ -2172,6 +3153,28 @@ pub(crate) fn jump_to_line(
     });
 }
 
+/// A bullet of the upgrade screen's value list.
+fn premium_line(theme: &Theme, text: &str) -> Div {
+    div()
+        .flex()
+        .flex_row()
+        .items_center()
+        .gap_3()
+        .child(
+            div()
+                .text_size(px(14.))
+                .text_color(theme.primary)
+                .font_weight(FontWeight::BOLD)
+                .child("\u{2713}"),
+        )
+        .child(
+            div()
+                .text_size(px(14.))
+                .text_color(theme.foreground)
+                .child(text.to_string()),
+        )
+}
+
 fn heading(theme: &Theme, title: &str, subtitle: &str) -> Div {
     let mut head = div().flex().flex_col().gap_1();
     head = head.child(
@@ -2218,8 +3221,9 @@ mod ui_tests {
     use super::{
         answer_question, begin_run, cancel_run, exercise_view, finish_run, load_builder,
         load_dashboard, load_progress, run_program, start_run, AppView, LessonContent,
-        LessonSection, Screen,
+        LessonSection, ModuleLock, Screen,
     };
+    use crate::services::remote::Entitlement;
     use gpui_kit::{TestAppContext, TestDispatcher, VisualTestContext};
 
     /// Progressive gating: module 0 is always open; module N opens only when
@@ -2237,13 +3241,71 @@ mod ui_tests {
         let seed0 = &view.modules[0];
         let lessons: Vec<i64> = seed0.lessons.iter().map(|l| l.id).collect();
         let exercises: Vec<i64> = seed0.exercises.iter().map(|e| e.id).collect();
-        assert!(!view.module_is_complete(0, &lessons, &none), "exercises still outstanding");
+        assert!(
+            !view.module_is_complete(0, &lessons, &none),
+            "exercises still outstanding"
+        );
         assert!(!view.module_is_unlocked(1, &lessons, &none));
 
         // Lessons + exercises: module 0 complete, module 1 unlocks.
         assert!(view.module_is_complete(0, &lessons, &exercises));
         assert!(view.module_is_unlocked(1, &lessons, &exercises));
-        assert!(!view.module_is_unlocked(2, &lessons, &exercises), "module 2 waits on module 1");
+        assert!(
+            !view.module_is_unlocked(2, &lessons, &exercises),
+            "module 2 waits on module 1"
+        );
+    }
+
+    /// Premium *adds* to the sequential gate: with modules 1–3 finished,
+    /// module 4 is a paywall without a subscription and open with one —
+    /// while the free modules never need one either way.
+    #[test]
+    fn premium_locks_modules_four_onward() {
+        let mut view = AppView::new(crate::content::all());
+
+        let mut lessons = Vec::new();
+        let mut exercises = Vec::new();
+        for seed in view.modules.iter().take(3) {
+            lessons.extend(seed.lessons.iter().map(|lesson| lesson.id));
+            exercises.extend(seed.exercises.iter().map(|exercise| exercise.id));
+        }
+
+        // Prerequisites met, no subscription: the paywall, not the
+        // progression lock — that is the distinction the dashboard shows.
+        assert_eq!(
+            view.module_lock(3, &lessons, &exercises),
+            ModuleLock::Premium,
+            "module 4 is behind the paywall"
+        );
+        assert_eq!(view.module_lock(2, &lessons, &exercises), ModuleLock::Open);
+        // And the same progress, without prerequisites at all, reads as
+        // progression on a premium module — the course still sequences.
+        assert_eq!(
+            view.module_lock(3, &[], &[]),
+            ModuleLock::Progression,
+            "prerequisites come first"
+        );
+
+        // A cached premium entitlement is all the paywall asked for.
+        view.session = Some(crate::auth::StoredSession {
+            token: "t".into(),
+            expires_at: 0,
+            email: "ada@example.com".into(),
+            name: None,
+            entitlement: Some(Entitlement {
+                premium: true,
+                reason: "active".into(),
+                access_ends_at: None,
+            }),
+            has_billing: false,
+            subscription: None,
+            fetched_at: 0,
+        });
+        assert_eq!(view.module_lock(3, &lessons, &exercises), ModuleLock::Open);
+
+        // Free modules are unaffected by the missing subscription.
+        view.session = None;
+        assert_eq!(view.module_lock(0, &[], &[]), ModuleLock::Open);
     }
 
     /// Applies the BORROW_ theme and opens the app at home on this context.
@@ -2316,9 +3378,10 @@ mod ui_tests {
 
         assert_eq!(screen_of(&view, cx), "Home");
 
-        // Wordmark, three nav entries, then START LEARNING — the landing
-        // screen's primary CTA. Enter on it resumes the first lesson.
-        for _ in 0..5 {
+        // Wordmark, four nav entries (dashboard, progress, playground,
+        // account), then START LEARNING — the landing screen's primary CTA.
+        // Enter on it resumes the first lesson.
+        for _ in 0..6 {
             cx.update(|window, cx| window.focus_next(cx));
         }
         press(cx, "enter");
@@ -2601,8 +3664,10 @@ mod ui_tests {
     /// works without a click first — the state issue #6 reported.
     #[test]
     fn the_shortcut_works_on_entry_without_a_click() {
-        let mut cx =
-            TestAppContext::build(TestDispatcher::new(0), Some("playground_shortcut_autofocus"));
+        let mut cx = TestAppContext::build(
+            TestDispatcher::new(0),
+            Some("playground_shortcut_autofocus"),
+        );
         let (view, cx) = open(&mut cx);
 
         cx.update(|_, cx| {
@@ -2644,7 +3709,11 @@ mod ui_tests {
 
         cx.update(|_, cx| {
             view.update(cx, |view, cx| {
-                begin_run(view, "fn main() { let mut i = 0u64; loop { i = i.wrapping_add(1); } }", cx);
+                begin_run(
+                    view,
+                    "fn main() { let mut i = 0u64; loop { i = i.wrapping_add(1); } }",
+                    cx,
+                );
             });
         });
 
@@ -2663,7 +3732,11 @@ mod ui_tests {
             (playground.running, status)
         });
         assert!(!running, "cancel must clear the running state at once");
-        assert_eq!(status, Some(Status::Cancelled), "the console reports the stop");
+        assert_eq!(
+            status,
+            Some(Status::Cancelled),
+            "the console reports the stop"
+        );
 
         cx.run_until_parked();
         cx.update(|window, cx| window.draw(cx).clear(cx));

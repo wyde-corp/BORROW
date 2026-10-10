@@ -26,6 +26,19 @@ tracing-subscriber = "0.3"
 tower = "0.4"
 tower-http = { version = "0.5", features = ["fs"] }
 
+# Remote services — the desktop's only network surface (auth, entitlement,
+# sync) against the Convex backend. rustls rather than platform OpenSSL, so
+# a release build needs no system TLS library; `url` builds the OAuth
+# authorize links with proper percent-encoding instead of string gluing.
+reqwest = { version = "0.12", default-features = false, features = [
+    "json",
+    "rustls-tls",
+] }
+url = "2"
+sha2 = "0.10"
+base64 = "0.22"
+rand = "0.8"
+
 # Desktop UI stack (the `app` branch only).
 #
 # gpui-kit is the single entry point: it brings gpui-component (widgets), the

@@ -18,6 +18,8 @@
 // The shared modules are pulled in by explicit path instead of living under
 // `src/bin/`, where cargo's autobin discovery would pick them up as extra
 // binaries.
+#[path = "app/auth.rs"]
+mod auth;
 #[path = "app/components.rs"]
 mod components;
 #[path = "../content/mod.rs"]
@@ -32,6 +34,8 @@ mod models;
 mod playground;
 #[path = "app/screen.rs"]
 mod screen;
+#[path = "app/sync.rs"]
+mod sync;
 #[path = "app/widgets.rs"]
 mod widgets;
 // The web's host/port and playground-guard helpers; the desktop app binds no
@@ -118,9 +122,44 @@ fn main() {
             ..Default::default()
         };
 
-        gpui_kit::open_window(options, cx, |_, cx| cx.new(|_| AppView::new(modules)))
-            .expect("failed to open window");
+        gpui_kit::open_window(options, cx, |_, cx| {
+            let view = cx.new(|_| AppView::new(modules));
+            bootstrap(view.clone(), cx);
+            view
+        })
+        .expect("failed to open window");
     });
+}
+
+/// First moments of a launch: who is signed in, if anyone.
+///
+/// `AppView::new` stays session-less (the tests build views with no file
+/// system assumptions, and the initial screen defaults to Home). The real
+/// app decides here: a stored session is adopted and refreshed — plus the
+/// launch sync — while its absence drops the app onto the login gate,
+/// which is the only screen reachable until a sign-in lands.
+fn bootstrap(view: Entity<AppView>, cx: &mut App) {
+    match auth::load() {
+        None => {
+            view.update(cx, |view, cx| {
+                view.adopt_session(None);
+                cx.notify();
+            });
+        }
+        Some(session) => {
+            // Adopting and arming happen inside one update: the closure
+            // already holds the `Context` the task builders need, and a
+            // second update from inside would double-borrow the entity.
+            view.update(cx, |view, cx| {
+                view.adopt_session(Some(session));
+                let entity = cx.entity();
+                view.auth.refresh_task = screen::build_refresh_task(entity.clone(), cx);
+                view.auth.daily_task = screen::build_daily_task(entity, cx);
+                cx.notify();
+            });
+            sync::spawn_initial(&view, cx);
+        }
+    }
 }
 
 #[cfg(test)]

@@ -76,6 +76,48 @@ fn data_dir_for(
     }
 }
 
+/// The Convex deployment's HTTP-actions origin (`.convex.site`), baked into
+/// the binary at compile time and overridable at runtime for development.
+///
+/// `None` means sign-in is unavailable in this build — the login screen says
+/// so rather than failing on a URL that is not there.
+#[allow(dead_code)] // called by the desktop app only; the web has no sign-in
+pub fn convex_site_url() -> Option<String> {
+    env_or_baked(
+        "BORROW_CONVEX_SITE_URL",
+        option_env!("BORROW_CONVEX_SITE_URL"),
+    )
+}
+
+/// The Google OAuth client id (public — it rides in the authorize URL).
+#[allow(dead_code)] // called by the desktop app only; the web has no sign-in
+pub fn google_client_id() -> Option<String> {
+    env_or_baked(
+        "BORROW_GOOGLE_CLIENT_ID",
+        option_env!("BORROW_GOOGLE_CLIENT_ID"),
+    )
+}
+
+/// The GitHub OAuth client id (also public).
+#[allow(dead_code)] // called by the desktop app only; the web has no sign-in
+pub fn github_client_id() -> Option<String> {
+    env_or_baked(
+        "BORROW_GITHUB_CLIENT_ID",
+        option_env!("BORROW_GITHUB_CLIENT_ID"),
+    )
+}
+
+/// Runtime environment first, then the value compiled in — the same
+/// precedence `BORROW_DB_URL` uses, so a release build needs no wrapper
+/// script and a dev build needs no rebuild to point somewhere else.
+#[allow(dead_code)] // called by the desktop app only; the web has no sign-in
+fn env_or_baked(name: &str, baked: Option<&str>) -> Option<String> {
+    match env::var(name) {
+        Ok(value) if !value.is_empty() => Some(value),
+        _ => baked.filter(|value| !value.is_empty()).map(str::to_owned),
+    }
+}
+
 pub fn address() -> SocketAddr {
     let host = env::var("BORROW_HOST").unwrap_or_else(|_| "127.0.0.1".to_string());
     let port = env::var("BORROW_PORT")

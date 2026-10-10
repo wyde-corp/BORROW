@@ -7,7 +7,7 @@
 //! nothing else, exactly like the module cards on home.
 
 use crate::components::{label, progress_bar, status_color, status_glyph, StatusState};
-use crate::screen::{AppView, Screen};
+use crate::screen::{AppView, ModuleLock, Screen};
 use crate::services::progress::{DashboardData, ProgressSummary};
 use gpui_kit::component::button::{Button, ButtonVariants};
 use gpui_kit::component::Theme;
@@ -28,13 +28,14 @@ fn percent(done: usize, total: i64) -> i64 {
 /// `AppView::modules`. The data comes from `services::progress::dashboard_data`,
 /// which reads the same tables the site does.
 ///
-/// `unlocked[i]` is the progressive-gating verdict for module `i`: locked
-/// rows are dimmed, carry a lock, and cannot be clicked.
+/// `locks[i]` is the gating verdict for module `i`: a progression lock is
+/// dimmed and inert (wait your turn), a premium lock is dimmed but *clicks
+/// through to the paywall* — a closed door with a handle on it.
 pub fn dashboard(
     theme: &Theme,
     view: Entity<AppView>,
     data: &DashboardData,
-    unlocked: &[bool],
+    locks: &[ModuleLock],
     module_index: impl Fn(i64) -> Option<usize>,
     lesson_index: impl Fn(i64) -> Option<(usize, usize)>,
 ) -> Div {
@@ -93,7 +94,8 @@ pub fn dashboard(
             .filter(|lesson| data.completed_lessons.contains(&lesson.id))
             .count();
         let total = lessons.len();
-        let is_unlocked = unlocked.get(position).copied().unwrap_or(true);
+        let lock = locks.get(position).copied().unwrap_or(ModuleLock::Open);
+        let is_unlocked = lock == ModuleLock::Open;
 
         let state = if !is_unlocked {
             StatusState::Locked
@@ -111,7 +113,7 @@ pub fn dashboard(
             module,
             (module.order_index, done, total, state),
             module_index(module.id),
-            is_unlocked,
+            lock,
         ));
     }
 
@@ -220,25 +222,27 @@ fn continue_card(
 
 /// One row of the curriculum list: number, status, title, progress.
 ///
-/// A locked row (`is_unlocked == false`) is dimmed, carries a lock, and is
-/// not a Button — hard gating, not the old advisory "read ahead" pattern.
+/// A progression-locked row is dimmed, carries a lock, and is not a Button.
+/// A premium-locked row looks the same but *is* a Button — it opens the
+/// paywall, because the only way through is to subscribe.
 fn module_row(
     theme: &Theme,
     view: Entity<AppView>,
     module: &crate::models::Module,
     progress: (i64, usize, usize, StatusState),
     index: Option<usize>,
-    is_unlocked: bool,
+    lock: ModuleLock,
 ) -> Div {
     let (num, done, total, state) = progress;
+    let is_unlocked = lock == ModuleLock::Open;
     let percent = if total > 0 {
         done as i64 * 100 / total as i64
     } else {
         0
     };
 
-    let heading = match (index, is_unlocked) {
-        (Some(index), true) => {
+    let heading = match (index, lock) {
+        (Some(index), ModuleLock::Open) => {
             let jump = view;
             div().child(
                 Button::new(format!("module-title-{index}"))
@@ -255,7 +259,26 @@ fn module_row(
                     }),
             )
         }
-        // Locked: plain text, not a control. Nothing to click.
+        // Paywall: same closed look, but the click opens the upgrade
+        // screen — the only row where "locked" has somewhere to go.
+        (Some(index), ModuleLock::Premium) => {
+            let jump = view;
+            div().child(
+                Button::new(format!("module-title-premium-{index}"))
+                    .ghost()
+                    .text_size(px(14.))
+                    .font_weight(FontWeight::BOLD)
+                    .text_color(theme.muted_foreground)
+                    .child(module.title.clone())
+                    .on_click(move |_, _, cx| {
+                        jump.update(cx, |view, cx| {
+                            view.navigate(Screen::Upgrade);
+                            cx.notify();
+                        });
+                    }),
+            )
+        }
+        // Progression: plain text, not a control. Nothing to click.
         _ => div().child(
             div()
                 .text_size(px(14.))

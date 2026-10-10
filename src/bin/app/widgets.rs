@@ -21,7 +21,7 @@ use crate::screen::AppView;
 use crate::services::sandbox::{self, RunResult};
 use gpui_kit::component::button::{Button, ButtonVariants};
 use gpui_kit::component::input::{Input, InputState};
-use gpui_kit::component::{Disableable, Theme};
+use gpui_kit::component::{Disableable, Sizable, Size, Theme};
 use gpui_kit::*;
 
 /// One block's interaction state, indexed by the block's place in its lesson.
@@ -553,6 +553,11 @@ pub fn guess_run(
                     list = list.child(
                         Button::new(format!("widget-{block}-option-{position}"))
                             .ghost()
+                            // Same fix as the practice options: Medium's fixed
+                            // h_8 minus our p_3 clips multi-line text to an
+                            // 8px band. Size::Size makes the row grow with its
+                            // content and keeps the Button's keyboard reach.
+                            .with_size(Size::Size(px(200.)))
                             .rounded_md()
                             .border_1()
                             .border_color(if chosen { theme.primary } else { theme.border })
@@ -579,6 +584,7 @@ pub fn guess_run(
                                 div()
                                     .text_size(px(13.))
                                     .text_color(theme.foreground)
+                                    .whitespace_normal()
                                     .child(option_text),
                             )
                             .on_click(move |_, _, cx| {

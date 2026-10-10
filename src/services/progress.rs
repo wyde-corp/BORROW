@@ -187,10 +187,14 @@ pub async fn mark_lesson_complete(pool: &SqlitePool, lesson_id: i64) -> Result<b
         .await?;
 
     if let Some(module_id) = module_id {
-        sqlx::query("INSERT INTO progress (module_id, lesson_id, xp_earned) VALUES (?, ?, ?)")
+        // A completion row with zero XP: the row is what gating and the
+        // dashboard read, and XP is only for exercises — PLAN.md awards it
+        // nowhere else, and a lesson click-through used to pay 10 for a
+        // button press. Rows written before that decision keep their value;
+        // total_xp sums what is there.
+        sqlx::query("INSERT INTO progress (module_id, lesson_id, xp_earned) VALUES (?, ?, 0)")
             .bind(module_id)
             .bind(lesson_id)
-            .bind(LESSON_XP)
             .execute(pool)
             .await?;
     }
@@ -234,8 +238,6 @@ pub async fn total_xp(pool: &SqlitePool) -> Result<i64> {
             .await?,
     )
 }
-
-pub const LESSON_XP: i64 = 10;
 
 pub async fn dashboard_data(pool: &SqlitePool) -> Result<DashboardData> {
     let modules = all_modules(pool).await?;

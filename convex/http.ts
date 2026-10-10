@@ -1,6 +1,6 @@
 import { httpRouter } from "convex/server";
 import { exchange, logout } from "./auth";
-import { checkout, portal } from "./billing";
+import { checkout, checkoutCancel, checkoutSuccess, portal } from "./billing";
 import { bachsWebhook } from "./bachsWebhook";
 import { me } from "./me";
 import { getProgress, postProgress } from "./progressSync";
@@ -18,6 +18,10 @@ http.route({ path: "/auth/logout", method: "POST", handler: logout });
 http.route({ path: "/me", method: "GET", handler: me });
 http.route({ path: "/entitlement", method: "GET", handler: me });
 http.route({ path: "/checkout", method: "POST", handler: checkout });
+// Where hosted checkout sends the browser — static pages, because the
+// desktop polls entitlement rather than trusting a redirect.
+http.route({ path: "/checkout/success", method: "GET", handler: checkoutSuccess });
+http.route({ path: "/checkout/cancel", method: "GET", handler: checkoutCancel });
 http.route({ path: "/portal", method: "POST", handler: portal });
 
 // Progress sync: pull on launch, push after each completion.

@@ -325,13 +325,35 @@ fn drain<R: Read + Send + 'static>(mut reader: R) -> mpsc::Receiver<(String, boo
                 Ok(n) => {
                     if lines >= MAX_OUTPUT_LINES || kept.len() >= MAX_OUTPUT_BYTES {
                         truncated = true;
+                        continue;
+                    }
+
+                    let room = MAX_OUTPUT_BYTES - kept.len();
+                    let mut take = room.min(n);
+
+                    // Stop at the line cap mid-chunk rather than overshooting
+                    // it: the cap is what bounds the console's per-frame
+                    // shaping cost, so "about 2000" is not the same promise.
+                    let chunk_lines = buf[..take].iter().filter(|&&b| b == b'\n').count();
+                    if lines + chunk_lines > MAX_OUTPUT_LINES {
+                        let need = MAX_OUTPUT_LINES - lines;
+                        let mut seen = 0;
+                        for (index, &byte) in buf[..take].iter().enumerate() {
+                            if byte == b'\n' {
+                                seen += 1;
+                                if seen == need {
+                                    take = index + 1;
+                                    break;
+                                }
+                            }
+                        }
+                        truncated = true;
                     } else {
-                        let room = MAX_OUTPUT_BYTES - kept.len();
-                        let take = room.min(n);
-                        kept.extend_from_slice(&buf[..take]);
-                        lines += buf[..take].iter().filter(|&&b| b == b'\n').count();
                         truncated |= take < n;
                     }
+
+                    kept.extend_from_slice(&buf[..take]);
+                    lines += buf[..take].iter().filter(|&&b| b == b'\n').count();
                 }
             }
         }
@@ -529,12 +551,8 @@ fn shift_text_references(text: &str, offset: usize) -> String {
         .map(|line| {
             if let Some((line_number, column)) = rustc_source_pointer(line) {
                 return match line_number.checked_sub(offset) {
-                    Some(shifted) if shifted > 0 => {
-                        replace_pointer_line(line, shifted, column)
-                    }
-                    _ if line.contains("-->") => {
-                        WRAPPER_MARKER.to_string()
-                    }
+                    Some(shifted) if shifted > 0 => replace_pointer_line(line, shifted, column),
+                    _ if line.contains("-->") => WRAPPER_MARKER.to_string(),
                     _ => line.to_string(),
                 };
             }
@@ -614,7 +632,6 @@ fn gutter_text_len(line: &str) -> usize {
     let digits = line[..bar].trim_end();
     digits.len()
 }
-
 
 fn run_in(dir: &Path, code: &str, cancel: &CancelFlag) -> RunResult {
     let src = dir.join("main.rs");
@@ -764,8 +781,7 @@ fn run_in(dir: &Path, code: &str, cancel: &CancelFlag) -> RunResult {
     // `status.code()` is `None` — indistinguishable from a kill at the exit-code
     // level. Rust's own abort message is the only reliable tell, so it is
     // checked before the exit code rather than inside one arm of the match.
-    let allocator_failed =
-        stderr.contains("memory allocation of") && stderr.contains("failed");
+    let allocator_failed = stderr.contains("memory allocation of") && stderr.contains("failed");
 
     let (status, message) = match outcome {
         WaitOutcome::Cancelled => (Status::Cancelled, Some("run stopped".to_string())),
@@ -992,9 +1008,7 @@ mod tests {
 
     #[test]
     fn compiles_and_runs_a_correct_program() {
-        let r = run(
-            r#"fn main() { println!("hello from the playground"); }"#,
-        );
+        let r = run(r#"fn main() { println!("hello from the playground"); }"#);
 
         assert_eq!(r.status, Status::Ok, "stderr was: {}", r.stderr);
         assert!(r.stdout.contains("hello from the playground"));
@@ -1003,13 +1017,11 @@ mod tests {
 
     #[test]
     fn a_use_after_move_yields_a_structured_e0382() {
-        let r = run(
-            r#"fn main() {
+        let r = run(r#"fn main() {
     let s1 = String::from("hello");
     let s2 = s1;
     println!("{s1}");
-}"#,
-        );
+}"#);
 
         assert_eq!(r.status, Status::CompileError);
 
@@ -1043,13 +1055,11 @@ mod tests {
 
     #[test]
     fn rustc_bookkeeping_records_are_filtered_out() {
-        let r = run(
-            r#"fn main() {
+        let r = run(r#"fn main() {
     let s1 = String::from("hello");
     let s2 = s1;
     println!("{s1}");
-}"#,
-        );
+}"#);
 
         assert!(
             !r.diagnostics
@@ -1065,12 +1075,10 @@ mod tests {
 
     #[test]
     fn a_type_mismatch_reports_its_code_and_annotations() {
-        let r = run(
-            r#"fn main() {
+        let r = run(r#"fn main() {
     let s: String = "hello";
     println!("{s}");
-}"#,
-        );
+}"#);
 
         assert_eq!(r.status, Status::CompileError);
         let err = r.diagnostics.iter().find(|d| d.level == "error").unwrap();
@@ -1080,9 +1088,7 @@ mod tests {
 
     #[test]
     fn warnings_survive_a_successful_compile() {
-        let r = run(
-            r#"fn main() { let unused_thing = 5; println!("ok"); }"#,
-        );
+        let r = run(r#"fn main() { let unused_thing = 5; println!("ok"); }"#);
 
         assert_eq!(r.status, Status::Ok);
         assert!(r.stdout.contains("ok"));
@@ -1094,9 +1100,7 @@ mod tests {
 
     #[test]
     fn a_panic_is_a_runtime_error_not_a_crash() {
-        let r = run(
-            r#"fn main() { let v: Vec<i32> = vec![]; println!("{}", v[3]); }"#,
-        );
+        let r = run(r#"fn main() { let v: Vec<i32> = vec![]; println!("{}", v[3]); }"#);
 
         assert_eq!(r.status, Status::RuntimeError);
         assert!(r.stderr.contains("panicked"), "stderr: {}", r.stderr);
@@ -1109,7 +1113,9 @@ mod tests {
         assert_eq!(r.status, Status::CompileError);
         assert!(!r.diagnostics.is_empty());
         assert!(
-            r.diagnostics.iter().any(|d| d.spans.iter().any(|s| s.is_primary)),
+            r.diagnostics
+                .iter()
+                .any(|d| d.spans.iter().any(|s| s.is_primary)),
             "a syntax error must point at a span"
         );
     }
@@ -1118,14 +1124,12 @@ mod tests {
     fn std_collections_compile() {
         // Guards against silently dropping to a std-less target: if someone
         // changes the rustc invocation, this is the canary.
-        let r = run(
-            r#"use std::collections::HashMap;
+        let r = run(r#"use std::collections::HashMap;
 fn main() {
     let mut m: HashMap<&str, i32> = HashMap::new();
     m.insert("one", 1);
     for (k, v) in &m { println!("{k}={v}"); }
-}"#,
-        );
+}"#);
 
         assert_eq!(r.status, Status::Ok, "stderr: {}", r.stderr);
         assert!(r.stdout.contains("one=1"));
@@ -1141,7 +1145,9 @@ fn main() {
 
         assert_eq!(r.status, Status::Timeout);
         assert!(
-            r.message.as_deref().is_some_and(|m| m.contains("without finishing")),
+            r.message
+                .as_deref()
+                .is_some_and(|m| m.contains("without finishing")),
             "the learner needs to know it was stopped, not that it 'failed': {:?}",
             r.message
         );
@@ -1218,8 +1224,8 @@ fn main() {
     #[cfg(target_os = "linux")]
     #[test]
     fn peak_rss_is_readable() {
-        let peak = peak_rss_kb(std::process::id())
-            .expect("this process should have a readable peak RSS");
+        let peak =
+            peak_rss_kb(std::process::id()).expect("this process should have a readable peak RSS");
 
         // Any live process is using kilobytes, and the ceiling is in the
         // hundreds of megabytes, so this also confirms the units are right —
@@ -1238,11 +1244,9 @@ fn main() {
 
     #[test]
     fn output_is_captured_and_truncation_is_reported() {
-        let r = run(
-            r#"fn main() {
+        let r = run(r#"fn main() {
     for i in 0..50 { println!("line {i}"); }
-}"#,
-        );
+}"#);
 
         assert_eq!(r.status, Status::Ok);
         assert!(r.stdout.contains("line 0"));
@@ -1331,13 +1335,19 @@ mod prepare_tests {
     fn a_bare_function_gets_an_empty_main_not_a_nested_one() {
         let prepared = prepare_for_run("fn add(a: i32, b: i32) -> i32 {\n    a + b\n}");
 
-        assert!(prepared.code.starts_with("fn add"), "the function must stay top level");
+        assert!(
+            prepared.code.starts_with("fn add"),
+            "the function must stay top level"
+        );
         assert!(
             prepared.code.contains("fn main() {}"),
             "a minimal main should be appended, got: {}",
             prepared.code
         );
-        assert_eq!(prepared.line_offset, 0, "main goes at the end, so nothing shifts");
+        assert_eq!(
+            prepared.line_offset, 0,
+            "main goes at the end, so nothing shifts"
+        );
         assert!(run(&prepared.code).status == Status::Ok, "should compile");
     }
 
@@ -1360,7 +1370,11 @@ mod prepare_tests {
     fn a_bare_statement_is_wrapped_in_main() {
         let prepared = prepare_for_run("let score = 100;\nprintln!(\"{score}\");");
 
-        assert!(prepared.code.contains("fn main() {"), "got: {}", prepared.code);
+        assert!(
+            prepared.code.contains("fn main() {"),
+            "got: {}",
+            prepared.code
+        );
         assert!(
             prepared.code.contains("    let score = 100;"),
             "body should be indented: {}",
@@ -1380,9 +1394,8 @@ mod prepare_tests {
     /// after wrapping rather than a nest of unrelated syntax errors.
     #[test]
     fn a_wrapped_ownership_fragment_still_reports_e0382() {
-        let prepared = prepare_for_run(
-            "let s1 = String::from(\"hello\");\nlet s2 = s1;\nprintln!(\"{s1}\");",
-        );
+        let prepared =
+            prepare_for_run("let s1 = String::from(\"hello\");\nlet s2 = s1;\nprintln!(\"{s1}\");");
 
         // The reported line must be where the learner sees it, not where it sits
         // inside the wrapper.
@@ -1428,7 +1441,11 @@ match action {
         // on it still works but the lesson's shape is wrong.
         let enum_pos = prepared.code.find("enum Action").unwrap();
         let main_pos = prepared.code.find("fn main").unwrap();
-        assert!(enum_pos < main_pos, "declaration must precede main: {}", prepared.code);
+        assert!(
+            enum_pos < main_pos,
+            "declaration must precede main: {}",
+            prepared.code
+        );
 
         let r = run(&prepared.code);
         assert_eq!(r.status, Status::Ok, "stderr: {}", r.stderr);
@@ -1438,16 +1455,25 @@ match action {
     #[test]
     fn comments_do_not_count_as_the_first_line() {
         // Lesson 414's fragment opens with a comment above the `fn`.
-        let prepared = prepare_for_run("// Naturally recursive\nfn count(node: &u32) -> u32 {\n    *node\n}");
+        let prepared =
+            prepare_for_run("// Naturally recursive\nfn count(node: &u32) -> u32 {\n    *node\n}");
 
-        assert!(prepared.code.contains("fn main() {}"), "got: {}", prepared.code);
+        assert!(
+            prepared.code.contains("fn main() {}"),
+            "got: {}",
+            prepared.code
+        );
         assert_eq!(prepared.line_offset, 0);
     }
 
     #[test]
     fn a_use_statement_at_the_top_level_is_left_alone() {
         let prepared = prepare_for_run("use std::collections::HashMap;\nfn f() -> i32 { 1 }");
-        assert!(prepared.code.contains("fn main() {}"), "got: {}", prepared.code);
+        assert!(
+            prepared.code.contains("fn main() {}"),
+            "got: {}",
+            prepared.code
+        );
     }
 }
 
@@ -1465,9 +1491,11 @@ match action {
 async fn sweep_every_seeded_fragment() {
     use sqlx::Row;
 
-    let Ok(pool) = sqlx::sqlite::SqlitePool::connect(&crate::config::database_url()).await
-    else {
-        panic!("sweep needs a seeded borrow.db at {}", crate::config::database_url());
+    let Ok(pool) = sqlx::sqlite::SqlitePool::connect(&crate::config::database_url()).await else {
+        panic!(
+            "sweep needs a seeded borrow.db at {}",
+            crate::config::database_url()
+        );
     };
 
     let rows = sqlx::query("SELECT id, content FROM lessons")
@@ -1557,7 +1585,10 @@ async fn sweep_every_seeded_fragment() {
     // smaller. Pinned loosely because this is a floor against a lesson losing
     // its fragments entirely, not a count of how many lessons happen to have
     // them today.
-    assert!(checked >= 8, "expected the known runnable fragments, found {checked}");
+    assert!(
+        checked >= 8,
+        "expected the known runnable fragments, found {checked}"
+    );
     assert!(
         failures.is_empty(),
         "{} of {checked} lesson fragments do not compile:\n\n{}",
@@ -1728,9 +1759,14 @@ mod diagnostic_passthrough_tests {
         let r = run("fn add(a: i32, b: i32) -> i32 {\n    a + b;\n}\nfn main() {}");
         assert_eq!(r.status, Status::CompileError);
         assert!(
-            r.diagnostics.iter().any(|d| d.code.as_deref() == Some("E0308")),
+            r.diagnostics
+                .iter()
+                .any(|d| d.code.as_deref() == Some("E0308")),
             "expected E0308, got {:?}",
-            r.diagnostics.iter().filter_map(|d| d.code.clone()).collect::<Vec<_>>()
+            r.diagnostics
+                .iter()
+                .filter_map(|d| d.code.clone())
+                .collect::<Vec<_>>()
         );
 
         // E0061: lesson 415's `fn add() -> i32` returns a string literal.
@@ -1748,7 +1784,10 @@ mod diagnostic_passthrough_tests {
             "fn main() {\n    let s1 = String::from(\"a\");\n    let s2 = s1;\n    println!(\"{s1}{s2}\");\n}",
         );
         assert_eq!(r.status, Status::CompileError);
-        assert!(r.diagnostics.iter().any(|d| d.code.as_deref() == Some("E0382")));
+        assert!(r
+            .diagnostics
+            .iter()
+            .any(|d| d.code.as_deref() == Some("E0382")));
     }
 
     /// A panel marked broken compiles in the seed data as valid Rust once
@@ -1761,10 +1800,7 @@ mod diagnostic_passthrough_tests {
                 "let s1 = String::from(\"a\");\nlet s2 = s1;\nprintln!(\"{s1}\");",
                 "E0382",
             ),
-            (
-                "let x = 5;\nx = 6;\nprintln!(\"{x}\");",
-                "E0384",
-            ),
+            ("let x = 5;\nx = 6;\nprintln!(\"{x}\");", "E0384"),
         ] {
             let r = run(code);
             assert_eq!(
@@ -1773,9 +1809,14 @@ mod diagnostic_passthrough_tests {
                 "expected a compile error for: {code}"
             );
             assert!(
-                r.diagnostics.iter().any(|d| d.code.as_deref() == Some(expected)),
+                r.diagnostics
+                    .iter()
+                    .any(|d| d.code.as_deref() == Some(expected)),
                 "expected {expected}, got {:?}",
-                r.diagnostics.iter().filter_map(|d| d.code.clone()).collect::<Vec<_>>()
+                r.diagnostics
+                    .iter()
+                    .filter_map(|d| d.code.clone())
+                    .collect::<Vec<_>>()
             );
         }
     }

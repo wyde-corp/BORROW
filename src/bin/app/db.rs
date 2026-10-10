@@ -74,4 +74,16 @@ impl Db {
     pub fn block_on<F: std::future::Future>(&self, future: F) -> F::Output {
         self.runtime.block_on(future)
     }
+
+    /// The runtime itself, for work that must run *on* tokio rather than
+    /// block a thread waiting for it.
+    ///
+    /// sqlx and reqwest both need a reactor; gpui's executors are not one.
+    /// The desktop's network calls (login exchange, entitlement, checkout,
+    /// sync) are spawned here and awaited from the UI as `JoinHandle`s —
+    /// cheap to wait on, because they are completions, not futures bound to
+    /// the wrong reactor.
+    pub fn runtime(&self) -> Arc<Runtime> {
+        Arc::clone(&self.runtime)
+    }
 }

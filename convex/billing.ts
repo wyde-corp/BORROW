@@ -105,3 +105,36 @@ export const portal = httpAction(async (ctx: ActionCtx, request: Request) => {
     return json({ error: err instanceof Error ? err.message : "portal failed" }, 502);
   }
 });
+
+/**
+ * The page Bachs redirects to after hosted checkout. Static HTML on
+ * purpose: the desktop notices the payment by polling entitlement, so this
+ * page's only job is to tell the human to go back to the app.
+ */
+export const checkoutSuccess = httpAction(async () => page(
+  "You're subscribed",
+  "Your modules are unlocking now. Return to BORROW_ — this window can close.",
+));
+
+/** The cancel counterpart: no payment, no harm, same instruction. */
+export const checkoutCancel = httpAction(async () => page(
+  "Checkout cancelled",
+  "No charge was made. Return to BORROW_ — this window can close.",
+));
+
+function page(title: string, body: string): Response {
+  return new Response(
+    `<!doctype html>
+<html>
+<head><meta charset="utf-8"><title>BORROW_</title></head>
+<body style="font-family: system-ui, sans-serif; display: grid; place-items: center; height: 100vh; margin: 0; background: #0b0b0f; color: #fafafa;">
+  <div style="text-align: center; max-width: 28rem; padding: 1rem;">
+    <div style="font-weight: 700; color: #7c8cff; letter-spacing: .05em;">BORROW_</div>
+    <h1 style="font-size: 1.5rem; margin: .75rem 0;">${title}</h1>
+    <p style="color: #999;">${body}</p>
+  </div>
+</body>
+</html>`,
+    { status: 200, headers: { "Content-Type": "text/html; charset=utf-8" } },
+  );
+}

@@ -93,9 +93,19 @@ async function applySubscription(
     patch.cancelAtPeriodEnd = parsed.cancelAtPeriodEnd;
   }
   if (parsed.periodEnd !== null) patch.currentPeriodEnd = parsed.periodEnd;
-  if (status && !isEntitledStatus(status)) {
-    // The grace anchor: the paid-through period end when there is one,
-    // otherwise the moment we learned the subscription stopped.
+
+  if (status && isEntitledStatus(status)) {
+    // A live subscription drops the previous window's anchor (undefined
+    // deletes the field): the next end must open a fresh seven days, not
+    // inherit — or outlive — the last one.
+    patch.endedAt = undefined;
+  } else if (status && row.endedAt == null) {
+    // First observation of the end: the grace anchor is the paid-through
+    // period end when there is one, otherwise the moment we learned the
+    // subscription stopped. Later non-entitled deliveries (dunning
+    // retries, redeliveries) leave it alone — grace counts from when the
+    // subscription actually ended, and re-anchoring to "now" would hand
+    // out a new window on every redelivery.
     patch.endedAt = parsed.periodEnd ?? now;
   }
 
@@ -227,8 +237,10 @@ export const customerOf = internalQuery({
       .first();
     return {
       customerId: row?.bachsCustomerId ?? null,
-      // Surfaces "Manage billing" only for someone who has billed before.
-      hasBilling: Boolean(row?.bachsCustomerId || row?.subscriptionId),
+      // Billing *history* means a subscription ever existed — a customer
+      // id alone is what an abandoned checkout leaves behind, and that is
+      // not something to offer a portal for.
+      hasBilling: Boolean(row?.subscriptionId),
     };
   },
 });
