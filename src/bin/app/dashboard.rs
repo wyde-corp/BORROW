@@ -27,10 +27,14 @@ fn percent(done: usize, total: i64) -> i64 {
 /// `module_index` and `lesson_index` translate database ids into positions in
 /// `AppView::modules`. The data comes from `services::progress::dashboard_data`,
 /// which reads the same tables the site does.
+///
+/// `unlocked[i]` is the progressive-gating verdict for module `i`: locked
+/// rows are dimmed, carry a lock, and cannot be clicked.
 pub fn dashboard(
     theme: &Theme,
     view: Entity<AppView>,
     data: &DashboardData,
+    unlocked: &[bool],
     module_index: impl Fn(i64) -> Option<usize>,
     lesson_index: impl Fn(i64) -> Option<(usize, usize)>,
 ) -> Div {
@@ -76,7 +80,6 @@ pub fn dashboard(
     let mut curriculum = div().flex().flex_col().gap_3();
     curriculum = curriculum.child(label(theme, "CURRICULUM"));
 
-    let mut next_is_open = true;
     let mut rows = div().flex().flex_col().gap_2();
 
     for (position, module) in data.modules.iter().enumerate() {
@@ -90,19 +93,17 @@ pub fn dashboard(
             .filter(|lesson| data.completed_lessons.contains(&lesson.id))
             .count();
         let total = lessons.len();
-        let complete = total > 0 && done == total;
-        let started = done > 0;
+        let is_unlocked = unlocked.get(position).copied().unwrap_or(true);
 
-        let state = if complete {
-            StatusState::Completed
-        } else if started {
-            StatusState::InProgress
-        } else if next_is_open {
-            StatusState::Available
-        } else {
+        let state = if !is_unlocked {
             StatusState::Locked
+        } else if total > 0 && done == total {
+            StatusState::Completed
+        } else if done > 0 {
+            StatusState::InProgress
+        } else {
+            StatusState::Available
         };
-        next_is_open = started || complete;
 
         rows = rows.child(module_row(
             theme,
@@ -110,6 +111,7 @@ pub fn dashboard(
             module,
             (module.order_index, done, total, state),
             module_index(module.id),
+            is_unlocked,
         ));
     }
 
@@ -217,12 +219,16 @@ fn continue_card(
 }
 
 /// One row of the curriculum list: number, status, title, progress.
+///
+/// A locked row (`is_unlocked == false`) is dimmed, carries a lock, and is
+/// not a Button — hard gating, not the old advisory "read ahead" pattern.
 fn module_row(
     theme: &Theme,
     view: Entity<AppView>,
     module: &crate::models::Module,
     progress: (i64, usize, usize, StatusState),
     index: Option<usize>,
+    is_unlocked: bool,
 ) -> Div {
     let (num, done, total, state) = progress;
     let percent = if total > 0 {
@@ -231,8 +237,8 @@ fn module_row(
         0
     };
 
-    let heading = match index {
-        Some(index) => {
+    let heading = match (index, is_unlocked) {
+        (Some(index), true) => {
             let jump = view;
             div().child(
                 Button::new(format!("module-title-{index}"))
@@ -249,11 +255,12 @@ fn module_row(
                     }),
             )
         }
-        None => div().child(
+        // Locked: plain text, not a control. Nothing to click.
+        _ => div().child(
             div()
                 .text_size(px(14.))
                 .font_weight(FontWeight::BOLD)
-                .text_color(theme.foreground)
+                .text_color(theme.muted_foreground)
                 .child(module.title.clone()),
         ),
     };
@@ -278,19 +285,9 @@ fn module_row(
             .child("Content coming soon")
     };
 
-    let mut body = div().flex().flex_col().gap_2().child(heading).child(meta);
+    let body = div().flex().flex_col().gap_2().child(heading).child(meta);
 
-    // A locked row stays readable — the lock is a recommendation, not a wall.
-    if state == StatusState::Locked {
-        body = body.child(
-            div()
-                .text_size(px(11.))
-                .text_color(theme.muted_foreground)
-                .child("Not started yet — you can still read ahead"),
-        );
-    }
-
-    div()
+    let row = div()
         .flex()
         .flex_row()
         .items_center()
@@ -313,9 +310,19 @@ fn module_row(
                 .w(px(20.))
                 .text_size(px(14.))
                 .text_color(status_color(theme, state))
-                .child(status_glyph(state)),
+                .child(if is_unlocked {
+                    status_glyph(state)
+                } else {
+                    "\u{1F512}"
+                }),
         )
-        .child(div().flex_1().min_w(px(0.)).child(body))
+        .child(div().flex_1().min_w(px(0.)).child(body));
+
+    if is_unlocked {
+        row
+    } else {
+        row.opacity(0.5)
+    }
 }
 
 /// The progress body: the overall bar, four stats, the curriculum list.

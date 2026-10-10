@@ -199,75 +199,243 @@ impl AppView {
         })
     }
 
-    fn home(&self, theme: &Theme, view: Entity<AppView>) -> Div {
-        let mut list = div().flex().flex_col().gap_3();
+    /// Whether every lesson and every exercise in module `index` is done.
+    ///
+    /// Exercises count: a module's challenges and BUILD IT briefs are part of
+    /// the work, and open-ended ones still record completion when submitted
+    /// (`record_exercise_result` receives `correct || open_ended`).
+    fn module_is_complete(
+        &self,
+        index: usize,
+        completed_lessons: &[i64],
+        completed_exercises: &[i64],
+    ) -> bool {
+        let Some(seed) = self.modules.get(index) else {
+            return false;
+        };
+        !seed.lessons.is_empty()
+            && seed.lessons.iter().all(|l| completed_lessons.contains(&l.id))
+            && seed
+                .exercises
+                .iter()
+                .all(|e| completed_exercises.contains(&e.id))
+    }
 
-        for (index, seed) in self.modules.iter().enumerate() {
-            let title = seed.module.title.clone();
-            let description = seed.module.description.clone();
-            let lesson_count = seed.lessons.len();
-            let jump_to = view.clone();
+    /// Progressive gating: module 0 is always open; module N opens once
+    /// module N-1 is complete.
+    fn module_is_unlocked(
+        &self,
+        index: usize,
+        completed_lessons: &[i64],
+        completed_exercises: &[i64],
+    ) -> bool {
+        index == 0 || self.module_is_complete(index - 1, completed_lessons, completed_exercises)
+    }
 
-            // Button rather than a div with on_click: gpui-component's Button
-            // owns focus, so the card is reachable with Tab and activates on
-            // Enter or Space. The custom size avoids the fixed h_8 height the
-            // default Medium size imposes — that clips multi-line card content
-            // to zero height.
-            let card = Button::new(format!("module-{index}"))
-                .ghost()
-                .with_size(Size::Size(px(200.)))
+    /// The landing screen: what BORROW_ is and why it is worth starting.
+    ///
+    /// The curriculum itself lives on the Dashboard (reached by the nav or
+    /// VIEW CURRICULUM); this screen's job is to sell the product and hand
+    /// the learner straight into their next lesson.
+    fn home(&self, theme: &Theme, view: Entity<AppView>, cx: &App) -> Div {
+        let (completed_lessons, _) = completed_progress(cx);
+
+        // The first lesson not yet complete, in course order. Fresh account:
+        // lesson 1 of module 1. Everything done: nowhere to resume, so the
+        // button points at the dashboard instead.
+        let first_incomplete = self.modules.iter().enumerate().find_map(|(m, seed)| {
+            seed.lessons
+                .iter()
+                .position(|l| !completed_lessons.contains(&l.id))
+                .map(|l| (m, l))
+        });
+
+        let mut ctas = div().flex().flex_row().gap_3().pt_2();
+
+        match first_incomplete {
+            Some((m, l)) => {
+                let jump = view.clone();
+                ctas = ctas.child(
+                    Button::new("start-learning")
+                        .primary()
+                        .label("START LEARNING")
+                        .on_click(move |_, _, cx| {
+                            jump.update(cx, |view, cx| {
+                                view.clear_answer();
+                                view.screen = Screen::Lesson { module: m, lesson: l };
+                                cx.notify();
+                            });
+                        }),
+                );
+            }
+            None => {
+                let jump = view.clone();
+                ctas = ctas.child(
+                    Button::new("start-learning")
+                        .primary()
+                        .label("VIEW PROGRESS")
+                        .on_click(move |_, _, cx| {
+                            let data = load_dashboard(cx);
+                            jump.update(cx, |view, cx| {
+                                view.dashboard = data;
+                                view.screen = Screen::Dashboard;
+                                cx.notify();
+                            });
+                        }),
+                );
+            }
+        }
+
+        let jump = view.clone();
+        ctas = ctas.child(
+            Button::new("view-curriculum")
+                .secondary()
+                .label("VIEW CURRICULUM")
+                .on_click(move |_, _, cx| {
+                    let data = load_dashboard(cx);
+                    jump.update(cx, |view, cx| {
+                        view.dashboard = data;
+                        view.screen = Screen::Dashboard;
+                        cx.notify();
+                    });
+                }),
+        );
+
+        let module_count = self.modules.len();
+        let lesson_count: usize = self.modules.iter().map(|s| s.lessons.len()).sum();
+        let exercise_count: usize = self.modules.iter().map(|s| s.exercises.len()).sum();
+
+        let hero = div()
+            .flex()
+            .flex_col()
+            .gap_3()
+            .pt_8()
+            .pb_2()
+            .child(
+                div()
+                    .text_size(px(40.))
+                    .font_weight(FontWeight::BOLD)
+                    .text_color(theme.foreground)
+                    .child("LEARN RUST"),
+            )
+            .child(
+                div()
+                    .text_size(px(20.))
+                    .font_weight(FontWeight::BOLD)
+                    .text_color(theme.primary)
+                    .child("WITHOUT THE 700-PAGE DETOUR."),
+            )
+            .child(
+                div()
+                    .text_size(px(14.))
+                    .text_color(theme.muted_foreground)
+                    .max_w(px(560.))
+                    .child(
+                        "Short lessons. Exercises that check your answers as you go. \
+                         A playground backed by the real compiler. Learn the \
+                         fundamentals by writing Rust, not by reading about it.",
+                    ),
+            )
+            .child(ctas);
+
+        let stat = |value: String, name: String| {
+            div()
+                .flex()
+                .flex_col()
+                .gap_1()
+                .min_w(px(100.))
+                .child(
+                    div()
+                        .text_size(px(24.))
+                        .font_weight(FontWeight::BOLD)
+                        .text_color(theme.primary)
+                        .child(value),
+                )
+                .child(
+                    div()
+                        .text_size(px(11.))
+                        .text_color(theme.muted_foreground)
+                        .child(name),
+                )
+        };
+
+        let stats = div()
+            .flex()
+            .flex_row()
+            .gap_10()
+            .py_4()
+            .my_4()
+            .border_t_1()
+            .border_b_1()
+            .border_color(theme.border)
+            .child(stat(module_count.to_string(), "MODULES".to_string()))
+            .child(stat(lesson_count.to_string(), "LESSONS".to_string()))
+            .child(stat(exercise_count.to_string(), "EXERCISES".to_string()));
+
+        let feature = |title: String, description: String| {
+            div()
+                .flex_1()
+                .min_w(px(280.))
+                .p_4()
                 .rounded_md()
                 .border_1()
                 .border_color(theme.border)
                 .bg(theme.secondary)
-                .p_4()
                 .flex()
                 .flex_col()
-                .gap_1()
-                .on_click(move |_, _, cx| {
-                    jump_to.update(cx, |view, cx| {
-                        view.screen = Screen::Module(index);
-                        cx.notify();
-                    });
-                })
-                .child(
-                    div()
-                        .flex()
-                        .flex_row()
-                        .items_baseline()
-                        .justify_between()
-                        .child(
-                            div()
-                                .text_size(px(15.))
-                                .text_color(theme.foreground)
-                                .font_weight(FontWeight::BOLD)
-                                .child(title),
-                        )
-                        .child(
-                            div()
-                                .text_size(px(11.))
-                                .text_color(theme.muted_foreground)
-                                .child(format!("{lesson_count} lessons")),
-                        ),
-                )
+                .gap_2()
                 .child(
                     div()
                         .text_size(px(13.))
+                        .font_weight(FontWeight::BOLD)
+                        .text_color(theme.foreground)
+                        .child(title),
+                )
+                .child(
+                    div()
+                        .text_size(px(12.))
                         .text_color(theme.muted_foreground)
                         .child(description),
-                );
+                )
+        };
 
-            list = list.child(card);
-        }
+        let features = div()
+            .flex()
+            .flex_row()
+            .gap_3()
+            .flex_wrap()
+            .child(feature(
+                "INTERACTIVE LESSONS".to_string(),
+                "Fill-in-the-gap code, step-through walkthroughs, and \
+                 guess-then-run exercises that compile your answer with the \
+                 real compiler.".to_string(),
+            ))
+            .child(feature(
+                "PRACTICE RUNS".to_string(),
+                "Graded question sets taken one at a time. Jump anywhere, \
+                 skip freely, and get a scored result at the end.".to_string(),
+            ))
+            .child(feature(
+                "CODE PLAYGROUND".to_string(),
+                "A full Rust editor backed by real rustc. Write, run, and \
+                 read the compiler's actual diagnostics.".to_string(),
+            ))
+            .child(feature(
+                "PROGRESS TRACKING".to_string(),
+                "XP, completion bars, and a dashboard that always shows \
+                 exactly where you left off.".to_string(),
+            ));
 
-        self.shell(
-            theme,
-            view,
-            "BORROW_",
-            "Learn Rust without the 700-page detour.",
-            None,
-            list,
-        )
+        let body = div()
+            .flex()
+            .flex_col()
+            .gap_2()
+            .child(hero)
+            .child(stats)
+            .child(features);
+
+        // No shell heading — the hero is the heading.
+        self.shell(theme, view, "", "", None, body)
     }
 
     fn module_screen(&self, theme: &Theme, view: Entity<AppView>, index: usize, cx: &App) -> Div {
@@ -422,18 +590,10 @@ impl AppView {
                 }),
         );
 
-        let completed = cx
-            .try_global::<Db>()
-            .map(|db| {
-                db.block_on(progress::completed_lesson_ids(db.pool()))
-                    .unwrap_or_default()
-            })
-            .unwrap_or_default();
+        let (completed_lessons, completed_exercises) = completed_progress(cx);
+        let module_done = self.module_is_complete(index, &completed_lessons, &completed_exercises);
 
-        let all_lessons_done = !seed.lessons.is_empty()
-            && seed.lessons.iter().all(|lesson| completed.contains(&lesson.id));
-
-        if all_lessons_done && index + 1 < self.modules.len() {
+        if module_done && index + 1 < self.modules.len() {
             let next_index = index + 1;
             let next_title = self.modules[next_index].module.title.clone();
             let jump_to_module = next_module_target.clone();
@@ -569,7 +729,15 @@ impl AppView {
             );
         }
 
-        if lesson + 1 < total {
+        let is_completed = cx
+            .try_global::<Db>()
+            .map(|db| {
+                db.block_on(progress::is_lesson_completed(db.pool(), lesson_id))
+                    .unwrap_or(false)
+            })
+            .unwrap_or(false);
+
+        if is_completed && lesson + 1 < total {
             let to = view.clone();
             pager = pager.child(
                 Button::new("next")
@@ -586,6 +754,63 @@ impl AppView {
                         });
                     }),
             );
+        } else if !is_completed {
+            // Completion is recorded here — nothing else in the desktop app
+            // marks a lesson done, and without this the dashboard, the
+            // progress bars, and progressive unlocking would never advance.
+            let to = view.clone();
+            pager = pager.child(
+                Button::new("complete")
+                    .primary()
+                    .label("MARK COMPLETE \u{2192}")
+                    .on_click(move |_, _, cx| {
+                        if let Some(db) = cx.try_global::<Db>() {
+                            let _ = db.block_on(progress::mark_lesson_complete(db.pool(), lesson_id));
+                        }
+                        to.update(cx, |v, cx| {
+                            v.clear_answer();
+                            cx.notify();
+                        });
+                    }),
+            );
+        } else {
+            // Last lesson, already complete: hand the learner to the next
+            // module once the whole module is done, otherwise back to the
+            // module page where the remaining exercises live.
+            let (done_lessons, done_exercises) = completed_progress(cx);
+            if self.module_is_complete(module, &done_lessons, &done_exercises)
+                && module + 1 < self.modules.len()
+            {
+                let next_index = module + 1;
+                let next_title = self.modules[next_index].module.title.clone();
+                let to = view.clone();
+                pager = pager.child(
+                    Button::new("next-module")
+                        .primary()
+                        .label(format!("NEXT MODULE: {next_title} \u{2192}"))
+                        .on_click(move |_, _, cx| {
+                            to.update(cx, |v, cx| {
+                                v.clear_answer();
+                                v.screen = Screen::Module(next_index);
+                                cx.notify();
+                            });
+                        }),
+                );
+            } else {
+                let to = view.clone();
+                pager = pager.child(
+                    Button::new("module-done")
+                        .primary()
+                        .label("MODULE DONE \u{2192}")
+                        .on_click(move |_, _, cx| {
+                            to.update(cx, |v, cx| {
+                                v.clear_answer();
+                                v.screen = Screen::Module(module);
+                                cx.notify();
+                            });
+                        }),
+                );
+            }
         }
 
         let body = div()
@@ -655,7 +880,7 @@ impl AppView {
     /// The dashboard. Data is loaded by the nav entry, so an empty state here
     /// means the read failed — the same "could not be loaded" shape practice
     /// uses rather than a spinner that never resolves.
-    fn dashboard_screen(&self, theme: &Theme, view: Entity<AppView>) -> Div {
+    fn dashboard_screen(&self, theme: &Theme, view: Entity<AppView>, cx: &App) -> Div {
         let Some(data) = self.dashboard.as_ref() else {
             return self.shell(
                 theme,
@@ -667,10 +892,16 @@ impl AppView {
             );
         };
 
+        let (completed_lessons, completed_exercises) = completed_progress(cx);
+        let unlocked: Vec<bool> = (0..self.modules.len())
+            .map(|i| self.module_is_unlocked(i, &completed_lessons, &completed_exercises))
+            .collect();
+
         let body = crate::dashboard::dashboard(
             theme,
             view.clone(),
             data,
+            &unlocked,
             |id| self.module_index(id),
             |id| self.lesson_index(id),
         );
@@ -767,6 +998,19 @@ impl AppView {
             .map(|s| s.module.title.clone())
             .unwrap_or_default();
 
+        // An empty title means the body carries its own heading (the landing
+        // hero), so no shell heading is added — an empty heading div would
+        // still consume a flex gap.
+        let mut column = div()
+            .mx_auto()
+            .max_w(px(820.))
+            .flex()
+            .flex_col()
+            .gap_5();
+        if !title.is_empty() {
+            column = column.child(heading(theme, title, subtitle));
+        }
+
         div()
             .size_full()
             .bg(theme.background)
@@ -782,16 +1026,7 @@ impl AppView {
                     .overflow_y_scroll()
                     .px_6()
                     .py_8()
-                    .child(
-                        div()
-                            .mx_auto()
-                            .max_w(px(820.))
-                            .flex()
-                            .flex_col()
-                            .gap_5()
-                            .child(heading(theme, title, subtitle))
-                            .child(body),
-                    ),
+                    .child(column.child(body)),
             )
     }
     /// Hints, each behind its own disclosure — the `<details>` the site uses.
@@ -1658,7 +1893,7 @@ impl Render for AppView {
         let view = cx.entity();
 
         match self.screen.clone() {
-            Screen::Home => self.home(theme, view),
+            Screen::Home => self.home(theme, view, cx),
             Screen::Module(index) => self.module_screen(theme, view, index, cx),
             Screen::Lesson { module, lesson } => {
                 self.lesson_screen(view, window, cx, module, lesson)
@@ -1669,7 +1904,7 @@ impl Render for AppView {
             Screen::Practice { module } => self.practice_screen(theme, view, module),
             Screen::PracticeRun { module } => self.practice_run_screen(theme, view, module),
             Screen::PracticeResults { module } => self.practice_results_screen(theme, view, module),
-            Screen::Dashboard => self.dashboard_screen(theme, view),
+            Screen::Dashboard => self.dashboard_screen(theme, view, cx),
             Screen::Progress => self.progress_screen(theme, view),
             Screen::Playground => self.playground_screen(view, window, cx),
         }
@@ -1683,6 +1918,23 @@ impl Render for AppView {
 /// something to reason about at every call site.
 fn with_db<T>(cx: &App, f: impl FnOnce(&Db) -> T) -> T {
     f(cx.global::<Db>())
+}
+
+/// Completed lesson and exercise ids — the two lists progressive gating
+/// reads. Two empty lists when the `Db` global is absent (headless tests),
+/// which locks every module after the first.
+fn completed_progress(cx: &App) -> (Vec<i64>, Vec<i64>) {
+    cx.try_global::<Db>()
+        .map(|db| {
+            let lessons = db
+                .block_on(progress::completed_lesson_ids(db.pool()))
+                .unwrap_or_default();
+            let exercises = db
+                .block_on(progress::completed_exercise_ids(db.pool()))
+                .unwrap_or_default();
+            (lessons, exercises)
+        })
+        .unwrap_or_default()
 }
 
 /// The practice builder's data for a module, or nothing if it cannot be read.
@@ -1933,6 +2185,30 @@ mod ui_tests {
     };
     use gpui_kit::{TestAppContext, TestDispatcher, VisualTestContext};
 
+    /// Progressive gating: module 0 is always open; module N opens only when
+    /// module N-1 is complete (all lessons AND all exercises).
+    #[test]
+    fn modules_unlock_progressively() {
+        let view = AppView::new(crate::content::all());
+        let none: Vec<i64> = vec![];
+
+        // Fresh account: only module 0 is open.
+        assert!(view.module_is_unlocked(0, &none, &none));
+        assert!(!view.module_is_unlocked(1, &none, &none));
+
+        // Completing module 0's lessons alone is not enough — exercises count.
+        let seed0 = &view.modules[0];
+        let lessons: Vec<i64> = seed0.lessons.iter().map(|l| l.id).collect();
+        let exercises: Vec<i64> = seed0.exercises.iter().map(|e| e.id).collect();
+        assert!(!view.module_is_complete(0, &lessons, &none), "exercises still outstanding");
+        assert!(!view.module_is_unlocked(1, &lessons, &none));
+
+        // Lessons + exercises: module 0 complete, module 1 unlocks.
+        assert!(view.module_is_complete(0, &lessons, &exercises));
+        assert!(view.module_is_unlocked(1, &lessons, &exercises));
+        assert!(!view.module_is_unlocked(2, &lessons, &exercises), "module 2 waits on module 1");
+    }
+
     /// Applies the BORROW_ theme and opens the app at home on this context.
     ///
     /// Takes `&mut TestAppContext` rather than building its own so the returned
@@ -1997,16 +2273,14 @@ mod ui_tests {
     }
 
     #[test]
-    fn tab_walks_from_the_wordmark_into_the_first_module_card() {
+    fn tab_walks_from_the_wordmark_to_start_learning() {
         let mut cx = TestAppContext::build(TestDispatcher::new(0), Some("tab_walks"));
         let (view, cx) = open(&mut cx);
 
         assert_eq!(screen_of(&view, cx), "Home");
 
-        // First stop is the BORROW_ wordmark in the navbar, then the three
-        // nav entries, then the first module card. If the cards were plain
-        // divs again the last stop would not be a card, and Enter would leave
-        // us on Home.
+        // Wordmark, three nav entries, then START LEARNING — the landing
+        // screen's primary CTA. Enter on it resumes the first lesson.
         for _ in 0..5 {
             cx.update(|window, cx| window.focus_next(cx));
         }
@@ -2016,8 +2290,8 @@ mod ui_tests {
 
         assert_eq!(
             screen_of(&view, cx),
-            "Module(0)",
-            "Enter on a focused module card should navigate"
+            "Lesson { module: 0, lesson: 0 }",
+            "Enter on START LEARNING should open the first lesson"
         );
     }
 
