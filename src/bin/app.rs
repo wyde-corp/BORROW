@@ -69,6 +69,13 @@ fn main() {
     gpui_kit::application().run(|cx| {
         gpui_kit::init(cx);
 
+        // The OS identifies a *process*, not a window title: WM_CLASS on
+        // X11, the xdg app_id on Wayland, the AppUserModelID on Windows.
+        // Without this every shell dialog reads "Unknown" (issue #7). The
+        // identifier matches the installers' in Cargo.toml, and this must
+        // run before any window opens.
+        cx.set_app_identity("com.gusdgoat.borrow", "BORROW_");
+
         // Fonts before the theme: an explicitly named family that was never
         // registered renders no glyphs at all, so registration cannot happen
         // after — or skipped — and the theme below must not come first.
@@ -119,6 +126,11 @@ fn main() {
                 point(px(120.), px(120.)),
                 size(px(1040.), px(760.)),
             ))),
+            // The xdg app_id / WM_CLASS this window reports. Composors key
+            // window matching and "not responding" dialogs off it — without
+            // it GNOME says "Unknown" (issue #7). Same identifier as the
+            // installers and `set_app_identity` above.
+            app_id: Some("com.gusdgoat.borrow".into()),
             ..Default::default()
         };
 
@@ -153,11 +165,7 @@ fn bootstrap(view: Entity<AppView>, cx: &mut App) {
             let runner = view.clone();
             view.update(cx, |view, cx| {
                 view.adopt_session(Some(session));
-                if let Some(token) = view
-                    .session
-                    .as_ref()
-                    .map(|session| session.token.clone())
-                {
+                if let Some(token) = view.session.as_ref().map(|session| session.token.clone()) {
                     view.auth.refresh_task = screen::refresh_task(runner.clone(), cx, token);
                     view.auth.daily_task = screen::daily_task(runner, cx);
                 }

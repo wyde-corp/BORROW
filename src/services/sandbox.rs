@@ -1137,6 +1137,27 @@ fn main() {
 
     /// The wall clock is the mitigation for a runaway loop. This is slow by
     /// design — it has to actually wait for the timeout to fire.
+    /// Issue #1: a flood must be *capped at the pipe*, not kept and shaped
+    /// later — an unbounded keep is what froze the window. The caps are the
+    /// fix; this test is what keeps them from quietly widening.
+    #[test]
+    fn a_flood_of_output_is_capped_so_the_console_cannot_freeze() {
+        let r = run(r#"fn main() { for i in 0..100_000 { println!("line {i}"); } }"#);
+
+        assert_eq!(r.status, Status::Ok, "stderr was: {}", r.stderr);
+        assert!(r.output_truncated, "the flood must report truncation");
+        assert!(
+            r.stdout.len() <= MAX_OUTPUT_BYTES,
+            "kept {} bytes, cap is {MAX_OUTPUT_BYTES}",
+            r.stdout.len()
+        );
+        assert!(
+            r.stdout.lines().count() <= MAX_OUTPUT_LINES,
+            "kept {} lines, cap is {MAX_OUTPUT_LINES}",
+            r.stdout.lines().count()
+        );
+    }
+
     #[test]
     fn an_infinite_loop_is_stopped_by_the_run_timeout() {
         let started = Instant::now();

@@ -9,7 +9,9 @@ use crate::components::{
     breakdown, callout, checklist, code_panel, diagram, steps, table, CalloutTone,
 };
 use crate::models::LessonSection;
+use crate::screen::Screen;
 use crate::widgets::{self, WidgetCtx};
+use gpui_kit::component::button::{Button, ButtonVariants};
 use gpui_kit::component::Theme;
 use gpui_kit::*;
 
@@ -47,7 +49,34 @@ pub fn render_section(theme: &Theme, section: &LessonSection, ctx: &WidgetCtx<'_
             language,
             code,
             status,
-        } => code_panel(theme, language, code, *status),
+        } => {
+            let panel = code_panel(theme, language, code, *status);
+            // The lesson's whole pitch is "write Rust, not read about it" —
+            // so every snippet is one click from the editor that runs it
+            // (issue #8). Detached contexts (the content sweep) get the
+            // panel alone; there is nowhere to jump to.
+            match &ctx.view {
+                Some(view) => {
+                    let jump = view.clone();
+                    let snippet = code.clone();
+                    div().flex().flex_col().gap_2().child(panel).child(
+                        Button::new("try-in-playground")
+                            .ghost()
+                            .text_size(px(12.))
+                            .text_color(theme.muted_foreground)
+                            .label("\u{25B6} TRY IN PLAYGROUND")
+                            .on_click(move |_, _, cx| {
+                                jump.update(cx, |view, cx| {
+                                    view.playground.pending_code = Some(snippet.clone());
+                                    view.navigate(Screen::Playground);
+                                    cx.notify();
+                                });
+                            }),
+                    )
+                }
+                None => panel,
+            }
+        }
 
         LessonSection::Breakdown { title, code, items } => breakdown(theme, title, code, items),
 

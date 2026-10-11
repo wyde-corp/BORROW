@@ -26,11 +26,7 @@ pub fn spawn_initial(view: &AppView, cx: &App) {
     let Some(site) = crate::config::convex_site_url() else {
         return;
     };
-    let Some(token) = view
-        .session
-        .as_ref()
-        .map(|session| session.token.clone())
-    else {
+    let Some(token) = view.session.as_ref().map(|session| session.token.clone()) else {
         return;
     };
     let Some(db) = cx.try_global::<crate::app_db::Db>() else {

@@ -18,10 +18,7 @@ use crate::models::Exercise;
 pub async fn gradable_exercises(pool: &SqlitePool, module_id: i64) -> Result<Vec<Exercise>> {
     let all = crate::services::progress::exercises_for_module(pool, module_id).await?;
 
-    Ok(all
-        .into_iter()
-        .filter(|e| !e.is_open_ended())
-        .collect())
+    Ok(all.into_iter().filter(|e| !e.is_open_ended()).collect())
 }
 
 /// How a question went the last time it was answered in any run of this module.
@@ -93,19 +90,21 @@ pub struct ResultsData {
 }
 
 pub async fn run_by_id(pool: &SqlitePool, run_id: i64) -> Result<Option<Run>> {
-    Ok(sqlx::query_as::<_, (i64, i64, String, String, Option<String>)>(
-        "SELECT id, module_id, label, created_at, finished_at FROM practice_runs WHERE id = ?",
+    Ok(
+        sqlx::query_as::<_, (i64, i64, String, String, Option<String>)>(
+            "SELECT id, module_id, label, created_at, finished_at FROM practice_runs WHERE id = ?",
+        )
+        .bind(run_id)
+        .fetch_optional(pool)
+        .await?
+        .map(|(id, module_id, label, created_at, finished_at)| Run {
+            id,
+            module_id,
+            label,
+            created_at,
+            finished_at,
+        }),
     )
-    .bind(run_id)
-    .fetch_optional(pool)
-    .await?
-    .map(|(id, module_id, label, created_at, finished_at)| Run {
-        id,
-        module_id,
-        label,
-        created_at,
-        finished_at,
-    }))
 }
 
 /// Every question in a run, ordered by position.
@@ -125,7 +124,9 @@ pub async fn run_items(pool: &SqlitePool, run_id: i64) -> Result<Vec<RunItem>> {
 
     let mut items = Vec::with_capacity(rows.len());
     for row in rows {
-        if let Some(exercise) = crate::services::progress::exercise_by_id(pool, row.exercise_id).await? {
+        if let Some(exercise) =
+            crate::services::progress::exercise_by_id(pool, row.exercise_id).await?
+        {
             items.push(RunItem {
                 position: row.position,
                 exercise,
@@ -169,12 +170,14 @@ pub async fn create_run(
         .await?;
 
     for (i, exercise_id) in exercise_ids.iter().enumerate() {
-        sqlx::query("INSERT INTO practice_run_items (run_id, position, exercise_id) VALUES (?, ?, ?)")
-            .bind(run_id)
-            .bind(i as i64 + 1)
-            .bind(exercise_id)
-            .execute(&mut *tx)
-            .await?;
+        sqlx::query(
+            "INSERT INTO practice_run_items (run_id, position, exercise_id) VALUES (?, ?, ?)",
+        )
+        .bind(run_id)
+        .bind(i as i64 + 1)
+        .bind(exercise_id)
+        .execute(&mut *tx)
+        .await?;
     }
 
     tx.commit().await?;
@@ -246,13 +249,15 @@ pub async fn unfinished_run(pool: &SqlitePool, module_id: i64) -> Result<Option<
     .fetch_optional(pool)
     .await?;
 
-    Ok(row.map(|(id, module_id, label, created_at, finished_at)| Run {
-        id,
-        module_id,
-        label,
-        created_at,
-        finished_at,
-    }))
+    Ok(
+        row.map(|(id, module_id, label, created_at, finished_at)| Run {
+            id,
+            module_id,
+            label,
+            created_at,
+            finished_at,
+        }),
+    )
 }
 
 /// Recent finished runs, newest first, with their correct and total counts.
@@ -354,8 +359,7 @@ pub async fn builder_data(pool: &SqlitePool, module_id: i64) -> Result<Option<Bu
 
     let mut lessons = crate::services::progress::lessons_for_module(pool, module_id).await?;
     lessons.sort_by_key(|l| l.order_index);
-    let lesson_titles: Vec<(i64, String)> =
-        lessons.into_iter().map(|l| (l.id, l.title)).collect();
+    let lesson_titles: Vec<(i64, String)> = lessons.into_iter().map(|l| (l.id, l.title)).collect();
 
     Ok(Some(BuilderData {
         module_id,
@@ -406,7 +410,10 @@ pub async fn results_data(pool: &SqlitePool, run_id: i64) -> Result<Option<Resul
     .collect();
 
     for item in &page.items {
-        if let Some(a) = answers.iter_mut().find(|a| a.exercise_id == item.exercise.id) {
+        if let Some(a) = answers
+            .iter_mut()
+            .find(|a| a.exercise_id == item.exercise.id)
+        {
             a.position = item.position;
         }
     }
@@ -462,7 +469,10 @@ mod tests {
     fn spread_samples_across_the_whole_module() {
         let picks = spread(106, 20);
 
-        assert!(picks.first().is_some_and(|p| *p < 10), "should start near the front");
+        assert!(
+            picks.first().is_some_and(|p| *p < 10),
+            "should start near the front"
+        );
         assert!(
             picks.last().is_some_and(|p| *p > 95),
             "should reach the end, got {:?}",
@@ -510,7 +520,10 @@ mod db_tests {
             .await
             .expect("in-memory sqlite");
 
-        sqlx::migrate!("./migrations").run(&pool).await.expect("migrate");
+        sqlx::migrate!("./migrations")
+            .run(&pool)
+            .await
+            .expect("migrate");
 
         sqlx::query("INSERT INTO modules (id, slug, title, description, order_index) VALUES (1, 'm', 'M', 'd', 1)")
             .execute(&pool)
@@ -543,11 +556,12 @@ mod db_tests {
         let run = create_run(&pool, 1, "test run", &[10]).await.unwrap();
         record_answer(&pool, run.id, 10, "1", true).await.unwrap();
 
-        let stored: i64 = sqlx::query_scalar("SELECT COUNT(*) FROM practice_answers WHERE run_id = ?")
-            .bind(run.id)
-            .fetch_one(&pool)
-            .await
-            .unwrap();
+        let stored: i64 =
+            sqlx::query_scalar("SELECT COUNT(*) FROM practice_answers WHERE run_id = ?")
+                .bind(run.id)
+                .fetch_one(&pool)
+                .await
+                .unwrap();
         assert_eq!(stored, 1, "the attempt itself must be recorded");
 
         assert_eq!(
@@ -610,12 +624,13 @@ mod db_tests {
         record_answer(&pool, run.id, 10, "0", false).await.unwrap();
         record_answer(&pool, run.id, 10, "1", true).await.unwrap();
 
-        let (rows, correct): (i64, bool) =
-            sqlx::query_as("SELECT COUNT(*), MAX(correct != 0) FROM practice_answers WHERE run_id = ?")
-                .bind(run.id)
-                .fetch_one(&pool)
-                .await
-                .unwrap();
+        let (rows, correct): (i64, bool) = sqlx::query_as(
+            "SELECT COUNT(*), MAX(correct != 0) FROM practice_answers WHERE run_id = ?",
+        )
+        .bind(run.id)
+        .fetch_one(&pool)
+        .await
+        .unwrap();
 
         assert_eq!(rows, 1, "re-answering must upsert, not duplicate");
         assert!(correct, "the latest answer wins");
@@ -643,14 +658,24 @@ mod db_tests {
         let pool = pool().await;
 
         let first = create_run(&pool, 1, "first", &[10]).await.unwrap();
-        record_answer(&pool, first.id, 10, "0", false).await.unwrap();
-        assert_eq!(past_states(&pool, 1).await.unwrap(), vec![(10, AttemptState::Incorrect)]);
+        record_answer(&pool, first.id, 10, "0", false)
+            .await
+            .unwrap();
+        assert_eq!(
+            past_states(&pool, 1).await.unwrap(),
+            vec![(10, AttemptState::Incorrect)]
+        );
 
         // Getting it right on a later run should stop it looking wrong in the
         // picker — otherwise revision is aimed at questions already understood.
         let second = create_run(&pool, 1, "second", &[10]).await.unwrap();
-        record_answer(&pool, second.id, 10, "1", true).await.unwrap();
-        assert_eq!(past_states(&pool, 1).await.unwrap(), vec![(10, AttemptState::Correct)]);
+        record_answer(&pool, second.id, 10, "1", true)
+            .await
+            .unwrap();
+        assert_eq!(
+            past_states(&pool, 1).await.unwrap(),
+            vec![(10, AttemptState::Correct)]
+        );
     }
 
     #[tokio::test]

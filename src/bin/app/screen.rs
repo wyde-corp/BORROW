@@ -139,6 +139,10 @@ pub(crate) struct PlaygroundState {
     shortcut: Option<Subscription>,
     /// The single open "WHY THIS HAPPENS" disclosure.
     pub(crate) explanation_open: bool,
+    /// A lesson's code block, carried here by "TRY IN PLAYGROUND" and
+    /// dropped into the editor on the next draw — the editor needs
+    /// `&mut Window`, so the swap cannot happen at click time.
+    pub(crate) pending_code: Option<String>,
 }
 
 /// Which of the two answer fields an option row writes to.
@@ -1447,6 +1451,13 @@ impl AppView {
                 }
             });
             self.playground.shortcut = Some(subscription);
+        }
+
+        // A lesson's "TRY IN PLAYGROUND" left its snippet here. Applied
+        // after the keyed state above, because that is the first moment the
+        // editor exists to receive it.
+        if let Some(code) = self.playground.pending_code.take() {
+            editor.update(cx, |state, cx| state.set_value(&code, window, cx));
         }
 
         // Taken after the keyed state above, which needs `&mut cx`: the theme
@@ -3693,6 +3704,40 @@ mod ui_tests {
         assert!(
             ran,
             "the shortcut should fire on entry, with the editor focused for the learner"
+        );
+    }
+
+    /// Issue #8: a lesson snippet handed to the Playground lands in the
+    /// editor, replacing the starter — the click cannot set the value
+    /// itself (that needs `&mut Window`), so it leaves the code behind for
+    /// the next draw to pick up.
+    #[test]
+    fn a_lesson_snippet_reaches_the_playground_editor() {
+        let mut cx = TestAppContext::build(TestDispatcher::new(0), Some("pending_snippet"));
+        let (view, cx) = open(&mut cx);
+
+        cx.update(|_, cx| {
+            view.update(cx, |view, cx| {
+                view.playground.pending_code = Some("fn main() { let x = 40 + 2; }".to_string());
+                view.navigate(Screen::Playground);
+                cx.notify();
+            });
+        });
+        cx.update(|window, cx| window.draw(cx).clear(cx));
+
+        let value = cx.update(|_, cx| {
+            let editor = view
+                .read(cx)
+                .playground
+                .editor
+                .clone()
+                .expect("the draw creates the editor");
+            editor.read(cx).value().to_string()
+        });
+        assert_eq!(value, "fn main() { let x = 40 + 2; }");
+        assert!(
+            cx.update(|_, cx| view.read(cx).playground.pending_code.is_none()),
+            "the snippet is consumed by the draw, not left to overwrite the next one"
         );
     }
 
