@@ -13,6 +13,29 @@ on:
   workflow_dispatch:
 
 jobs:
+  backend:
+    name: backend · tests
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: npm
+
+      - run: npm ci
+
+      # The Convex backend's suite: entitlement/grace math, sessions,
+      # webhook signature + idempotency, email linking. Runs offline —
+      # convex-test needs no deployment.
+      - run: npm test
+
+      - name: Typecheck
+        run: |
+          npm run typecheck
+          npx tsc --noEmit -p convex/tsconfig.json
+
   build:
     name: build · ${{ matrix.os }}
     runs-on: ${{ matrix.os }}

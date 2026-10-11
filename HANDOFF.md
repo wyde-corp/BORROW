@@ -35,6 +35,7 @@ desktop target, 82 in the web target), CI green on Linux, macOS and Windows.
 | **Dashboard** | continue card, module list with bars, overall XP (phase 3 complete) |
 | **Progress** | totals, stats grid, curriculum (phase 3 complete) |
 | **Playground** | Rust editor with line numbers and tree-sitter colouring, RUN in all eight states, console, diagnostics with jump-to-line, ⌘/CTRL+ENTER, RESET, cancel a run in flight |
+| **Auth & payments** | login gate (Google/GitHub via loopback PKCE), opaque sessions, $5/month Bachs paywall on modules 4–11 with a 7-day grace, progress sync — see SETUP.md and its section below |
 | **Five widgets** | gap-fill, step-through, dispatch, pipeline, guess-then-run — all interactive, per-line highlighting included |
 | Design system | `borrow.theme.json`, generated from `static/style.css` |
 | Database | migrations, seeding, `block_on` for local queries |
@@ -206,6 +207,40 @@ dev-dependency.
 
 ---
 
+## Auth, payments & sync (desktop)
+
+Sign-in and the $5/month subscription. The backend is a Convex deployment —
+HTTP actions only, every secret in its env vars — and the desktop is a thin
+client. **SETUP.md is the source of truth for configuration and the e2e
+checklist**; this section is only the shape and the traps.
+
+| | |
+|---|---|
+| Login | hard gate at launch; Google + GitHub via loopback (`127.0.0.1`, ephemeral port, PKCE S256); the code + verifier go to Convex, which holds the client secrets |
+| Sessions | opaque token; the server stores only its HMAC (`SESSION_HASH_KEY`); sliding 30-day expiry; the desktop keeps the token in `session.json` (0600) beside the database |
+| Paywall | modules 4–11 need premium **and** the sequential gate; a premium-locked dashboard row clicks through to the upgrade screen |
+| Entitlement | computed from the webhooked subscription row: `trialing\|active\|past_due`, then a 7-day grace from the end anchor; unknown status grants nothing; no offline lockout (cached state, refreshed at launch and daily) |
+| Checkout | hosted Bachs checkout in the browser; the app polls `/entitlement` every 2s for 15 minutes; the webhook is the source of truth |
+| Sync | completions + XP only; full-set push (union merge) after each completion and at launch; pull merges the account's rows into SQLite |
+| Tests | vitest + convex-test in `convex/` (entitlement/grace, sessions, webhook signature, idempotency, email linking); Rust unit tests for PKCE, the loopback listener, the session file, and the sync merge |
+
+Traps:
+
+- **Never touch the entity inside its own update.** Arming the refresh,
+  daily-refresh or initial-sync tasks used to re-read the view from inside
+  `view.update` — a lease violation that panicked the process the moment a
+  login completed. Task builders take the *token* and a plain handle; only
+  the running task ever leases the view (`screen::refresh_task`).
+- **reqwest and sqlx need a tokio reactor; gpui's executors are not one.**
+  Every network call runs on `Db::runtime()` and is awaited as a `JoinHandle`.
+- **`cargo fmt` is not a repo-wide gate** — much of the web code predates it.
+  Format only the files you touched (`rustfmt --edition 2021 <files>`).
+- Webhooks post to the same `.convex.site` origin; a stale secret is a
+  `400 invalid signature`, and Bachs disables endpoints after ~72h of
+  continuous failure.
+
+---
+
 ## Remaining work
 
 ### Phase 7 — packaging (Linux done, macOS/Windows untried)
@@ -290,6 +325,17 @@ What has never run yet:
   and there is no POSIX shell on Windows. Run timeout works everywhere; the
   memory cap does not. Documented in `services::sandbox.rs` as a platform
   table. Closing it needs `setrlimit` on Unix and job objects on Windows.
+- **Release CI does not bake the Convex/OAuth env vars.** They are read with
+  `option_env!` at compile time and `release.yml` passes none, so a tagged
+  build ships with sign-in unconfigured. Bake them before the first public
+  release.
+- **A pending cancellation is invisible in the app.** Cancel-at-period-end
+  keeps the status `active` until the period actually ends — the 7-day
+  countdown only appears once the subscription has ended, and nothing shows
+  "cancels on <date>" before that.
+- **The live grace window has only been proven by tests.** The subscription
+  ends Nov 10 in the sandbox; until a real (sandbox) end fires, the grace
+  state rests on the unit suite and synthetic webhooks.
 
 ---
 
@@ -306,4 +352,6 @@ What has never run yet:
 | `tools/gen_theme.py` | regenerates `borrow.theme.json` after CSS changes |
 | `tools/gen_icon.py` | regenerates `assets/icon/borrow-512.png` |
 | `tools/before-package.sh` | what `cargo packager` builds first — release binary, or a universal macOS pair |
+| `SETUP.md` | one-time auth/payments setup, and the manual e2e checklist |
+| `convex/` | the backend: auth exchange, sessions, billing, webhooks, progress sync — vitest suite beside it |
 | `~/.cargo/registry/src/*/gpui-kit-0.7.1/` | gpui-component source; `TESTING.md` and `src/button/button.rs` answer most API questions |
