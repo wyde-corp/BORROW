@@ -735,6 +735,44 @@ impl AppView {
                         }),
                 ),
             );
+        } else if !module_done {
+            // The lessons can be finished while the exercises are not — the
+            // state the first test pass got stuck in, where the module felt
+            // done and every "go on" button was invisible. Point at the
+            // exercises that are actually left instead of hiding the door.
+            let lessons_done = seed
+                .lessons
+                .iter()
+                .all(|lesson| completed_lessons.contains(&lesson.id));
+            if lessons_done {
+                if let Some((position, remaining)) = next_open_exercise(seed, &completed_exercises)
+                {
+                    let jump = view.clone();
+                    body = body.child(
+                        div().flex().flex_row().justify_center().pt_4().child(
+                            Button::new("continue-exercises")
+                                .primary()
+                                .text_size(px(15.))
+                                .px_5()
+                                .py_3()
+                                .label(format!(
+                                    "CONTINUE \u{2014} {remaining} EXERCISE{} LEFT \u{2192}",
+                                    if remaining == 1 { "" } else { "S" }
+                                ))
+                                .on_click(move |_, _, cx| {
+                                    jump.update(cx, |view, cx| {
+                                        view.clear_answer();
+                                        view.screen = Screen::Exercise {
+                                            module: index,
+                                            exercise: position,
+                                        };
+                                        cx.notify();
+                                    });
+                                }),
+                        ),
+                    );
+                }
+            }
         }
 
         self.shell(theme, view, &title, "", Some(index), body)
@@ -912,6 +950,32 @@ impl AppView {
                             to.update(cx, |v, cx| {
                                 v.clear_answer();
                                 v.screen = Screen::Module(next_index);
+                                cx.notify();
+                            });
+                        }),
+                );
+            } else if let Some((position, remaining)) = self
+                .module(module)
+                .and_then(|seed| next_open_exercise(seed, &done_exercises))
+            {
+                // Lessons are done but the module is not: "MODULE DONE" was
+                // a lie. The exercises are the way on — say so, and go
+                // straight to the first one that is left.
+                let to = view.clone();
+                pager = pager.child(
+                    Button::new("continue-exercises")
+                        .primary()
+                        .label(format!(
+                            "CONTINUE \u{2014} {remaining} EXERCISE{} LEFT \u{2192}",
+                            if remaining == 1 { "" } else { "S" }
+                        ))
+                        .on_click(move |_, _, cx| {
+                            to.update(cx, |v, cx| {
+                                v.clear_answer();
+                                v.screen = Screen::Exercise {
+                                    module,
+                                    exercise: position,
+                                };
                                 cx.notify();
                             });
                         }),
@@ -2776,6 +2840,22 @@ fn in_words(epoch_ms: u64, now_ms: u64) -> String {
     }
 }
 
+/// The next unfinished exercise in a module, and how many are left — the
+/// door that is actually open when the lessons are done but the exercises
+/// are not, so "the module is finished" never dead-ends in a hidden button.
+fn next_open_exercise(seed: &ModuleSeed, done: &[i64]) -> Option<(usize, usize)> {
+    let position = seed
+        .exercises
+        .iter()
+        .position(|exercise| !done.contains(&exercise.id))?;
+    let remaining = seed
+        .exercises
+        .iter()
+        .filter(|exercise| !done.contains(&exercise.id))
+        .count();
+    Some((position, remaining))
+}
+
 /// The top strip: wordmark back to home, and where you are.
 fn navbar(theme: &Theme, to_home: Entity<AppView>, module_name: String) -> Div {
     let to_dashboard = to_home.clone();
@@ -3241,8 +3321,8 @@ fn callout(theme: &Theme, title: &str, text: &str) -> Div {
 mod ui_tests {
     use super::{
         answer_question, begin_run, cancel_run, exercise_view, finish_run, load_builder,
-        load_dashboard, load_progress, run_program, start_run, AppView, LessonContent,
-        LessonSection, ModuleLock, Screen,
+        load_dashboard, load_progress, next_open_exercise, run_program, start_run, AppView,
+        LessonContent, LessonSection, ModuleLock, Screen,
     };
     use crate::services::remote::Entitlement;
     use gpui_kit::{TestAppContext, TestDispatcher, VisualTestContext};
@@ -3327,6 +3407,32 @@ mod ui_tests {
         // Free modules are unaffected by the missing subscription.
         view.session = None;
         assert_eq!(view.module_lock(0, &[], &[]), ModuleLock::Open);
+    }
+
+    /// The continue-door counts what is actually left, and disappears when
+    /// nothing is — the difference between "module finished" and "lessons
+    /// finished" that the module screen used to collapse into a hidden
+    /// button.
+    #[test]
+    fn the_next_open_exercise_counts_what_is_left() {
+        let view = AppView::new(crate::content::all());
+        let seed = &view.modules[0];
+        let all: Vec<i64> = seed.exercises.iter().map(|exercise| exercise.id).collect();
+
+        assert_eq!(
+            next_open_exercise(seed, &[]),
+            Some((0, all.len())),
+            "nothing done: the first exercise, and the whole count"
+        );
+
+        let done = all[..all.len() - 1].to_vec();
+        assert_eq!(
+            next_open_exercise(seed, &done),
+            Some((all.len() - 1, 1)),
+            "one left: the last position, count of one"
+        );
+
+        assert_eq!(next_open_exercise(seed, &all), None, "all done: no door");
     }
 
     /// Applies the BORROW_ theme and opens the app at home on this context.
