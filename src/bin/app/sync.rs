@@ -10,7 +10,7 @@
 //! thread has none.
 
 use anyhow::Result;
-use gpui_kit::{App, Entity};
+use gpui_kit::App;
 use sqlx::SqlitePool;
 
 use crate::screen::AppView;
@@ -22,12 +22,11 @@ use crate::services::remote::{self, ProgressRow};
 ///
 /// Both halves run on the database runtime; failures are logged, never
 /// fatal. The local database stays the working copy either way.
-pub fn spawn_initial(view: &Entity<AppView>, cx: &App) {
+pub fn spawn_initial(view: &AppView, cx: &App) {
     let Some(site) = crate::config::convex_site_url() else {
         return;
     };
     let Some(token) = view
-        .read(cx)
         .session
         .as_ref()
         .map(|session| session.token.clone())

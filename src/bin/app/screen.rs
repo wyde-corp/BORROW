@@ -1276,10 +1276,7 @@ impl AppView {
                 Button::new("upgrade-refresh")
                     .secondary()
                     .label("I'VE PAID — REFRESH")
-                    .on_click(move |_, _, cx| {
-                        let entity = refresh.clone();
-                        refresh.update(cx, |_, cx| spawn_refresh(entity, cx));
-                    }),
+                    .on_click(move |_, _, cx| spawn_refresh(refresh.clone(), cx)),
             );
         }
 
@@ -2334,32 +2331,40 @@ async fn refresh_and_apply(
     });
 }
 
-/// Builds the one-shot refresh task without storing it — the caller is
-/// already inside an entity update and can assign the field itself.
-pub(crate) fn build_refresh_task(
-    view: Entity<AppView>,
-    cx: &mut Context<AppView>,
-) -> Option<Task<()>> {
+/// Builds the one-shot refresh task.
+///
+/// Deliberately takes the *token*, not the entity: callers arm this from
+/// inside an entity update, where touching the entity again (even a read)
+/// is a lease violation and panics. The strong `runner` clone the task
+/// holds is just a handle — it leases nothing until the task runs, long
+/// after the update that spawned it has ended.
+pub(crate) fn refresh_task(runner: Entity<AppView>, cx: &App, token: String) -> Option<Task<()>> {
     let site = crate::config::convex_site_url()?;
-    let token = view.read(cx).session.as_ref()?.token.clone();
     let runtime = cx.try_global::<Db>()?.runtime();
-    let runner = view.clone();
-    Some(cx.spawn(async move |_this, cx| {
+    Some(cx.spawn(async move |cx: &mut AsyncApp| {
         refresh_and_apply(cx, runner, site, token, runtime).await;
     }))
 }
 
-/// Pulls a fresh entitlement into the cached session, from a context that
-/// is *not* already inside an entity update (button handlers).
+/// Pulls a fresh entitlement into the cached session. For button handlers:
+/// read, build, store — three steps that never overlap a lease.
 ///
 /// The only failures that change anything: a `401` means the session row is
 /// gone server-side, so this device signs out; everything else (offline,
 /// server hiccup) keeps the cache — no offline lockout.
-pub(crate) fn spawn_refresh(view: Entity<AppView>, cx: &mut Context<AppView>) {
-    let task = build_refresh_task(view.clone(), cx);
-    if task.is_some() {
-        view.update(cx, |view, _| view.auth.refresh_task = task);
-    }
+pub(crate) fn spawn_refresh(runner: Entity<AppView>, cx: &mut App) {
+    let Some(token) = runner
+        .read(cx)
+        .session
+        .as_ref()
+        .map(|session| session.token.clone())
+    else {
+        return;
+    };
+    let Some(task) = refresh_task(runner.clone(), cx, token) else {
+        return;
+    };
+    runner.update(cx, |view, _| view.auth.refresh_task = Some(task));
 }
 
 fn apply_refresh(
@@ -2382,21 +2387,14 @@ fn apply_refresh(
     }
 }
 
-/// The launch session's daily re-check: grace windows end while the app is
-/// open, and the cache must notice. Stops itself if the user signs out or
-/// the build is unconfigured — there is nothing left to refresh for.
-pub(crate) fn spawn_daily_refresh(view: Entity<AppView>, cx: &mut Context<AppView>) {
-    if let Some(task) = build_daily_task(view.clone(), cx) {
-        view.update(cx, |view, _| view.auth.daily_task = Some(task));
-    }
-}
-
-pub(crate) fn build_daily_task(
-    view: Entity<AppView>,
-    cx: &mut Context<AppView>,
-) -> Option<Task<()>> {
-    let runner = view.clone();
-    Some(cx.spawn(async move |_this, cx| loop {
+/// The session's daily re-check: grace windows end while the app is open,
+/// and the cache must notice. Stops itself if the user signs out or the
+/// build is unconfigured — there is nothing left to refresh for.
+///
+/// Like [`refresh_task`], it takes only a handle, never a lease: arming it
+/// inside an entity update must not touch the entity.
+pub(crate) fn daily_task(runner: Entity<AppView>, cx: &App) -> Option<Task<()>> {
+    Some(cx.spawn(async move |cx: &mut AsyncApp| loop {
         cx.background_executor()
             .timer(Duration::from_secs(24 * 60 * 60))
             .await;
@@ -2511,9 +2509,17 @@ fn start_login(view: &mut AppView, cx: &mut Context<AppView>, provider: &'static
                             view.adopt_session(Some(session));
                             // Entitlement lands a beat later; the login
                             // already opened the door to the free modules.
-                            spawn_refresh(entity.clone(), cx);
-                            spawn_daily_refresh(entity.clone(), cx);
-                            crate::sync::spawn_initial(&entity, cx);
+                            // Armed on `view` directly — we are inside its
+                            // update, and re-entering the entity here is
+                            // exactly the lease violation that crashed the
+                            // first post-login build.
+                            if let Some(token) =
+                                view.session.as_ref().map(|session| session.token.clone())
+                            {
+                                view.auth.refresh_task = refresh_task(entity.clone(), cx, token);
+                                view.auth.daily_task = daily_task(entity.clone(), cx);
+                            }
+                            crate::sync::spawn_initial(view, cx);
                         }
                         Err(err) => {
                             view.auth.login_error = Some(format!("{err:#}"));

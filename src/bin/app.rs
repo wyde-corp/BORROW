@@ -147,17 +147,23 @@ fn bootstrap(view: Entity<AppView>, cx: &mut App) {
             });
         }
         Some(session) => {
-            // Adopting and arming happen inside one update: the closure
-            // already holds the `Context` the task builders need, and a
-            // second update from inside would double-borrow the entity.
+            // Adopting and arming happen inside one update, and the tasks
+            // are built from the token alone: re-entering the entity here
+            // (a read or a second update) is a lease violation and panics.
+            let runner = view.clone();
             view.update(cx, |view, cx| {
                 view.adopt_session(Some(session));
-                let entity = cx.entity();
-                view.auth.refresh_task = screen::build_refresh_task(entity.clone(), cx);
-                view.auth.daily_task = screen::build_daily_task(entity, cx);
+                if let Some(token) = view
+                    .session
+                    .as_ref()
+                    .map(|session| session.token.clone())
+                {
+                    view.auth.refresh_task = screen::refresh_task(runner.clone(), cx, token);
+                    view.auth.daily_task = screen::daily_task(runner, cx);
+                }
+                sync::spawn_initial(view, cx);
                 cx.notify();
             });
-            sync::spawn_initial(&view, cx);
         }
     }
 }
