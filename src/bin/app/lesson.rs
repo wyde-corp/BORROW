@@ -60,11 +60,11 @@ pub fn render_section(theme: &Theme, section: &LessonSection, ctx: &WidgetCtx<'_
                     let jump = view.clone();
                     let snippet = code.clone();
                     div().flex().flex_col().gap_2().child(panel).child(
-                        Button::new("try-in-playground")
+                        Button::new("run-in-playground")
                             .ghost()
                             .text_size(px(12.))
                             .text_color(theme.muted_foreground)
-                            .label("\u{25B6} TRY IN PLAYGROUND")
+                            .label("\u{25B6} RUN IN PLAYGROUND")
                             .on_click(move |_, _, cx| {
                                 jump.update(cx, |view, cx| {
                                     view.playground.pending_code = Some(snippet.clone());

@@ -1453,11 +1453,15 @@ impl AppView {
             self.playground.shortcut = Some(subscription);
         }
 
-        // A lesson's "TRY IN PLAYGROUND" left its snippet here. Applied
-        // after the keyed state above, because that is the first moment the
-        // editor exists to receive it.
+        // A lesson or exercise's "RUN IN PLAYGROUND" left its snippet
+        // here. Applied after the keyed state above, because that is the
+        // first moment the editor exists to receive it — and "run" means
+        // run: the snippet is loaded *and* started, so a learner arrives at
+        // the output. Snippets that do not compile show their diagnostics;
+        // the timeout and STOP still bound the ones that do.
         if let Some(code) = self.playground.pending_code.take() {
             editor.update(cx, |state, cx| state.set_value(&code, window, cx));
+            begin_run(self, &code, cx);
         }
 
         // Taken after the keyed state above, which needs `&mut cx`: the theme
@@ -1633,7 +1637,7 @@ impl AppView {
             .flex()
             .flex_col()
             .gap_5()
-            .child(exercise_view::question(theme, record))
+            .child(exercise_view::question(theme, record, Some(view.clone())))
             .child(self.hints_panel(theme, record, view.clone()));
 
         // Every seeded exercise carries options, so this is the branch the whole
@@ -2024,7 +2028,7 @@ impl AppView {
                     .gap_4()
                     .child(label(theme, format!("QUESTION {} / {total}", position + 1))),
             )
-            .child(exercise_view::question(theme, exercise))
+            .child(exercise_view::question(theme, exercise, Some(view.clone())))
             .child(self.hints_panel(theme, exercise, view.clone()));
 
         if !options.is_empty() {
@@ -3707,12 +3711,12 @@ mod ui_tests {
         );
     }
 
-    /// Issue #8: a lesson snippet handed to the Playground lands in the
-    /// editor, replacing the starter — the click cannot set the value
-    /// itself (that needs `&mut Window`), so it leaves the code behind for
-    /// the next draw to pick up.
+    /// Issue #8, extended: a snippet handed to the Playground lands in the
+    /// editor *and starts running* — the click cannot set the value itself
+    /// (that needs `&mut Window`), so it leaves the code behind for the
+    /// next draw to pick up and launch.
     #[test]
-    fn a_lesson_snippet_reaches_the_playground_editor() {
+    fn a_lesson_snippet_reaches_the_playground_editor_and_runs() {
         let mut cx = TestAppContext::build(TestDispatcher::new(0), Some("pending_snippet"));
         let (view, cx) = open(&mut cx);
 
@@ -3738,6 +3742,15 @@ mod ui_tests {
         assert!(
             cx.update(|_, cx| view.read(cx).playground.pending_code.is_none()),
             "the snippet is consumed by the draw, not left to overwrite the next one"
+        );
+
+        // "Run in playground" means run: the arrival both loads the buffer
+        // and starts the compile, so the learner lands on output.
+        cx.run_until_parked();
+        let result = cx.update(|_, cx| view.read(cx).playground.result.clone());
+        assert!(
+            result.is_some(),
+            "the snippet should have been run on arrival, not just loaded"
         );
     }
 

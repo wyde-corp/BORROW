@@ -6,7 +6,9 @@
 //! completion instead, which is what earns the XP.
 
 use crate::models::Exercise;
+use crate::screen::{AppView, Screen};
 use crate::services::progress;
+use gpui_kit::component::button::{Button, ButtonVariants};
 use gpui_kit::component::Theme;
 use gpui_kit::*;
 
@@ -142,7 +144,7 @@ pub fn submit(db: &crate::app_db::Db, exercise: &Exercise, selected: Option<usiz
 /// Hints live in `screen::AppView::hints_panel`, because revealing one needs to
 /// write to the view — `question` has no handle to it and `exercise.rs` should
 /// not depend on the screen module.
-pub fn question(theme: &Theme, exercise: &Exercise) -> Div {
+pub fn question(theme: &Theme, exercise: &Exercise, view: Option<Entity<AppView>>) -> Div {
     let mut body = div()
         .flex()
         .flex_col()
@@ -160,6 +162,27 @@ pub fn question(theme: &Theme, exercise: &Exercise) -> Div {
             code,
             crate::models::CodeStatus::Valid,
         ));
+
+        // Same affordance as a lesson's snippets: the exercise's code is
+        // one click from actually running (issue #8, extended).
+        if let Some(view) = view {
+            let jump = view;
+            let snippet = code.to_string();
+            body = body.child(
+                Button::new("run-in-playground")
+                    .ghost()
+                    .text_size(px(12.))
+                    .text_color(theme.muted_foreground)
+                    .label("\u{25B6} RUN IN PLAYGROUND")
+                    .on_click(move |_, _, cx| {
+                        jump.update(cx, |view, cx| {
+                            view.playground.pending_code = Some(snippet.clone());
+                            view.navigate(Screen::Playground);
+                            cx.notify();
+                        });
+                    }),
+            );
+        }
     }
 
     body
