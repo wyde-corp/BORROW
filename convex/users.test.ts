@@ -93,6 +93,38 @@ describe("finishLogin", () => {
     expect(await accounts(t)).toHaveLength(2);
   });
 
+  test("a custom picture outranks the provider's, and survives re-login", async () => {
+    const t = makeTest();
+    const google = { provider: "google" as const, providerUserId: "g-777" };
+    const userId = await t.mutation(internal.users.finishLogin, {
+      ...google,
+      email: "ada@example.com",
+      avatarUrl: "https://example.com/provider.png",
+    });
+    expect((await t.query(internal.users.profile, { userId }))!.avatarUrl).toBe(
+      "https://example.com/provider.png",
+    );
+
+    await t.mutation(internal.users.setAvatarCustom, {
+      userId,
+      avatarCustomUrl: "https://convex.site/api/storage/chosen",
+    });
+    expect((await t.query(internal.users.profile, { userId }))!.avatarUrl).toBe(
+      "https://convex.site/api/storage/chosen",
+    );
+
+    // A later login re-saves the provider's picture underneath — the
+    // override must still win.
+    await t.mutation(internal.users.finishLogin, {
+      ...google,
+      email: "ada@example.com",
+      avatarUrl: "https://example.com/provider-again.png",
+    });
+    expect((await t.query(internal.users.profile, { userId }))!.avatarUrl).toBe(
+      "https://convex.site/api/storage/chosen",
+    );
+  });
+
   test("emails are matched case-insensitively", async () => {
     const t = makeTest();
     const first = await t.mutation(internal.users.finishLogin, {

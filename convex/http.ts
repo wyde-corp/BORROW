@@ -2,7 +2,7 @@ import { httpRouter } from "convex/server";
 import { exchange, logout } from "./auth";
 import { checkout, checkoutCancel, checkoutSuccess, portal } from "./billing";
 import { bachsWebhook } from "./bachsWebhook";
-import { me } from "./me";
+import { me, uploadAvatar } from "./me";
 import { getProgress, postProgress } from "./progressSync";
 
 const http = httpRouter();
@@ -17,6 +17,8 @@ http.route({ path: "/auth/logout", method: "POST", handler: logout });
 // open — same payload, a name that says why it is being asked.
 http.route({ path: "/me", method: "GET", handler: me });
 http.route({ path: "/entitlement", method: "GET", handler: me });
+// The account's picture: raw image bytes in, served storage URL out.
+http.route({ path: "/avatar", method: "POST", handler: uploadAvatar });
 http.route({ path: "/checkout", method: "POST", handler: checkout });
 // Where hosted checkout sends the browser — static pages, because the
 // desktop polls entitlement rather than trusting a redirect.

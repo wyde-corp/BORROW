@@ -38,6 +38,9 @@ url = "2"
 sha2 = "0.10"
 base64 = "0.22"
 rand = "0.8"
+# Native "pick a file" dialog for CHANGE PICTURE — xdg portals on Linux
+# (no GTK), the system dialogs on macOS/Windows.
+rfd = "0.14"
 
 # Desktop UI stack (the `app` branch only).
 #

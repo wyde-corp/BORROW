@@ -76,7 +76,18 @@ export const profile = internalQuery({
     return {
       email: user.email,
       name: user.name ?? null,
-      avatarUrl: user.avatarUrl ?? null,
+      // A picture the user chose beats the provider's — but a fresh login
+      // re-saves the provider's picture underneath, so the override must
+      // live in its own field to survive it.
+      avatarUrl: user.avatarCustomUrl ?? user.avatarUrl ?? null,
     };
+  },
+});
+
+/** Stores the picture the user picked; nothing else on the row moves. */
+export const setAvatarCustom = internalMutation({
+  args: { userId: v.id("users"), avatarCustomUrl: v.string() },
+  handler: async (ctx, { userId, avatarCustomUrl }) => {
+    await ctx.db.patch(userId, { avatarCustomUrl });
   },
 });

@@ -30,6 +30,10 @@ pub struct Entitlement {
 pub struct UserProfile {
     pub email: String,
     pub name: Option<String>,
+    /// The face to show: a custom picture if one was chosen, else the
+    /// provider's. `None` on payloads that predate the field.
+    #[serde(rename = "avatarUrl")]
+    pub avatar_url: Option<String>,
 }
 
 /// The subscription row, for display only — access is `entitlement`.
@@ -150,6 +154,25 @@ pub async fn push_progress(site: &str, token: &str, rows: &[ProgressRow]) -> Res
     let body = serde_json::json!({ "rows": rows });
     let _: Value = post_json(&format!("{}/progress", trim(site)), Some(token), body).await?;
     Ok(())
+}
+
+/// Sends a picked picture as raw bytes; returns the URL to display.
+pub async fn upload_avatar(site: &str, token: &str, bytes: Vec<u8>, mime: &str) -> Result<String> {
+    let client = reqwest::Client::new();
+    let response = client
+        .post(format!("{}/avatar", trim(site)))
+        .bearer_auth(token)
+        .header(reqwest::header::CONTENT_TYPE, mime)
+        .body(bytes)
+        .send()
+        .await
+        .context("send")?;
+    let value: Value = parse(response).await?;
+    value
+        .get("url")
+        .and_then(Value::as_str)
+        .map(str::to_owned)
+        .ok_or_else(|| anyhow!("avatar response has no `url`"))
 }
 
 /// Revokes the session server-side. Best-effort: clearing the local file

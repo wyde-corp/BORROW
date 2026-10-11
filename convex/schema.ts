@@ -7,7 +7,10 @@ export default defineSchema({
   users: defineTable({
     email: v.string(),
     name: v.optional(v.string()),
+    /// The provider's picture (Google/GitHub) — the default face.
     avatarUrl: v.optional(v.string()),
+    /// A picture the user chose themselves; wins over the provider's.
+    avatarCustomUrl: v.optional(v.string()),
     createdAt: v.number(),
   }).index("by_email", ["email"]),
 

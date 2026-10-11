@@ -242,6 +242,9 @@ pub struct StoredSession {
     pub email: String,
     #[serde(default)]
     pub name: Option<String>,
+    /// The picture to show on Account — provider's, or the user's own.
+    #[serde(default, rename = "avatarUrl")]
+    pub avatar_url: Option<String>,
     #[serde(default)]
     pub entitlement: Option<Entitlement>,
     #[serde(default, rename = "hasBilling")]
@@ -264,6 +267,7 @@ impl StoredSession {
             expires_at: response.expires_at,
             email: user.email,
             name: user.name,
+            avatar_url: user.avatar_url,
             entitlement: None,
             has_billing: false,
             subscription: None,
@@ -275,6 +279,7 @@ impl StoredSession {
     pub fn apply_me(&mut self, me: &Me) {
         self.email = me.user.email.clone();
         self.name = me.user.name.clone();
+        self.avatar_url = me.user.avatar_url.clone();
         self.entitlement = Some(me.entitlement.clone());
         self.has_billing = me.has_billing;
         self.subscription = me.subscription.clone();
@@ -508,6 +513,7 @@ mod tests {
             expires_at: 123,
             email: "ada@example.com".to_string(),
             name: Some("Ada".to_string()),
+            avatar_url: None,
             entitlement: None,
             has_billing: false,
             subscription: None,
@@ -537,6 +543,7 @@ mod tests {
             expires_at: 1,
             email: "old@example.com".into(),
             name: None,
+            avatar_url: None,
             entitlement: None,
             has_billing: false,
             subscription: None,
@@ -545,7 +552,7 @@ mod tests {
 
         let me: Me = serde_json::from_str(
             r#"{
-                "user": { "email": "ada@example.com", "name": "Ada" },
+                "user": { "email": "ada@example.com", "name": "Ada", "avatarUrl": "https://example.com/pic.png" },
                 "entitlement": { "premium": true, "reason": "active", "accessEndsAt": null },
                 "subscription": { "status": "active", "currentPeriodEnd": 99, "cancelAtPeriodEnd": false },
                 "hasBilling": true
@@ -556,6 +563,11 @@ mod tests {
         session.apply_me(&me);
         assert!(session.premium());
         assert_eq!(session.email, "ada@example.com");
+        assert_eq!(
+            session.avatar_url.as_deref(),
+            Some("https://example.com/pic.png"),
+            "the face rides the refresh, not just the login"
+        );
         assert!(session.has_billing);
         assert!(session.fetched_at > 0);
         assert_eq!(
@@ -571,6 +583,7 @@ mod tests {
             expires_at: 1,
             email: "a@b.c".into(),
             name: None,
+            avatar_url: None,
             entitlement: None,
             has_billing: false,
             subscription: None,

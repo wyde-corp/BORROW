@@ -17,6 +17,7 @@ use crate::services::progress::{self, DashboardData, ProgressSummary};
 use crate::services::remote::{self as api, FetchError, Me};
 use crate::services::sandbox::{self, RunResult};
 use crate::widgets::{BlockState, WidgetCtx};
+use gpui_kit::component::avatar::Avatar;
 use gpui_kit::component::button::{Button, ButtonVariants};
 use gpui_kit::component::input::{EditorState, InputState};
 use gpui_kit::component::Size;
@@ -66,6 +67,8 @@ pub enum Screen {
     Upgrade,
     /// Signed-in identity: plan status, billing, sign out.
     Account,
+    /// The how-to-use tour.
+    Help,
 }
 
 /// Why a module is closed, so the UI can offer the right door.
@@ -102,6 +105,10 @@ pub(crate) struct AuthUi {
     billing_error: Option<String>,
     /// The daily entitlement refresh, running for the app's whole life.
     pub(crate) daily_task: Option<Task<()>>,
+    /// CHANGE PICTURE in flight: picked file on its way to Convex.
+    avatar_pending: bool,
+    avatar_task: Option<Task<()>>,
+    avatar_error: Option<String>,
 }
 
 /// Everything the practice screens need between renders, all loaded once on
@@ -182,6 +189,13 @@ pub struct AppView {
     /// offline.
     pub(crate) session: Option<StoredSession>,
     pub(crate) auth: AuthUi,
+    /// Where the learner has been, newest last — what `← BACK` walks out
+    /// of. Recorded in `render`, so *every* transition lands here no matter
+    /// which handler set the screen.
+    history: Vec<Screen>,
+    /// The screen the last render saw; how `record_history` notices a
+    /// change without re-recording a `back()`'s own write.
+    last_recorded: Option<Screen>,
 }
 
 impl AppView {
@@ -200,6 +214,41 @@ impl AppView {
             widgets_lesson: None,
             session: None,
             auth: AuthUi::default(),
+            history: Vec::new(),
+            last_recorded: None,
+        }
+    }
+
+    /// Records a screen transition into `history`, called once per render.
+    ///
+    /// Recording here rather than in `navigate` means the direct
+    /// `view.screen = …` writes (the pager, the navbar, the snippet jumps)
+    /// are captured too — without rewriting twenty call sites to remember
+    /// to ask. Login is never part of the trail: `← BACK` must not walk
+    /// out through the gate.
+    fn record_history(&mut self) {
+        let current = self.screen.clone();
+        if let Some(previous) = self.last_recorded.clone() {
+            let changed = previous != current;
+            let past_the_gate = previous != Screen::Login && current != Screen::Login;
+            let not_already_there = self.history.last() != Some(&previous);
+            if changed && past_the_gate && not_already_there {
+                self.history.push(previous);
+                if self.history.len() > 30 {
+                    self.history.remove(0);
+                }
+            }
+        }
+        self.last_recorded = Some(current);
+    }
+
+    /// Pops one screen off the trail. No history: no-op — there is no
+    /// "before" to return to, and inventing one (Home?) would lie.
+    pub(crate) fn go_back(&mut self) {
+        if let Some(previous) = self.history.pop() {
+            self.clear_answer();
+            self.screen = previous.clone();
+            self.last_recorded = Some(previous);
         }
     }
 
@@ -723,6 +772,11 @@ impl AppView {
                 div().flex().flex_row().justify_center().pt_4().child(
                     Button::new("next-module")
                         .primary()
+                        // Custom size opts out of Medium's fixed h_8: the
+                        // padding and label define the height, so the text
+                        // is not squeezed into a 32px band (the clipping in
+                        // the report).
+                        .with_size(Size::Size(px(50.)))
                         .text_size(px(15.))
                         .px_5()
                         .py_3()
@@ -752,6 +806,9 @@ impl AppView {
                         div().flex().flex_row().justify_center().pt_4().child(
                             Button::new("continue-exercises")
                                 .primary()
+                                // Same fix as NEXT MODULE: hug the content
+                                // instead of clipping into Medium's h_8.
+                                .with_size(Size::Size(px(50.)))
                                 .text_size(px(15.))
                                 .px_5()
                                 .py_3()
@@ -1384,37 +1441,95 @@ impl AppView {
             _ => "Free".to_string(),
         };
 
-        let mut body = div().flex().flex_col().gap_5().child(
-            div()
-                .rounded_md()
-                .border_1()
-                .border_color(theme.border)
-                .bg(theme.secondary)
-                .p_5()
-                .flex()
-                .flex_col()
-                .gap_2()
-                .child(
-                    div()
-                        .text_size(px(13.))
-                        .text_color(theme.muted_foreground)
-                        .child("SIGNED IN AS"),
-                )
-                .child(
-                    div()
-                        .text_size(px(17.))
-                        .font_weight(FontWeight::BOLD)
-                        .text_color(theme.foreground)
-                        .child(session.email.clone()),
-                )
-                .child(
-                    div()
-                        .text_size(px(13.))
-                        .text_color(theme.primary)
-                        .font_weight(FontWeight::BOLD)
-                        .child(plan),
-                ),
-        );
+        // The face: the user's own picture when they have chosen one, the
+        // provider's otherwise, and initials underneath both — never a hole.
+        let mut avatar = Avatar::new().with_size(Size::Size(px(56.)));
+        avatar = match &session.avatar_url {
+            Some(url) => avatar.src(url.clone()),
+            None => avatar.name(
+                session
+                    .name
+                    .clone()
+                    .unwrap_or_else(|| session.email.clone()),
+            ),
+        };
+
+        let identity = div()
+            .rounded_md()
+            .border_1()
+            .border_color(theme.border)
+            .bg(theme.secondary)
+            .p_5()
+            .flex()
+            .flex_row()
+            .gap_4()
+            .items_center()
+            .child(avatar)
+            .child(
+                div()
+                    .flex()
+                    .flex_col()
+                    .gap_1()
+                    .child(
+                        div()
+                            .text_size(px(13.))
+                            .text_color(theme.muted_foreground)
+                            .child("SIGNED IN AS"),
+                    )
+                    .child(
+                        div()
+                            .text_size(px(17.))
+                            .font_weight(FontWeight::BOLD)
+                            .text_color(theme.foreground)
+                            .child(session.email.clone()),
+                    )
+                    .child(
+                        div()
+                            .text_size(px(13.))
+                            .text_color(theme.primary)
+                            .font_weight(FontWeight::BOLD)
+                            .child(plan),
+                    ),
+            );
+
+        let pick = view.clone();
+        let change_picture = if self.auth.avatar_pending {
+            Button::new("change-picture")
+                .secondary()
+                .label("UPLOADING\u{2026}")
+                .loading(true)
+        } else {
+            Button::new("change-picture")
+                .secondary()
+                .label("CHANGE PICTURE")
+                .on_click(move |_, _, cx| {
+                    // The native picker: a modal by design, run by the OS.
+                    // Cancel is a no-op, not an error.
+                    let Some(path) = rfd::FileDialog::new()
+                        .add_filter("Images", &["png", "jpg", "jpeg", "webp", "gif"])
+                        .pick_file()
+                    else {
+                        return;
+                    };
+                    start_avatar_upload(pick.clone(), path, cx);
+                })
+        };
+
+        let mut body = div()
+            .flex()
+            .flex_col()
+            .gap_5()
+            .child(identity)
+            .child(change_picture);
+
+        if let Some(error) = &self.auth.avatar_error {
+            body = body.child(
+                div()
+                    .text_size(px(13.))
+                    .text_color(theme.warning)
+                    .child(error.clone()),
+            );
+        }
 
         if session.has_billing {
             let portal = view.clone();
@@ -1449,6 +1564,101 @@ impl AppView {
         );
 
         self.shell(theme, view, "Account", "", None, body)
+    }
+
+    /// The how-to tour — the answer to "I opened the app, now what?"
+    ///
+    /// Every line here is a promise the app keeps; when the behaviour
+    /// changes, this screen changes with it.
+    fn help_screen(&self, theme: &Theme, view: Entity<AppView>, _cx: &App) -> Div {
+        /// One term and what it does: bold term, muted explanation.
+        fn row(theme: &Theme, term: &str, explanation: &str) -> Div {
+            div()
+                .flex()
+                .flex_row()
+                .gap_3()
+                .items_baseline()
+                .child(
+                    div()
+                        .w(px(150.))
+                        .min_w(px(150.))
+                        .text_size(px(13.))
+                        .font_weight(FontWeight::BOLD)
+                        .text_color(theme.primary)
+                        .child(term.to_string()),
+                )
+                .child(
+                    div()
+                        .flex_1()
+                        .min_w(px(0.))
+                        .text_size(px(13.))
+                        .text_color(theme.foreground)
+                        .child(explanation.to_string()),
+                )
+        }
+
+        fn section(theme: &Theme, title: &str, rows: &[(&str, &str)]) -> Div {
+            let mut list = div().flex().flex_col().gap_2();
+            for (term, explanation) in rows {
+                list = list.child(row(theme, term, explanation));
+            }
+            div()
+                .flex()
+                .flex_col()
+                .gap_3()
+                .child(label(theme, title))
+                .child(list)
+        }
+
+        let body = div()
+            .flex()
+            .flex_col()
+            .gap_6()
+            .child(
+                div()
+                    .text_size(px(13.))
+                    .text_color(theme.muted_foreground)
+                    .child("BORROW_ teaches Rust by having you write it. This is every control, in the order you will meet it."),
+            )
+            .child(section(theme, "GETTING AROUND", &[
+                ("BORROW_ (top left)", "Back to the home screen from anywhere."),
+                ("\u{2190} BACK", "Returns to the screen you were on — a lesson you sent to the Playground, an exercise you came from. It only appears once you have been somewhere."),
+                ("DASHBOARD / PROGRESS", "The curriculum with per-module bars, and your totals across the course."),
+                ("PLAYGROUND / HELP / ACCOUNT", "The editor, this page, and your plan, profile and sign-out."),
+            ]))
+            .child(section(theme, "LESSONS & EXERCISES", &[
+                ("MARK COMPLETE", "Records the lesson as read — lessons award no XP; exercises are the work that does."),
+                ("NEXT \u{2192}", "Walks forward through the course in order."),
+                ("CHECK ANSWER", "Grades an exercise the moment you submit it."),
+                ("TRY AGAIN", "After a wrong answer, re-attempt in place — your pick stays selected, and XP can only be earned once per exercise."),
+                ("Open-ended exercises", "Have no single right answer: submitting records them for self-review."),
+            ]))
+            .child(section(theme, "PRACTICE", &[
+                ("PRACTICE THIS MODULE", "Builds a question set from one module's exercises."),
+                ("Practice never touches XP", "It is revision: answers are recorded for review, not scored."),
+            ]))
+            .child(section(theme, "THE PLAYGROUND", &[
+                ("RUN / STOP", "Compiles and runs the buffer. STOP (or Esc) ends a run early; there is a 5-second timeout and output is capped."),
+                ("\u{2318}/CTRL + ENTER", "Runs from the keyboard while the editor has focus."),
+                ("\u{25B6} RUN IN PLAYGROUND", "Under every snippet in lessons and exercises: loads the code into the editor and runs it immediately. \u{2190} BACK returns you to where you were reading."),
+            ]))
+            .child(section(theme, "MODULES & PROGRESSION", &[
+                ("Sequential unlocks", "Module N+1 opens when module N is finished — every lesson and every exercise."),
+                ("CONTINUE \u{2014} N EXERCISES LEFT", "Shown when the lessons are done but exercises remain: it jumps to the first one you have not answered."),
+                ("NEXT MODULE", "Appears when the module is genuinely complete."),
+            ]))
+            .child(section(theme, "PREMIUM", &[
+                ("Modules 1\u{2013}3", "Free with an account."),
+                ("Modules 4\u{2013}11", "Included with Premium — $5/month, cancelled any time from the billing portal."),
+                ("After cancelling", "Access runs to the end of the paid period, then a 7-day grace window before the modules lock."),
+            ]))
+            .child(section(theme, "ACCOUNT & SYNC", &[
+                ("Gmail or GitHub", "Either signs you in; both point at the same account when the emails match."),
+                ("Profile picture", "Your provider's picture is the default — change it from the Account screen."),
+                ("Progress sync", "Completions follow your account: sign in anywhere and your work is there. Lessons work offline; the account catches up when you are back online."),
+            ]));
+
+        self.shell(theme, view, "How to use BORROW_", "", None, body)
     }
 
     /// The progress totals screen.
@@ -1574,7 +1784,12 @@ impl AppView {
             .text_color(theme.foreground)
             .flex()
             .flex_col()
-            .child(navbar(theme, to_home, module_name))
+            .child(navbar(
+                theme,
+                to_home,
+                module_name,
+                !self.history.is_empty(),
+            ))
             .child(
                 div()
                     // Keyed by screen: gpui keeps a scrollable div's offset in
@@ -1747,6 +1962,27 @@ impl AppView {
 
         if let Some(result) = &self.result {
             body = body.child(self.feedback(theme, record, &options, result));
+
+            // Wrong on a graded exercise: offer the attempt again in place.
+            // Leaving and re-entering used to be the only reset — "start
+            // the whole process over" for one wrong tap. Clearing `result`
+            // is the whole button: CHECK ANSWER returns with the previous
+            // pick still selected, and XP cannot double, because the
+            // completion row is written once.
+            if !record.is_open_ended() && !result.correct {
+                let retry = view.clone();
+                body = body.child(
+                    Button::new("retry")
+                        .secondary()
+                        .label("TRY AGAIN")
+                        .on_click(move |_, _, cx| {
+                            retry.update(cx, |view, cx| {
+                                view.result = None;
+                                cx.notify();
+                            });
+                        }),
+                );
+            }
         }
 
         let heading = format!("Exercise {}/{}", exercise + 1, total);
@@ -2776,6 +3012,86 @@ fn start_portal(view: &mut AppView, cx: &mut Context<AppView>) {
     view.auth.checkout_task = Some(task);
 }
 
+/// CHANGE PICTURE: pick → upload → the account now wears it.
+///
+/// The dialog blocks (it is the OS's), the upload does not: bytes go to
+/// the backend on the tokio runtime, and the view is leased for the
+/// write-back only after the round trip, from a context holding nothing
+/// else.
+fn start_avatar_upload(runner: Entity<AppView>, path: std::path::PathBuf, cx: &mut App) {
+    let Some(site) = crate::config::convex_site_url() else {
+        runner.update(cx, |view, cx| {
+            view.auth.avatar_error = Some("Uploads are not configured for this build.".into());
+            cx.notify();
+        });
+        return;
+    };
+    let Some(token) = runner
+        .read(cx)
+        .session
+        .as_ref()
+        .map(|session| session.token.clone())
+    else {
+        return;
+    };
+    let Some(db) = cx.try_global::<Db>() else {
+        return;
+    };
+    let runtime = db.runtime();
+
+    runner.update(cx, |view, cx| {
+        view.auth.avatar_pending = true;
+        view.auth.avatar_error = None;
+        cx.notify();
+    });
+
+    let writer = runner.clone();
+    let task = cx.spawn(async move |cx: &mut AsyncApp| {
+        let uploaded = runtime
+            .spawn(async move {
+                let bytes = tokio::fs::read(&path)
+                    .await
+                    .map_err(|err| anyhow::anyhow!("could not read the file: {err}"))?;
+                let mime = image_mime(&path);
+                api::upload_avatar(&site, &token, bytes, mime).await
+            })
+            .await;
+
+        cx.update(|cx| {
+            writer.update(cx, |view, cx| {
+                view.auth.avatar_pending = false;
+                match uploaded {
+                    Ok(Ok(url)) => {
+                        if let Some(session) = view.session.as_mut() {
+                            session.avatar_url = Some(url);
+                            let _ = auth::save(session);
+                        }
+                    }
+                    Ok(Err(err)) => view.auth.avatar_error = Some(format!("{err}")),
+                    Err(err) => view.auth.avatar_error = Some(format!("Upload failed: {err}")),
+                }
+                cx.notify();
+            });
+        });
+    });
+    runner.update(cx, |view, _| view.auth.avatar_task = Some(task));
+}
+
+/// The content type the backend stores the bytes under, from the extension.
+fn image_mime(path: &std::path::Path) -> &'static str {
+    match path
+        .extension()
+        .and_then(|ext| ext.to_str())
+        .map(str::to_ascii_lowercase)
+        .as_deref()
+    {
+        Some("jpg") | Some("jpeg") => "image/jpeg",
+        Some("webp") => "image/webp",
+        Some("gif") => "image/gif",
+        _ => "image/png",
+    }
+}
+
 /// SIGN OUT: revoke server-side (best-effort), drop the file, land on the
 /// gate. The local clear alone would already sign this device out.
 fn sign_out(view: &mut AppView, cx: &mut Context<AppView>) {
@@ -2857,11 +3173,18 @@ fn next_open_exercise(seed: &ModuleSeed, done: &[i64]) -> Option<(usize, usize)>
 }
 
 /// The top strip: wordmark back to home, and where you are.
-fn navbar(theme: &Theme, to_home: Entity<AppView>, module_name: String) -> Div {
+///
+/// `can_go_back` shows the `← BACK` door — the answer to "I sent this
+/// snippet to the Playground, how do I get back to the lesson". It appears
+/// only when there *is* a previous screen, because a dead back button is
+/// worse than none.
+fn navbar(theme: &Theme, to_home: Entity<AppView>, module_name: String, can_go_back: bool) -> Div {
     let to_dashboard = to_home.clone();
     let to_progress = to_home.clone();
     let to_playground = to_home.clone();
+    let to_help = to_home.clone();
     let to_account = to_home.clone();
+    let to_back = to_home.clone();
 
     let mut bar = div()
         .flex()
@@ -2887,6 +3210,24 @@ fn navbar(theme: &Theme, to_home: Entity<AppView>, module_name: String) -> Div {
                     });
                 }),
         )
+        .child(if can_go_back {
+            let back = to_back;
+            div().child(
+                Button::new("nav-back")
+                    .ghost()
+                    .text_size(px(13.))
+                    .text_color(theme.muted_foreground)
+                    .label("\u{2190} BACK")
+                    .on_click(move |_, _, cx| {
+                        back.update(cx, |view, cx| {
+                            view.go_back();
+                            cx.notify();
+                        });
+                    }),
+            )
+        } else {
+            div()
+        })
         .child(
             Button::new("nav-dashboard")
                 .ghost()
@@ -2932,6 +3273,19 @@ fn navbar(theme: &Theme, to_home: Entity<AppView>, module_name: String) -> Div {
                 }),
         )
         .child(
+            Button::new("nav-help")
+                .ghost()
+                .text_size(px(13.))
+                .text_color(theme.muted_foreground)
+                .child("HELP")
+                .on_click(move |_, _, cx| {
+                    to_help.update(cx, |view, cx| {
+                        view.navigate(Screen::Help);
+                        cx.notify();
+                    });
+                }),
+        )
+        .child(
             Button::new("nav-account")
                 .ghost()
                 .text_size(px(13.))
@@ -2961,9 +3315,11 @@ impl Render for AppView {
     fn render(&mut self, window: &mut Window, cx: &mut Context<Self>) -> impl IntoElement {
         let theme = cx.theme();
         let view = cx.entity();
+        self.record_history();
 
         match self.screen.clone() {
             Screen::Login => self.login_screen(theme, view, cx),
+            Screen::Help => self.help_screen(theme, view, cx),
             Screen::Upgrade => self.upgrade_screen(theme, view, cx),
             Screen::Account => self.account_screen(theme, view, cx),
             // A premium-locked module hands every one of its screens to the
@@ -3393,6 +3749,7 @@ mod ui_tests {
             expires_at: 0,
             email: "ada@example.com".into(),
             name: None,
+            avatar_url: None,
             entitlement: Some(Entitlement {
                 premium: true,
                 reason: "active".into(),
@@ -3407,6 +3764,68 @@ mod ui_tests {
         // Free modules are unaffected by the missing subscription.
         view.session = None;
         assert_eq!(view.module_lock(0, &[], &[]), ModuleLock::Open);
+    }
+
+    /// The trail the `← BACK` button walks: recorded on render (so the
+    /// direct `view.screen = …` writes count too), one pop per press, and
+    /// nothing to pop at the start — a dead back button is worse than none.
+    #[test]
+    fn back_returns_to_the_previous_screen() {
+        let mut cx = TestAppContext::build(TestDispatcher::new(0), Some("back_trail"));
+        let (view, cx) = open(&mut cx);
+
+        assert!(
+            cx.update(|_, cx| view.read(cx).history.is_empty()),
+            "nothing has been visited yet"
+        );
+
+        cx.update(|_, cx| {
+            view.update(cx, |view, cx| {
+                view.navigate(Screen::Dashboard);
+                cx.notify();
+            });
+        });
+        cx.update(|window, cx| window.draw(cx).clear(cx));
+
+        cx.update(|_, cx| {
+            view.update(cx, |view, cx| {
+                view.navigate(Screen::Playground);
+                cx.notify();
+            });
+        });
+        cx.update(|window, cx| window.draw(cx).clear(cx));
+
+        cx.update(|_, cx| {
+            view.update(cx, |view, cx| {
+                view.go_back();
+                cx.notify();
+            });
+        });
+        assert_eq!(screen_of(&view, cx), "Dashboard", "one pop back");
+
+        cx.update(|_, cx| {
+            view.update(cx, |view, cx| {
+                view.go_back();
+                cx.notify();
+            });
+        });
+        assert_eq!(
+            screen_of(&view, cx),
+            "Home",
+            "two pops: Home is where the walk started, and it is on the trail"
+        );
+
+        cx.update(|_, cx| {
+            view.update(cx, |view, cx| {
+                view.go_back();
+                cx.notify();
+            });
+        });
+        assert_eq!(
+            screen_of(&view, cx),
+            "Home",
+            "the trail is empty now: back is a no-op, not a jump somewhere invented"
+        );
     }
 
     /// The continue-door counts what is actually left, and disappears when
@@ -3505,10 +3924,10 @@ mod ui_tests {
 
         assert_eq!(screen_of(&view, cx), "Home");
 
-        // Wordmark, four nav entries (dashboard, progress, playground,
-        // account), then START LEARNING — the landing screen's primary CTA.
-        // Enter on it resumes the first lesson.
-        for _ in 0..6 {
+        // Wordmark, five nav entries (dashboard, progress, playground,
+        // help, account), then START LEARNING — the landing screen's
+        // primary CTA. Enter on it resumes the first lesson.
+        for _ in 0..7 {
             cx.update(|window, cx| window.focus_next(cx));
         }
         press(cx, "enter");
