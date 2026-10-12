@@ -2,8 +2,7 @@
 (function () {
   "use strict";
 
-  var DEFAULT_REPO = "Gus-D-Goat/BORROW";
-  var TAG = "[borrow-download]";
+  var DEFAULT_REPO = "wyde-corp/BORROW";
 
   function config() {
     var c = window.BORROW_DOWNLOAD_CONFIG || {};

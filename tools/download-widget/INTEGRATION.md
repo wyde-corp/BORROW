@@ -4,12 +4,12 @@ Audience: whoever builds the static landing page. One file, zero dependencies, n
 
 ## What this is
 
-`tools/download-widget/download-widget.js` (~250 lines, vanilla JS, IIFE, no exports to manage) turns the latest GitHub release of `Gus-D-Goat/BORROW` into working download links on your page. It:
+`tools/download-widget/download-widget.js` (~250 lines, vanilla JS, IIFE, no exports to manage) turns the latest GitHub release of `wyde-corp/BORROW` into working download links on your page. It:
 
-1. Fetches `https://api.github.com/repos/Gus-D-Goat/BORROW/releases/latest` from the visitor's browser (CORS is open on this endpoint; no auth, no server needed).
+1. Fetches `https://api.github.com/repos/wyde-corp/BORROW/releases/latest` from the visitor's browser (CORS is open on this endpoint; no auth, no server needed).
 2. Maps release assets to platforms by file extension (see contract below).
 3. Detects the visitor's OS and marks the matching link as recommended.
-4. If the API fails (rate limit: 60 req/hr per IP unauthenticated; GitHub outage; no stable release yet), every link silently falls back to `https://github.com/Gus-D-Goat/BORROW/releases/latest` — the visitor always gets a working path, never a broken button.
+4. If the API fails (rate limit: 60 req/hr per IP unauthenticated; GitHub outage; no stable release yet), every link silently falls back to `https://github.com/wyde-corp/BORROW/releases/latest` — the visitor always gets a working path, never a broken button.
 
 It never shows prereleases: GitHub's `/releases/latest` endpoint excludes them by design (tags with a hyphen, e.g. `v0.1.0-rc.1`, are marked prerelease by the BORROW_ release workflow). No beta toggle, deliberately.
 
@@ -86,7 +86,7 @@ Config, set **before** the script tag:
 ```html
 <script>
   window.BORROW_DOWNLOAD_CONFIG = {
-    repo: "Gus-D-Goat/BORROW",           // default; override for forks/staging
+    repo: "wyde-corp/BORROW",             // default; override for forks/staging
     autoInit: false,                      // default true
   };
 </script>
