@@ -1,0 +1,426 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>BORROW_ — Learn Rust without the 700-page detour</title>
+  <meta name="description" content="borrow_ is a lightweight Rust fundamentals trainer for macOS, Windows, and Linux. Short lessons. Real practice. Small projects. Modules 1–3 free.">
+  <meta property="og:title" content="BORROW_ — Learn Rust without the 700-page detour">
+  <meta property="og:description" content="Short lessons. Real practice. Small projects. A desktop Rust trainer backed by the real compiler.">
+  <meta property="og:type" content="website">
+  <meta name="theme-color" content="#0B0A08">
+  <link rel="icon" type="image/png" href="assets/borrow-512.png">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=VT323&family=DotGothic16&family=IBM+Plex+Mono:ital,wght@0,400;0,600;0,700;1,400&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="style.css">
+  <!--
+    NOTE (for wyde industries only):
+    The GitHub repo wyde-corp/BORROW is currently PRIVATE, so the direct-download
+    URLs below return 404 for visitors. They start working the moment the repo
+    is flipped public. No code changes needed — just make the repo public.
+  -->
+</head>
+<body>
+
+<canvas id="starfield" aria-hidden="true"></canvas>
+
+<div class="rail rail-left" aria-hidden="true">読むより、書く。</div>
+<div class="rail rail-right" aria-hidden="true">RAIL:// borrow_checker.exe</div>
+
+<div class="page">
+
+  <!-- ============ TOP BAR ============ -->
+  <header class="window window--thin topbar">
+    <div class="titlebar titlebar--sakura">
+      <span class="titlebar-text">ようこそ BORROW_ のホームページへ!!</span>
+      <span class="titlebar-btns" aria-hidden="true"><i>—</i><i>▢</i><i class="tb-close">✕</i></span>
+    </div>
+    <div class="topbar-body">
+      <nav class="crumb" aria-label="breadcrumb">ホーム &gt; borrow_ &gt; <b>ダウンロード</b></nav>
+      <span class="topbar-date" id="today-date">本日もようこそ</span>
+    </div>
+    <div class="ticker ticker--sm" aria-hidden="true">
+      <div class="ticker-track">
+        <span class="ticker-seq">☆★ようこそ BORROW_ のホームページへ!! ★☆ ◆ Rustを700ページ読まずに学ぼう ◆ モジュール1–3は無料 ◆ リリース候補 v0.1.0-rc.1 公開中 ◆ macOS / Windows / Linux 対応 ◆ いらっしゃいませ!! ◆ </span>
+        <span class="ticker-seq">☆★ようこそ BORROW_ のホームページへ!! ★☆ ◆ Rustを700ページ読まずに学ぼう ◆ モジュール1–3は無料 ◆ リリース候補 v0.1.0-rc.1 公開中 ◆ macOS / Windows / Linux 対応 ◆ いらっしゃいませ!! ◆ </span>
+      </div>
+    </div>
+  </header>
+
+  <!-- ============ HERO ============ -->
+  <section class="window window--hero hero" aria-labelledby="hero-title">
+    <div class="titlebar titlebar--flame">
+      <span class="titlebar-text">BORROW__home.html</span>
+      <span class="titlebar-btns" aria-hidden="true"><i>—</i><i>▢</i><i class="tb-close">✕</i></span>
+    </div>
+    <div class="hero-body">
+
+      <svg class="orn orn-torii float-a" viewBox="0 0 18 14" shape-rendering="crispEdges" aria-hidden="true">
+        <rect x="0" y="0" width="18" height="2" fill="#FF6B35"/>
+        <rect x="1" y="2" width="16" height="1" fill="#F2C14E"/>
+        <rect x="2" y="5" width="14" height="2" fill="#FF6B35"/>
+        <rect x="3" y="2" width="2" height="12" fill="#FF6B35"/>
+        <rect x="13" y="2" width="2" height="12" fill="#FF6B35"/>
+        <rect x="8" y="2" width="2" height="3" fill="#F2C14E"/>
+        <rect x="2" y="13" width="3" height="1" fill="#6D6558"/>
+        <rect x="13" y="13" width="3" height="1" fill="#6D6558"/>
+      </svg>
+
+      <svg class="orn orn-floppy float-b" viewBox="0 0 16 16" shape-rendering="crispEdges" aria-hidden="true">
+        <rect x="0" y="0" width="16" height="16" fill="#5CC8FF"/>
+        <rect x="0" y="0" width="16" height="1" fill="#8FDBFF"/>
+        <rect x="3" y="0" width="10" height="7" fill="#A9A197"/>
+        <rect x="4" y="1" width="8" height="5" fill="#6D6558"/>
+        <rect x="8" y="1" width="3" height="5" fill="#14120F"/>
+        <rect x="2" y="9" width="12" height="6" fill="#F4EFE6"/>
+        <rect x="3" y="10" width="9" height="1" fill="#FF4DDB"/>
+        <rect x="3" y="12" width="7" height="1" fill="#A9A197"/>
+        <rect x="3" y="13" width="8" height="1" fill="#A9A197"/>
+      </svg>
+
+      <svg class="orn orn-sakura float-c" viewBox="0 0 9 9" shape-rendering="crispEdges" aria-hidden="true">
+        <rect x="4" y="0" width="1" height="9" fill="#FF8FAB"/>
+        <rect x="0" y="4" width="9" height="1" fill="#FF8FAB"/>
+        <rect x="1" y="1" width="1" height="1" fill="#FFB7D5"/>
+        <rect x="7" y="1" width="1" height="1" fill="#FFB7D5"/>
+        <rect x="1" y="7" width="1" height="1" fill="#FFB7D5"/>
+        <rect x="7" y="7" width="1" height="1" fill="#FFB7D5"/>
+        <rect x="4" y="4" width="1" height="1" fill="#F2C14E"/>
+      </svg>
+
+      <svg class="orn orn-sakura orn-sakura-2 float-a" viewBox="0 0 9 9" shape-rendering="crispEdges" aria-hidden="true">
+        <rect x="4" y="0" width="1" height="9" fill="#FF4DDB"/>
+        <rect x="0" y="4" width="9" height="1" fill="#FF4DDB"/>
+        <rect x="1" y="1" width="1" height="1" fill="#FF8FAB"/>
+        <rect x="7" y="1" width="1" height="1" fill="#FF8FAB"/>
+        <rect x="1" y="7" width="1" height="1" fill="#FF8FAB"/>
+        <rect x="7" y="7" width="1" height="1" fill="#FF8FAB"/>
+        <rect x="4" y="4" width="1" height="1" fill="#F2C14E"/>
+      </svg>
+
+      <div class="hero-mark">
+        <img class="hero-icon" src="assets/borrow-512.png" alt="" width="84" height="84">
+        <h1 class="wordmark" id="hero-title">BORROW<span class="cursor-block" aria-hidden="true">_</span></h1>
+      </div>
+
+      <p class="hero-jp">ラストの遠回りを、やめよう。</p>
+
+      <p class="tagline">
+        <span class="tagline-line">LEARN RUST</span>
+        <span class="tagline-line tagline-line--accent">WITHOUT THE 700-PAGE DETOUR.</span>
+      </p>
+
+      <p class="hero-sub">Short lessons. Real practice. Small projects.<br>
+      A native desktop trainer for macOS, Windows &amp; Linux.</p>
+
+      <p class="blink-badge" role="status">今、ダウンロード可能 — AVAILABLE NOW!!</p>
+
+      <a class="cta" href="#download">
+        <span class="cta-jp">▼ ダウンロードする</span>
+        <span class="cta-en">DOWNLOAD NOW</span>
+      </a>
+
+      <p class="hero-meta">v0.1.0-rc.1 · modules 1–3 free · <span class="yen">¥0</span> to start</p>
+    </div>
+  </section>
+
+  <!-- ============ TICKER ============ -->
+  <div class="ticker ticker--big" aria-hidden="true">
+    <div class="ticker-track ticker-track--rev">
+      <span class="ticker-seq">◆ NEW! 新着 ◆ 284 LESSONS ◆ REAL COMPILER PLAYGROUND ◆ 11 MODULES ◆ EXERCISES GRADE YOU ◆ LOCAL-FIRST ◆ MADE WITH GPUI ◆ 所有権・借用・ライフタイム ◆ 今なら無料で始められる ◆ </span>
+      <span class="ticker-seq">◆ NEW! 新着 ◆ 284 LESSONS ◆ REAL COMPILER PLAYGROUND ◆ 11 MODULES ◆ EXERCISES GRADE YOU ◆ LOCAL-FIRST ◆ MADE WITH GPUI ◆ 所有権・借用・ライフタイム ◆ 今なら無料で始められる ◆ </span>
+    </div>
+  </div>
+
+  <!-- ============ PITCH ============ -->
+  <section class="window window--pitch pitch" aria-labelledby="pitch-title">
+    <div class="titlebar titlebar--aqua">
+      <span class="titlebar-text" id="pitch-title">about_borrow_.html — borrow_ とは</span>
+      <span class="titlebar-btns" aria-hidden="true"><i>—</i><i>▢</i><i class="tb-close">✕</i></span>
+    </div>
+    <div class="pitch-body">
+      <div class="pitch-copy">
+        <p class="jp-label">「 borrowing 」</p>
+        <p><b>borrow_</b> is a lightweight Rust fundamentals trainer that lives on your desktop.
+        Eleven modules. Lessons you actually <i>type</i>. Exercises that run your code and tell you
+        exactly what broke. A playground backed by the real compiler — not a toy sandbox.</p>
+        <p>Learn the fundamentals by <b class="hl-aqua">writing Rust</b>, not by reading about it.
+        The borrow checker stops being the villain and starts being your study buddy.</p>
+        <p class="pitch-official">Built by <b>wyde industries</b> · shipped as a native GPUI app · local-first SQLite · Google / GitHub sync</p>
+      </div>
+
+      <div class="fakeui" role="img" aria-label="Stylized illustration of a borrow_ lesson window showing a moved-value error being explained">
+        <div class="fakeui-titlebar">
+          <span>lesson_03_ownership.rs — borrow_</span>
+          <span class="titlebar-btns" aria-hidden="true"><i>—</i><i>▢</i><i class="tb-close">✕</i></span>
+        </div>
+        <pre class="fakeui-code"><code><span class="tok-k">let</span> s1 = <span class="tok-t">String</span>::from(<span class="tok-s">"hello"</span>);
+<span class="tok-k">let</span> s2 = s1;                <span class="tok-c">// s1 は move された</span>
+<span class="tok-err">println!("{s1}");</span>
+<span class="tok-err-msg">✗ E0382 — borrow of moved value: `s1`</span>
+<span class="tok-c">// 💡 ヒント: s1.clone() を試してみよう</span></code></pre>
+        <div class="fakeui-status">
+          <span class="status-dot"></span> 解答チェック中… <b>まだ</b> — もう一度書いてみよう!
+        </div>
+      </div>
+
+      <ul class="stats" aria-label="stats">
+        <li class="stat"><span class="stat-num" data-count="11">0</span><span class="stat-label">MODULES<br><i>モジュール</i></span></li>
+        <li class="stat"><span class="stat-num" data-count="284">0</span><span class="stat-label">LESSONS<br><i>レッスン</i></span></li>
+        <li class="stat"><span class="stat-num" data-count="5">0</span><span class="stat-label">PROJECTS<br><i>プロジェクト</i></span></li>
+        <li class="stat"><span class="stat-num stat-num--text">rustc</span><span class="stat-label">REAL COMPILER<br><i>本物のコンパイラ</i></span></li>
+      </ul>
+    </div>
+  </section>
+
+  <!-- ============ FEATURES ============ -->
+  <section class="window window--features features" aria-labelledby="features-title">
+    <div class="titlebar titlebar--magenta">
+      <span class="titlebar-text" id="features-title">features.html — 機能紹介</span>
+      <span class="titlebar-btns" aria-hidden="true"><i>—</i><i>▢</i><i class="tb-close">✕</i></span>
+    </div>
+    <div class="features-body">
+      <p class="section-jp">「 機能 」</p>
+
+      <ul class="feature-grid">
+        <li class="feature">
+          <span class="feature-icon" aria-hidden="true">
+            <svg viewBox="0 0 16 16" shape-rendering="crispEdges"><rect x="1" y="2" width="14" height="9" fill="#5CC8FF"/><rect x="2" y="3" width="12" height="7" fill="#0B0A08"/><rect x="5" y="12" width="6" height="1" fill="#6D6558"/><rect x="3" y="13" width="10" height="1" fill="#A9A197"/><rect x="6" y="5" width="1" height="3" fill="#39FFB6"/><rect x="8" y="5" width="3" height="1" fill="#FF6B35"/></svg>
+          </span>
+          <h3 class="feature-name">デスクトップアプリ <span>DESKTOP APP</span></h3>
+          <p>Native GPUI app. Local-first SQLite. Works on a plane. Syncs when you're back online.</p>
+        </li>
+        <li class="feature">
+          <span class="feature-icon" aria-hidden="true">
+            <svg viewBox="0 0 16 16" shape-rendering="crispEdges"><rect x="2" y="1" width="12" height="14" fill="#F4EFE6"/><rect x="3" y="2" width="10" height="12" fill="#14120F"/><rect x="4" y="4" width="6" height="1" fill="#A9A197"/><rect x="4" y="6" width="8" height="1" fill="#A9A197"/><rect x="4" y="8" width="5" height="1" fill="#A9A197"/><rect x="9" y="10" width="1" height="2" fill="#39FFB6"/><rect x="10" y="11" width="2" height="1" fill="#39FFB6"/><rect x="8" y="11" width="1" height="1" fill="#39FFB6"/></svg>
+          </span>
+          <h3 class="feature-name">添削つき演習 <span>EXERCISES GRADE YOU</span></h3>
+          <p>Every lesson ends with an exercise that runs your code and points at what broke — line by line.</p>
+        </li>
+        <li class="feature">
+          <span class="feature-icon" aria-hidden="true">
+            <svg viewBox="0 0 16 16" shape-rendering="crispEdges"><rect x="1" y="2" width="14" height="12" fill="#1C1915"/><rect x="1" y="2" width="14" height="1" fill="#F2C14E"/><rect x="3" y="5" width="1" height="1" fill="#39FFB6"/><rect x="5" y="5" width="6" height="1" fill="#F4EFE6"/><rect x="3" y="7" width="1" height="1" fill="#39FFB6"/><rect x="5" y="7" width="8" height="1" fill="#A9A197"/><rect x="3" y="9" width="1" height="1" fill="#39FFB6"/><rect x="5" y="9" width="4" height="1" fill="#5CC8FF"/><rect x="11" y="9" width="1" height="2" fill="#F4EFE6"/></svg>
+          </span>
+          <h3 class="feature-name">本物のコンパイラ <span>REAL COMPILER</span></h3>
+          <p>The playground is backed by <code>rustc</code> itself. If it compiles here, it compiles out there.</p>
+        </li>
+        <li class="feature">
+          <span class="feature-icon" aria-hidden="true">
+            <svg viewBox="0 0 16 16" shape-rendering="crispEdges"><rect x="6" y="1" width="4" height="4" fill="#FF8FAB"/><rect x="1" y="8" width="4" height="4" fill="#5CC8FF"/><rect x="11" y="8" width="4" height="4" fill="#A66CFF"/><rect x="7" y="5" width="2" height="3" fill="#6D6558"/><rect x="4" y="7" width="4" height="1" fill="#6D6558"/><rect x="8" y="7" width="4" height="1" fill="#6D6558"/></svg>
+          </span>
+          <h3 class="feature-name">進捗同期 <span>PROGRESS SYNC</span></h3>
+          <p>Sign in with Google or GitHub. Your streak and solved exercises follow you across machines.</p>
+        </li>
+      </ul>
+
+      <div class="pro-note">
+        <span class="pro-flag">PRO</span>
+        <p><b>モジュール 1–3 are free forever.</b>
+        <b class="hl-yellow">BORROW Pro — $5/month</b> unlocks modules 4–11, the full playground, and progress sync.
+        Cancel anytime. No dark patterns, no upsell popups mid-lesson.</p>
+      </div>
+    </div>
+  </section>
+
+  <!-- ============ CURRICULUM ============ -->
+  <section class="window window--curriculum curriculum" aria-labelledby="curriculum-title">
+    <div class="titlebar titlebar--yellow">
+      <span class="titlebar-text" id="curriculum-title">curriculum.html —カリキュラム</span>
+      <span class="titlebar-btns" aria-hidden="true"><i>—</i><i>▢</i><i class="tb-close">✕</i></span>
+    </div>
+    <div class="curriculum-body">
+      <p class="section-jp">「 カリキュラム 」</p>
+      <ol class="module-list">
+        <li class="module module--free">
+          <span class="module-num">01</span>
+          <span class="module-name">The Borrow Checker<i>所有権と借用</i></span>
+          <span class="module-tag module-tag--free">FREE 無料</span>
+        </li>
+        <li class="module module--free">
+          <span class="module-num">02</span>
+          <span class="module-name">Option &amp; Result<i>あるかもしれない、失敗しうる</i></span>
+          <span class="module-tag module-tag--free">FREE 無料</span>
+        </li>
+        <li class="module module--free">
+          <span class="module-num">03</span>
+          <span class="module-name">Structs &amp; Enums<i>データをかたちにする</i></span>
+          <span class="module-tag module-tag--free">FREE 無料</span>
+        </li>
+        <li class="module">
+          <span class="module-num">04</span>
+          <span class="module-name">Collections<i>Vec と HashMap と仲間たち</i></span>
+          <span class="module-tag">PRO</span>
+        </li>
+        <li class="module">
+          <span class="module-num">05</span>
+          <span class="module-name">Generics &amp; Traits<i>書いて一度、どこでも</i></span>
+          <span class="module-tag">PRO</span>
+        </li>
+        <li class="module">
+          <span class="module-num">06</span>
+          <span class="module-name">Iterators<i>遅延評価の美学</i></span>
+          <span class="module-tag">PRO</span>
+        </li>
+      </ol>
+      <p class="curriculum-more">…全11モジュール · 284レッスン — そして5つの小さなプロジェクトで締めくくる。</p>
+    </div>
+  </section>
+
+  <!-- ============ DOWNLOAD ============ -->
+  <section class="window window--download download" id="download" aria-labelledby="download-title">
+    <div class="titlebar titlebar--sakura">
+      <span class="titlebar-text" id="download-title">download.html — ダウンロード</span>
+      <span class="titlebar-btns" aria-hidden="true"><i>—</i><i>▢</i><i class="tb-close">✕</i></span>
+    </div>
+    <div class="download-body">
+      <p class="section-jp">「 ダウンロード 」</p>
+
+      <p class="prerelease-badge"><span>VERSION 0.1.0-rc.1</span> · PRERELEASE リリース候補</p>
+
+      <p class="os-status" id="os-status" role="status" aria-live="polite">お使いのOSを検出しています…</p>
+
+      <div class="os-grid">
+
+        <article class="os-card" id="card-mac" data-os-card="mac">
+          <header class="os-head">
+            <span class="os-logo" aria-hidden="true">
+              <svg viewBox="0 0 16 16" shape-rendering="crispEdges"><rect x="5" y="1" width="6" height="2" fill="#F4EFE6"/><rect x="4" y="3" width="8" height="7" fill="#F4EFE6"/><rect x="5" y="10" width="2" height="3" fill="#F4EFE6"/><rect x="9" y="10" width="2" height="3" fill="#F4EFE6"/><rect x="3" y="12" width="10" height="1" fill="#A9A197"/></svg>
+            </span>
+            <h3>macOS</h3>
+            <span class="os-ribbon" hidden>あなた向け ◀ RECOMMENDED FOR YOU</span>
+          </header>
+          <p class="os-arch">UNIVERSAL — Apple Silicon &amp; Intel</p>
+          <a class="dl-btn dl-btn--sakura" data-file="dmg"
+             href="https://github.com/wyde-corp/BORROW/releases/download/v0.1.0-rc.1/BORROW__0.1.0_aarch64.dmg">
+            <b>⬇ .dmg</b><span>BORROW__0.1.0_aarch64.dmg · 18.4 MB</span>
+          </a>
+          <p class="os-note">両アーケクチャ対応のユニバーサルビルド。.dmg を開いて Applications へドラッグ。</p>
+        </article>
+
+        <article class="os-card" id="card-windows" data-os-card="windows">
+          <header class="os-head">
+            <span class="os-logo" aria-hidden="true">
+              <svg viewBox="0 0 16 16" shape-rendering="crispEdges"><rect x="1" y="2" width="6" height="5" fill="#5CC8FF"/><rect x="9" y="2" width="6" height="5" fill="#39FFB6"/><rect x="1" y="9" width="6" height="5" fill="#F2C14E"/><rect x="9" y="9" width="6" height="5" fill="#FF4DDB"/></svg>
+            </span>
+            <h3>Windows</h3>
+            <span class="os-ribbon" hidden>あなた向け ◀ RECOMMENDED FOR YOU</span>
+          </header>
+          <p class="os-arch">x64 — Windows 10 / 11</p>
+          <a class="dl-btn dl-btn--aqua" data-file="exe"
+             href="https://github.com/wyde-corp/BORROW/releases/download/v0.1.0-rc.1/borrow-app_0.1.0_x64-setup.exe">
+            <b>⬇ Installer.exe</b><span>borrow-app_0.1.0_x64-setup.exe · 8.7 MB</span>
+          </a>
+          <p class="os-note">NSIS installer. Windows on ARM はエミュレーション経由で動作します(ARM ネイティブ版は未提供)。</p>
+        </article>
+
+        <article class="os-card" id="card-linux" data-os-card="linux">
+          <header class="os-head">
+            <span class="os-logo" aria-hidden="true">
+              <svg viewBox="0 0 16 16" shape-rendering="crispEdges"><rect x="5" y="1" width="6" height="5" fill="#F2C14E"/><rect x="4" y="2" width="2" height="2" fill="#0B0A08"/><rect x="10" y="2" width="2" height="2" fill="#0B0A08"/><rect x="3" y="6" width="10" height="7" fill="#F2C14E"/><rect x="5" y="8" width="2" height="3" fill="#FF6B35"/><rect x="9" y="8" width="2" height="3" fill="#FF6B35"/><rect x="2" y="13" width="3" height="2" fill="#FF6B35"/><rect x="11" y="13" width="3" height="2" fill="#FF6B35"/></svg>
+            </span>
+            <h3>Linux</h3>
+            <span class="os-ribbon" hidden>あなた向け ◀ RECOMMENDED FOR YOU</span>
+          </header>
+          <p class="os-arch">x86_64 — AppImage &amp; .deb</p>
+          <a class="dl-btn dl-btn--green dl-btn--picked" data-file="appimage"
+             href="https://github.com/wyde-corp/BORROW/releases/download/v0.1.0-rc.1/borrow-app_0.1.0_x86_64.AppImage">
+            <b>⬇ AppImage <em>推奨</em></b><span>borrow-app_0.1.0_x86_64.AppImage · 16.4 MB</span>
+          </a>
+          <a class="dl-btn dl-btn--ghost" data-file="deb"
+             href="https://github.com/wyde-corp/BORROW/releases/download/v0.1.0-rc.1/borrow-app_0.1.0_amd64.deb">
+            <b>⬇ .deb</b><span>borrow-app_0.1.0_amd64.deb · 16.7 MB</span>
+          </a>
+          <p class="os-note">AppImage はどこでも動く。Debian / Ubuntu は .deb を。<b>ARM 版はまだありません。</b></p>
+        </article>
+
+      </div>
+
+      <p class="sha-line">
+        🔏 <a href="https://github.com/wyde-corp/BORROW/releases/download/v0.1.0-rc.1/SHA256SUMS">SHA256SUMS を確認する</a>
+        — ダウンロードしたファイルのハッシュを照合しよう。
+      </p>
+    </div>
+  </section>
+
+  <!-- ============ RELATED LINKS ============ -->
+  <section class="window window--related related" aria-labelledby="related-title">
+    <div class="titlebar titlebar--purple">
+      <span class="titlebar-text" id="related-title">links.html — 関連リンク</span>
+      <span class="titlebar-btns" aria-hidden="true"><i>—</i><i>▢</i><i class="tb-close">✕</i></span>
+    </div>
+    <div class="related-body">
+      <p class="section-jp">「 関連リンク 」 <span class="webring-arrows" aria-hidden="true">◀ ● ○ ○ ○ ▶</span></p>
+      <ul class="linkbar">
+        <li><a href="https://doc.rust-lang.org/book/" target="_blank" rel="noopener">The Rust Book<span>あの700ページ(それでも読む価値はある)</span></a></li>
+        <li><a href="https://zed.dev/" target="_blank" rel="noopener">Zed<span>borrow_ の UI は GPUI 製</span></a></li>
+        <li><a href="https://this-week-in-rust.com/" target="_blank" rel="noopener">This Week in Rust<span>Rust 圏の週刊誌</span></a></li>
+        <li><a href="https://crates.io/" target="_blank" rel="noopener">crates.io<span>crate の超大型市場</span></a></li>
+      </ul>
+    </div>
+  </section>
+
+  <!-- ============ FOOTER ============ -->
+  <footer class="window window--footer footer">
+    <div class="titlebar titlebar--dim">
+      <span class="titlebar-text">guestbook.cgi — 訪問者記録</span>
+      <span class="titlebar-btns" aria-hidden="true"><i>—</i><i>▢</i><i class="tb-close">✕</i></span>
+    </div>
+    <div class="footer-body">
+
+      <div class="counter-block">
+        <p class="counter-label">このホームページの訪問者数 — YOU ARE VISITOR</p>
+        <div class="counter" id="hit-counter" aria-label="visitor counter">
+          <span>0</span><span>0</span><span>0</span><span>0</span><span>4</span><span>2</span><span>7</span>
+        </div>
+        <p class="counter-since">since 2026 · counter by wyde industries CGI</p>
+      </div>
+
+      <form class="guestbook" onsubmit="return false" aria-label="decorative guestbook">
+        <p class="guestbook-title">✏️ ゲストブック<span>(表示用・書き込み不可)</span></p>
+        <label>名前: <input type="text" value="ゲスト" readonly tabindex="-1"></label>
+        <label>メッセージ: <input type="text" value="（準備中です）" readonly tabindex="-1"></label>
+        <button type="submit" disabled>書き込む</button>
+      </form>
+
+      <div class="badges88" aria-label="site badges">
+        <span class="badge88 b-ns">NETSCAPE<br>NOW!</span>
+        <span class="badge88 b-ie">BEST WITH<br>IE 4.0</span>
+        <span class="badge88 b-rust">MADE WITH<br>RUST</span>
+        <span class="badge88 b-inside">borrow_<br>INSIDE</span>
+        <span class="badge88 b-res">800×600<br>OK</span>
+        <span class="badge88 b-html">HTML5<br>VALID?</span>
+        <span class="badge88 b-cookie">NO<br>COOKIES</span>
+        <span class="badge88 b-new">NEW! 新着<br>v0.1.0-rc.1</span>
+      </div>
+
+      <p class="construction">⚠ 工事中のコーナーがあります — some corners still under construction!!</p>
+
+      <div class="footer-credit">
+        <svg class="orn orn-crab" viewBox="0 0 16 10" shape-rendering="crispEdges" aria-hidden="true">
+          <rect x="4" y="2" width="8" height="5" fill="#FF6B35"/>
+          <rect x="3" y="3" width="1" height="3" fill="#FF6B35"/>
+          <rect x="12" y="3" width="1" height="3" fill="#FF6B35"/>
+          <rect x="2" y="1" width="2" height="2" fill="#FF6B35"/>
+          <rect x="12" y="1" width="2" height="2" fill="#FF6B35"/>
+          <rect x="5" y="3" width="1" height="1" fill="#0B0A08"/>
+          <rect x="10" y="3" width="1" height="1" fill="#0B0A08"/>
+          <rect x="4" y="8" width="1" height="2" fill="#FF6B35"/>
+          <rect x="6" y="8" width="1" height="2" fill="#FF6B35"/>
+          <rect x="9" y="8" width="1" height="2" fill="#FF6B35"/>
+          <rect x="11" y="8" width="1" height="2" fill="#FF6B35"/>
+        </svg>
+        <p><b>wyde industries</b> · made with 🦀 Rust · 2026<br>
+        <span class="credit-jp">このページは borrow_ のダウンロード用ホームページです。 Crab included free of charge.</span></p>
+      </div>
+
+      <p class="best-viewed">This page is best viewed at <b>800×600</b> in <b>Netscape Navigator 4.0</b> or <b>Internet Explorer 4.0</b> with JavaScript enabled. © 201996–2026 wyde industries. All wrongs reserved.</p>
+
+    </div>
+  </footer>
+
+</div><!-- /.page -->
+
+<script src="main.js"></script>
+</body>
+</html>
