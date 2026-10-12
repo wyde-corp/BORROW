@@ -152,64 +152,64 @@
   }
 
   /* ======================================================================
-     3. OS DETECTION + DOWNLOAD CARD HIGHLIGHT
+     3. DOWNLOAD WIRING — driven by download-widget's ready event
+     (widget owns hrefs + OS detection; we own the visuals around it)
      ====================================================================== */
   const osStatus = document.getElementById("os-status");
+  const shaLink = document.getElementById("sha-link");
+  const versionBadge = document.getElementById("version-badge");
+  const heroVersion = document.getElementById("hero-version");
 
-  function detectOS() {
-    const ua = navigator.userAgent || "";
-    const uaData = navigator.userAgentData;
-    const platform = (uaData && uaData.platform) || navigator.platform || "";
-    const hay = platform + " " + ua;
-
-    if (/Android/i.test(ua)) return "android";
-    if (/iPhone|iPad|iPod/i.test(ua)) return "ios";
-    if (/Mac/i.test(platform) || /Mac OS X/i.test(hay)) return "mac";
-    if (/Win/i.test(platform) || /Windows/i.test(hay)) return "windows";
-    if (/Linux|X11|CrOS/i.test(hay)) return "linux";
-    return "unknown";
+  function isMobile() {
+    return /Android|iPhone|iPad|iPod|Mobile/i.test(navigator.userAgent || "");
   }
 
-  function applyOS(os) {
-    const ribbonText = "あなた向け ◀ RECOMMENDED FOR YOU";
+  function onDownloadsReady(e) {
+    const links = (e && e.detail && e.detail.links) || {};
+    const detectedOS = e && e.detail ? e.detail.detectedOS : null;
+    const cardFor = { macos: "mac", windows: "windows", linux: "linux" }[detectedOS] || null;
+
     const notes = {
-      mac:     "⌁ 検出: macOS — ユニバーサル .dmg をどうぞ。Apple Silicon / Intel 両対応。",
+      mac: "⌁ 検出: macOS — ユニバーサル .dmg をどうぞ。Apple Silicon / Intel 両対応。",
       windows: "⌁ 検出: Windows — x64 インストーラーをどうぞ。ARM 版はエミュレーションで動きます。",
-      linux:   "⌁ 検出: Linux — AppImage(推奨)か .deb をどうぞ。ARM ビルドはまだありません。",
-      ios:     "⌁ iOS を検出しましたが、borrow_ はデスクトップアプリです。PC でお試しください。",
-      android: "⌁ Android を検出しましたが、borrow_ はデスクトップアプリです。PC でお試しください。",
-      unknown: "お使いのOSを検出できませんでした — 下からお選びください。",
+      linux: "⌁ 検出: Linux — AppImage(推奨)か .deb をどうぞ。ARM ビルドはまだありません。",
     };
-
-    if (osStatus) osStatus.textContent = notes[os] || notes.unknown;
-
-    const cardFor = { mac: "mac", windows: "windows", linux: "linux" }[os];
-    if (!cardFor) return;
-
-    const card = document.querySelector('[data-os-card="' + cardFor + '"]');
-    if (!card) return;
-    card.classList.add("is-detected");
-    const ribbon = card.querySelector(".os-ribbon");
-    if (ribbon) {
-      ribbon.textContent = ribbonText;
-      ribbon.hidden = false;
+    if (osStatus) {
+      if (cardFor) osStatus.textContent = notes[cardFor];
+      else if (isMobile()) osStatus.textContent = "⌁ borrow_ はデスクトップアプリです — PC でお試しください。";
+      else osStatus.textContent = "お使いのOSを検出できませんでした — 下からお選びください。";
     }
 
-    // Highlight the primary download for the detected OS.
-    // Linux: AppImage (runs anywhere without apt). mac/win: the single build.
-    const primaryFile = { mac: "dmg", windows: "exe", linux: "appimage" }[os];
-    if (primaryFile) {
-      card.querySelectorAll(".dl-btn").forEach((btn) => {
-        btn.classList.toggle("is-picked", btn.dataset.file === primaryFile);
-      });
+    if (cardFor) {
+      const card = document.querySelector('[data-os-card="' + cardFor + '"]');
+      if (card) {
+        card.classList.add("is-detected");
+        const ribbon = card.querySelector(".os-ribbon");
+        if (ribbon) ribbon.hidden = false;
+        const primaryFile = { mac: "dmg", windows: "exe", linux: "appimage" }[cardFor];
+        card.querySelectorAll(".dl-btn").forEach((btn) => {
+          btn.classList.toggle("is-picked", btn.dataset.file === primaryFile);
+        });
+      }
     }
+
+    if (shaLink && links.sha256sums) shaLink.href = links.sha256sums;
+
+    if (links.version) {
+      if (heroVersion) heroVersion.textContent = links.version;
+      if (versionBadge) {
+        versionBadge.textContent = "";
+        const span = document.createElement("span");
+        span.textContent = "VERSION " + links.version;
+        versionBadge.appendChild(span);
+        versionBadge.appendChild(document.createTextNode(" · LATEST STABLE 最新安定版"));
+      }
+    }
+    // On fallback (version null) the static prerelease badge stays — honest,
+    // since the rc is the newest thing that exists.
   }
 
-  try {
-    applyOS(detectOS());
-  } catch (_) {
-    if (osStatus) osStatus.textContent = "お使いのOSを検出できませんでした — 下からお選びください。";
-  }
+  document.addEventListener("borrow:download:ready", onDownloadsReady);
 
   /* ======================================================================
      4. HIT COUNTER (odometer roll-up)

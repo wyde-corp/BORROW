@@ -15,10 +15,11 @@
   <link href="https://fonts.googleapis.com/css2?family=VT323&family=DotGothic16&family=IBM+Plex+Mono:ital,wght@0,400;0,600;0,700;1,400&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="style.css">
   <!--
-    NOTE (for wyde industries only):
-    The GitHub repo wyde-corp/BORROW is currently PRIVATE, so the direct-download
-    URLs below return 404 for visitors. They start working the moment the repo
-    is flipped public. No code changes needed — just make the repo public.
+    Download links are resolved at runtime by download-widget.js:
+    it fetches the latest stable GitHub release of wyde-corp/BORROW and
+    rewrites every [data-borrow-dl] href, falling back to the releases page
+    if the API is unreachable. See tools/download-widget/INTEGRATION.md.
+    Repo must be public. Never link prerelease assets directly.
   -->
 </head>
 <body>
@@ -121,7 +122,7 @@
         <span class="cta-en">DOWNLOAD NOW</span>
       </a>
 
-      <p class="hero-meta">v0.1.0-rc.1 · modules 1–3 free · <span class="yen">¥0</span> to start</p>
+      <p class="hero-meta">v<span id="hero-version">0.1.0-rc.1</span> · modules 1–3 free · <span class="yen">¥0</span> to start</p>
     </div>
   </section>
 
@@ -276,7 +277,7 @@
     <div class="download-body">
       <p class="section-jp">「 ダウンロード 」</p>
 
-      <p class="prerelease-badge"><span>VERSION 0.1.0-rc.1</span> · PRERELEASE リリース候補</p>
+      <p class="prerelease-badge" id="version-badge"><span>VERSION 0.1.0-rc.1</span> · PRERELEASE リリース候補</p>
 
       <p class="os-status" id="os-status" role="status" aria-live="polite">お使いのOSを検出しています…</p>
 
@@ -291,11 +292,11 @@
             <span class="os-ribbon" hidden>あなた向け ◀ RECOMMENDED FOR YOU</span>
           </header>
           <p class="os-arch">UNIVERSAL — Apple Silicon &amp; Intel</p>
-          <a class="dl-btn dl-btn--sakura" data-file="dmg"
-             href="https://github.com/wyde-corp/BORROW/releases/download/v0.1.0-rc.1/BORROW__0.1.0_aarch64.dmg">
-            <b>⬇ .dmg</b><span>BORROW__0.1.0_aarch64.dmg · 18.4 MB</span>
+          <a class="dl-btn dl-btn--sakura" data-borrow-dl="macos" data-file="dmg"
+             href="https://github.com/wyde-corp/BORROW/releases/latest">
+            <b>⬇ .dmg</b><span>macOS · universal · Apple Silicon &amp; Intel</span>
           </a>
-          <p class="os-note">両アーケクチャ対応のユニバーサルビルド。.dmg を開いて Applications へドラッグ。</p>
+          <p class="os-note">両アーケクチャ対応のユニバーサルビルド。.dmg を開いて Applications へドラッグ。<br>macOS が「不明な開発者」と言う場合は: <b>右クリック → 開く</b>。</p>
         </article>
 
         <article class="os-card" id="card-windows" data-os-card="windows">
@@ -307,11 +308,11 @@
             <span class="os-ribbon" hidden>あなた向け ◀ RECOMMENDED FOR YOU</span>
           </header>
           <p class="os-arch">x64 — Windows 10 / 11</p>
-          <a class="dl-btn dl-btn--aqua" data-file="exe"
-             href="https://github.com/wyde-corp/BORROW/releases/download/v0.1.0-rc.1/borrow-app_0.1.0_x64-setup.exe">
-            <b>⬇ Installer.exe</b><span>borrow-app_0.1.0_x64-setup.exe · 8.7 MB</span>
+          <a class="dl-btn dl-btn--aqua" data-borrow-dl="windows" data-file="exe"
+             href="https://github.com/wyde-corp/BORROW/releases/latest">
+            <b>⬇ Installer.exe</b><span>Windows · x64 · NSIS installer</span>
           </a>
-          <p class="os-note">NSIS installer. Windows on ARM はエミュレーション経由で動作します(ARM ネイティブ版は未提供)。</p>
+          <p class="os-note">Windows 10 / 11 x64。SmartScreen が出たら <b>詳細情報 → 実行する</b>。Windows on ARM はエミュレーション経由で動作します(ARM ネイティブ版は未提供)。</p>
         </article>
 
         <article class="os-card" id="card-linux" data-os-card="linux">
@@ -323,13 +324,13 @@
             <span class="os-ribbon" hidden>あなた向け ◀ RECOMMENDED FOR YOU</span>
           </header>
           <p class="os-arch">x86_64 — AppImage &amp; .deb</p>
-          <a class="dl-btn dl-btn--green dl-btn--picked" data-file="appimage"
-             href="https://github.com/wyde-corp/BORROW/releases/download/v0.1.0-rc.1/borrow-app_0.1.0_x86_64.AppImage">
-            <b>⬇ AppImage <em>推奨</em></b><span>borrow-app_0.1.0_x86_64.AppImage · 16.4 MB</span>
+          <a class="dl-btn dl-btn--green dl-btn--picked" data-borrow-dl="linux-appimage" data-file="appimage"
+             href="https://github.com/wyde-corp/BORROW/releases/latest">
+            <b>⬇ AppImage <em>推奨</em></b><span>Linux x86_64 · runs anywhere</span>
           </a>
-          <a class="dl-btn dl-btn--ghost" data-file="deb"
-             href="https://github.com/wyde-corp/BORROW/releases/download/v0.1.0-rc.1/borrow-app_0.1.0_amd64.deb">
-            <b>⬇ .deb</b><span>borrow-app_0.1.0_amd64.deb · 16.7 MB</span>
+          <a class="dl-btn dl-btn--ghost" data-borrow-dl="linux-deb" data-file="deb"
+             href="https://github.com/wyde-corp/BORROW/releases/latest">
+            <b>⬇ .deb</b><span>Debian / Ubuntu · x86_64</span>
           </a>
           <p class="os-note">AppImage はどこでも動く。Debian / Ubuntu は .deb を。<b>ARM 版はまだありません。</b></p>
         </article>
@@ -337,7 +338,7 @@
       </div>
 
       <p class="sha-line">
-        🔏 <a href="https://github.com/wyde-corp/BORROW/releases/download/v0.1.0-rc.1/SHA256SUMS">SHA256SUMS を確認する</a>
+        🔏 <a id="sha-link" href="https://github.com/wyde-corp/BORROW/releases/latest">SHA256SUMS を確認する</a>
         — ダウンロードしたファイルのハッシュを照合しよう。
       </p>
     </div>
@@ -421,6 +422,7 @@
 
 </div><!-- /.page -->
 
+<script src="download-widget.js"></script>
 <script src="main.js"></script>
 </body>
 </html>

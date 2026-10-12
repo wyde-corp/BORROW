@@ -1,0 +1,9 @@
+# Netlify deployment for the BORROW_ landing page.
+# Site source lives in site/ (plain static — no build step).
+# Connect the site in the Netlify dashboard to wyde-corp/BORROW, branch `app`;
+# this file supplies base/publish so no other build settings are needed.
+
+[build]
+  base = "site"
+  command = ""
+  publish = "."
