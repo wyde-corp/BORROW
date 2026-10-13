@@ -1,0 +1,26 @@
+# Auto-deploy the landing page: push to app (site/** changes) -> Netlify production.
+# Uses Netlify's deploy API directly, so it doesn't depend on Netlify's git-clone
+# build container (whose deploy-key wiring got corrupted during setup).
+name: Deploy site to Netlify
+
+on:
+  push:
+    branches: [app]
+    paths:
+      - "site/**"
+      - ".github/workflows/deploy-site.yml"
+  workflow_dispatch:
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Deploy to Netlify
+        uses: netlify/actions/cli@master
+        with:
+          args: deploy --dir site --prod --auth ${{ secrets.NETLIFY_AUTH_TOKEN }}
+
+      - name: Verify production
+        run: curl -fsS --retry 5 --retry-delay 5 https://borrow-front-end.netlify.app/ | grep -q "BORROW_" && echo "live OK"
