@@ -20,7 +20,7 @@ jobs:
       - name: Deploy to Netlify
         uses: netlify/actions/cli@master
         with:
-          args: deploy --dir site --prod --auth ${{ secrets.NETLIFY_AUTH_TOKEN }}
+          args: deploy --dir site --prod --site ad2c5fd4-2240-47b6-a76a-3d5468d8d9b1 --auth ${{ secrets.NETLIFY_AUTH_TOKEN }}
 
       - name: Verify production
         run: curl -fsS --retry 5 --retry-delay 5 https://borrow-front-end.netlify.app/ | grep -q "BORROW_" && echo "live OK"
