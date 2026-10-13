@@ -12,3 +12,6 @@
 
 # JS toolchain (Convex backend + tests)
 node_modules/
+
+# Local Netlify folder
+.netlify

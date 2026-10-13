@@ -125,7 +125,8 @@
      2. SPARKLE CURSOR TRAIL
      ====================================================================== */
   if (!reduceMotion) {
-    const SPARK_COLORS = ["#F1EDE6", "#FFB08A", "#C9A55C"];
+    // colours live in style.css tokens (.sparkle / --b / --c classes)
+    const SPARK_CLASSES = ["sparkle--a", "sparkle--b", "sparkle--c"];
     let lastX = 0, lastY = 0, lastT = 0, live = 0;
     const MAX_LIVE = 16;
 
@@ -139,10 +140,9 @@
       if (live >= MAX_LIVE) return;
 
       const el = document.createElement("div");
-      el.className = "sparkle";
+      el.className = "sparkle " + SPARK_CLASSES[(Math.random() * SPARK_CLASSES.length) | 0];
       el.style.left = e.clientX + "px";
       el.style.top = e.clientY + "px";
-      el.style.background = SPARK_COLORS[(Math.random() * SPARK_COLORS.length) | 0];
       el.style.width = el.style.height = 4 + Math.random() * 5 + "px";
       document.body.appendChild(el);
       live++;
@@ -216,7 +216,7 @@
      ====================================================================== */
   const counterEl = document.getElementById("hit-counter");
   if (counterEl) {
-    const TARGET = 427;
+    const TARGET = 427; // decorative demo figure — the page labels it as such
     const digits = [...counterEl.querySelectorAll("span")];
     const pad = String(TARGET).padStart(digits.length, "0");
 
