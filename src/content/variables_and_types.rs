@@ -58,7 +58,7 @@ fn lesson_what_is_a_variable() -> SeedLesson {
         "What Is a Variable?",
         vec![
             labelled(
-                "CONCEPT",
+                "THE IDEA",
                 "`100 > 50` tells you almost nothing. `score > 50` tells you a story. A variable is a name \
                  attached to a value so later code can refer to that value by something meaningful — not to \
                  save typing, but so the code says what it means.",
@@ -83,7 +83,7 @@ fn lesson_what_is_a_variable() -> SeedLesson {
                 &[("n1", "score", "The name used inside the braces of the print.")],
             ),
             labelled(
-                "EXPLANATION",
+                "LET'S BREAK IT DOWN",
                 "`let` creates a **binding**: a name tied to a value. In `let score = 100;`, `score` is the \
                  name and `100` is the value. Every value also has a **type** — what kind of data it is. \
                  `100` is a whole number, `\"Gus\"` is text (a **string slice**, written `&str`), and `true` \
@@ -119,14 +119,14 @@ fn lesson_immutable_by_default() -> SeedLesson {
         "Immutable by Default",
         vec![
             labelled(
-                "CONCEPT",
+                "THE IDEA",
                 "In Rust a plain `let` binding is immutable. Once it holds a value, that value is frozen: \
                  you can read it as often as you like, but you cannot change it. This surprises almost \
                  everyone on day one — and it is deliberate.",
             ),
             broken("fn main() {\n    let score = 100;\n\n    score = 200;\n}"),
             labelled(
-                "EXPLANATION",
+                "LET'S BREAK IT DOWN",
                 "The compiler stops on the second assignment. Read what it says: `cannot assign twice to \
                  immutable variable`. It is not scolding you. It is telling you that a plain `let` \
                  promised this value would not change, and this line breaks that promise.",
@@ -166,7 +166,7 @@ fn lesson_mut() -> SeedLesson {
         "mut — When Values Need to Change",
         vec![
             labelled(
-                "CONCEPT",
+                "THE IDEA",
                 "Some values genuinely change: a player's health drops, a timer counts down, a score \
                  climbs. For those, Rust asks you to say so out loud with `mut`. It is a small word \
                  carrying real information — this binding is intentionally allowed to change.",
@@ -183,7 +183,7 @@ fn lesson_mut() -> SeedLesson {
 }"#,
             ),
             labelled(
-                "EXPLANATION",
+                "LET'S BREAK IT DOWN",
                 "`let mut` does what `let` does and adds one permission: this binding may be reassigned. \
                  That lets you write `health = health - 10`, or the shorthand `health -= 10` — the same \
                  line with the operation moved in front of the `=`. Mutability attaches to the \
@@ -217,7 +217,7 @@ fn lesson_why_immutable() -> SeedLesson {
         "Why Rust Defaults to Immutability",
         vec![
             labelled(
-                "CONCEPT",
+                "THE IDEA",
                 "Why make you opt in to change? It looks bureaucratic until you notice what it buys. If a \
                  value cannot silently change, then reading it later tells you something reliable: it is \
                  exactly what it said it was.",
@@ -240,7 +240,7 @@ println!("users: {user_count}");"#,
                 ],
             ),
             labelled(
-                "EXPLANATION",
+                "LET'S BREAK IT DOWN",
                 "The value is read in two places, and because it is immutable, both reads agree. That is \
                  the whole argument for the default. A plain `let` is a promise the compiler enforces: \
                  this value does not move. You can therefore reason about it without hunting through the \
@@ -289,7 +289,7 @@ fn lesson_type_inference() -> SeedLesson {
         "Type Inference",
         vec![
             labelled(
-                "CONCEPT",
+                "THE IDEA",
                 "You never told Rust the type of `age`. You never told it the type of `price`. It knows \
                  anyway. This is **type inference**: Rust works out the type from the value and the \
                  surrounding context, before your program runs.",
@@ -306,7 +306,7 @@ fn lesson_type_inference() -> SeedLesson {
 }"#,
             ),
             labelled(
-                "EXPLANATION",
+                "LET'S BREAK IT DOWN",
                 "Rust reads the literal and decides. A whole number is `i32`. A number with a decimal \
                  point is `f64`. Text in double quotes is `&str` — a string slice, the type for text; \
                  the lesson after next gives it the attention it deserves. `true` is a `bool`. Having \
@@ -349,7 +349,7 @@ fn lesson_type_annotations() -> SeedLesson {
         "Type Annotations",
         vec![
             labelled(
-                "CONCEPT",
+                "THE IDEA",
                 "Sometimes you want to be explicit. `let age: i32 = 25;` puts the type right there in the \
                  source. This is a **type annotation**. It is optional, and Rust does not want it \
                  everywhere — but there are real places it earns its keep.",
@@ -367,7 +367,7 @@ fn lesson_type_annotations() -> SeedLesson {
 }"#,
             ),
             labelled(
-                "EXPLANATION",
+                "LET'S BREAK IT DOWN",
                 "The `: i32` between the name and the `=` is the annotation. It states what type the \
                  binding should have, and Rust checks the value against it. That check is the value: \
                  annotate `: u8` and write `300`, and Rust stops you rather than silently wrapping.",
@@ -403,7 +403,7 @@ fn lesson_text_str() -> SeedLesson {
         "Text: `&str`",
         vec![
             labelled(
-                "CONCEPT",
+                "THE IDEA",
                 "You have been writing text since the first example — `\"Gus\"`, `\"hello\"` — without \
                  being told what it is. This lesson fixes that. Text in double quotes is a **string \
                  slice**, written `&str`. It is the type for a run of characters: one letter, a word, a \
@@ -421,7 +421,7 @@ fn lesson_text_str() -> SeedLesson {
 }"#,
             ),
             labelled(
-                "EXPLANATION",
+                "LET'S BREAK IT DOWN",
                 "A `&str` can hold any number of characters, including none. The `&` means it is a view \
                  into text rather than something that owns its own copy; for now, the practical rule is \
                  simply that **double quotes make text**. You can ask for its length with `.len()` — a \
@@ -472,7 +472,7 @@ fn lesson_integer_types() -> SeedLesson {
         "Integer Types",
         vec![
             labelled(
-                "CONCEPT",
+                "THE IDEA",
                 "Rust has a whole family of integer types, and they are not interchangeable. When you \
                  write `25`, Rust picks `i32` for you. When `25` appears somewhere that demands a `u8`, it \
                  checks whether 25 actually fits.",
@@ -495,7 +495,7 @@ fn lesson_integer_types() -> SeedLesson {
                 ],
             ),
             labelled(
-                "EXPLANATION",
+                "LET'S BREAK IT DOWN",
                 "The letter and the number each say something. The letter is the signedness: `i` can be \
                  negative, `u` cannot. The number is the **bit width** — how much storage the type uses. \
                  One bit is a single on/off switch, so 8 bits give 2⁸ = 256 distinct values.",
@@ -533,7 +533,7 @@ fn lesson_integer_literals() -> SeedLesson {
         "Integer Literals",
         vec![
             labelled(
-                "CONCEPT",
+                "THE IDEA",
                 "Rust lets you write whole numbers in four notations. You are not required to use them, \
                  but you will meet all four eventually — and once you know what they are, they stop \
                  looking strange.",
@@ -559,7 +559,7 @@ fn lesson_integer_literals() -> SeedLesson {
                 ],
             ),
             labelled(
-                "EXPLANATION",
+                "LET'S BREAK IT DOWN",
                 "The underscores are the part worth caring about. `1000000` is valid Rust, but counting \
                  the zeros wastes your attention. `1_000_000` is the same number and reads at a glance. \
                  Rust ignores the underscores entirely — they exist purely for humans.",
@@ -587,7 +587,7 @@ fn lesson_signed_unsigned() -> SeedLesson {
         "Signed vs Unsigned",
         vec![
             labelled(
-                "CONCEPT",
+                "THE IDEA",
                 "A signed integer can be negative. An unsigned integer cannot. That is the whole \
                  difference — but its consequences ripple outward in ways that surprise people \
                  regularly.",
@@ -604,7 +604,7 @@ fn lesson_signed_unsigned() -> SeedLesson {
 }"#,
             ),
             labelled(
-                "EXPLANATION",
+                "LET'S BREAK IT DOWN",
                 "Signed types spend half their range on negatives. `i8` runs from -128 to 127 — 256 values, \
                  half of them negative. `u8` runs from 0 to 255 — 256 values, none negative. Same storage, \
                  different territory.",
@@ -633,7 +633,7 @@ fn lesson_floats() -> SeedLesson {
         "Floating-Point Numbers",
         vec![
             labelled(
-                "CONCEPT",
+                "THE IDEA",
                 "Not every number is whole. Rust has two float types: `f32` (32 bits) and `f64` (64 bits). \
                  Write a decimal with no other context and Rust gives you `f64`.",
             ),
@@ -648,7 +648,7 @@ fn lesson_floats() -> SeedLesson {
 }"#,
             ),
             labelled(
-                "EXPLANATION",
+                "LET'S BREAK IT DOWN",
                 "Floats store an *approximation* of your number, not the exact value. Most of the time \
                  that is invisible; it becomes visible with arithmetic on values that have no exact \
                  binary form. Run the example below and read the first line: `0.1 + 0.2` does not come \
@@ -690,7 +690,7 @@ fn lesson_booleans() -> SeedLesson {
         "Booleans",
         vec![
             labelled(
-                "CONCEPT",
+                "THE IDEA",
                 "A boolean is two values: `true` and `false`. That is the whole type. In Rust it is a \
                  first-class value you can store in a variable — not merely something that appears inside \
                  an `if`.",
@@ -706,7 +706,7 @@ fn lesson_booleans() -> SeedLesson {
 }"#,
             ),
             labelled(
-                "EXPLANATION",
+                "LET'S BREAK IT DOWN",
                 "A `bool` takes one byte and has exactly two possible values. That constraint is the \
                  point: there is no third option, no `maybe`, no `null`. When a variable holds a bool, you \
                  know exactly what it is — and when you combine booleans with `&&` (and) or `||` (or), the \
@@ -742,7 +742,7 @@ fn lesson_characters() -> SeedLesson {
         "Characters",
         vec![
             labelled(
-                "CONCEPT",
+                "THE IDEA",
                 "A `char` holds exactly one character, written in single quotes: `'A'`, `'7'`, `'♥'`. It is \
                  not a string; it is a single value, and it is always four bytes wide.",
             ),
@@ -758,7 +758,7 @@ fn lesson_characters() -> SeedLesson {
 }"#,
             ),
             labelled(
-                "EXPLANATION",
+                "LET'S BREAK IT DOWN",
                 "Rust's `char` is a Unicode scalar value, which covers essentially every writing system on \
                  earth plus a large set of symbols and emoji. The type is always four bytes wide, no \
                  matter how many bytes the glyph itself occupies. Single quotes make a `char`; double \
@@ -792,7 +792,7 @@ fn lesson_tuples() -> SeedLesson {
         "Tuples",
         vec![
             labelled(
-                "CONCEPT",
+                "THE IDEA",
                 "Sometimes a few values belong together and are not all the same type. That is a tuple: a \
                  fixed-size group of values that can each have their own type.",
             ),
@@ -807,7 +807,7 @@ fn lesson_tuples() -> SeedLesson {
 }"#,
             ),
             labelled(
-                "EXPLANATION",
+                "LET'S BREAK IT DOWN",
                 "Each element has its own type, inferred independently: here `&str`, `i32`, and `bool`. \
                  Access them by position with `.0`, `.1`, `.2` — positions start at zero. The size is fixed \
                  at creation; a tuple cannot grow or shrink.",
@@ -842,7 +842,7 @@ fn lesson_arrays() -> SeedLesson {
         "Arrays",
         vec![
             labelled(
-                "CONCEPT",
+                "THE IDEA",
                 "An array holds a fixed number of values, all of the same type, in order. Fixed means \
                  fixed: `[i32; 5]` is not a suggestion, it is the type.",
             ),
@@ -856,7 +856,7 @@ fn lesson_arrays() -> SeedLesson {
 }"#,
             ),
             labelled(
-                "EXPLANATION",
+                "LET'S BREAK IT DOWN",
                 "Two rules: every element is the same type, and the count is part of the type itself. \
                  Indexing starts at **zero**, so `numbers[0]` is the first element, not the second — this \
                  trips up almost everyone, usually exactly once.",
@@ -897,7 +897,7 @@ fn lesson_constants() -> SeedLesson {
         "Constants",
         vec![
             labelled(
-                "CONCEPT",
+                "THE IDEA",
                 "Some values are fixed for the entire life of a program: the maximum score, the tax rate, \
                  the name of the app. A `const` says: this value will never change, and it is known before \
                  the program runs.",
@@ -913,7 +913,7 @@ fn main() {
 }"#,
             ),
             labelled(
-                "EXPLANATION",
+                "LET'S BREAK IT DOWN",
                 "Three things make a constant different from a variable. It uses `const`, not `let`. It \
                  **requires** a type annotation — no inference here. And its name is written in \
                  `SCREAMING_SNAKE_CASE` by convention, because it reads as a named fact rather than a \
@@ -945,7 +945,7 @@ fn lesson_shadowing() -> SeedLesson {
         "Shadowing",
         vec![
             labelled(
-                "CONCEPT",
+                "THE IDEA",
                 "You can declare a new `let` with a name that already exists. The new binding does not \
                  overwrite the old one — it *shadows* it. The old value still exists; you simply cannot \
                  reach it through that name any more.",
@@ -962,7 +962,7 @@ fn lesson_shadowing() -> SeedLesson {
 }"#,
             ),
             labelled(
-                "EXPLANATION",
+                "LET'S BREAK IT DOWN",
                 "Read `let x = x + 1;` carefully. The right-hand `x` is the old binding, value 5. The \
                  result, 6, is bound to a brand-new `x`. The old `x` still holds 5, and will until it goes \
                  out of scope; it is just no longer reachable by that name.",
@@ -994,7 +994,7 @@ fn lesson_shadowing_vs_mutation() -> SeedLesson {
         "Shadowing vs Mutation",
         vec![
             labelled(
-                "CONCEPT",
+                "THE IDEA",
                 "These two look almost identical and behave differently in ways that matter. Understanding \
                  why is the difference between writing Rust and guessing at it.",
             ),
@@ -1009,7 +1009,7 @@ fn lesson_shadowing_vs_mutation() -> SeedLesson {
                 ],
             ),
             labelled(
-                "EXPLANATION",
+                "LET'S BREAK IT DOWN",
                 "The deciding question is what the code is *saying*. If you are tracking one quantity as it \
                  changes — health dropping, a counter climbing — that is mutation. If you are transforming \
                  one representation into another — text parsed into a number, a value converted between \
@@ -1056,7 +1056,7 @@ fn lesson_shadowing_changes_types() -> SeedLesson {
         "Shadowing Can Change Types",
         vec![
             labelled(
-                "CONCEPT",
+                "THE IDEA",
                 "One of Rust's genuinely pleasant surprises: shadowing lets the same name hold a different \
                  type. The value has moved to a new representation of the same idea, and you never needed \
                  to invent a second name.",
@@ -1071,7 +1071,7 @@ fn lesson_shadowing_changes_types() -> SeedLesson {
 }"#,
             ),
             labelled(
-                "EXPLANATION",
+                "LET'S BREAK IT DOWN",
                 "The first `value` is a `&str` holding the characters `4` and `2`. `.parse()` asks Rust to \
                  read those characters as a number, and `.unwrap()` says \"assume it works\" — proper \
                  error handling is Module 09, so for now we take the success for granted. The result is \
@@ -1081,7 +1081,7 @@ fn lesson_shadowing_changes_types() -> SeedLesson {
                 "fn main() {\n    let mut value = \"42\";\n    value = 42;\n}",
             ),
             labelled(
-                "EXPLANATION",
+                "LET'S BREAK IT DOWN",
                 "The mutation version cannot do this. A mutable binding's type is fixed the moment you \
                  declare it, so `value = 42` fails with `expected &str, found integer`. Shadowing creates \
                  a new binding, which is free to have a new type. This is the single most useful thing to \
@@ -1112,7 +1112,7 @@ fn lesson_conversions() -> SeedLesson {
         "Numeric Type Conversions",
         vec![
             labelled(
-                "CONCEPT",
+                "THE IDEA",
                 "Rust will not quietly convert between numeric types for you. To turn an `i32` into an \
                  `f64` you have to say so with `as`, every time.",
             ),
@@ -1127,7 +1127,7 @@ fn lesson_conversions() -> SeedLesson {
 }"#,
             ),
             labelled(
-                "EXPLANATION",
+                "LET'S BREAK IT DOWN",
                 "`as` makes a conversion explicit and visible. Widening — a small integer into a bigger \
                  one, or an integer into a float — is safe and exact. Narrowing — a big number into a \
                  small type, or a float into an integer — can silently lose information, so Rust makes \
@@ -1161,7 +1161,7 @@ fn lesson_type_compatibility() -> SeedLesson {
         "Type Compatibility",
         vec![
             labelled(
-                "CONCEPT",
+                "THE IDEA",
                 "Two integer types do not mix just because both hold integers. `i32` and `i64` are \
                  different types, and Rust will not add them for you.",
             ),
@@ -1172,7 +1172,7 @@ fn lesson_type_compatibility() -> SeedLesson {
                 "error[E0308]: mismatched types\n  --> src/main.rs:4:18\n   |\n4  |     let total = x + y;\n   |                  ^   expected `i32`, found `i64`",
             ),
             labelled(
-                "EXPLANATION",
+                "LET'S BREAK IT DOWN",
                 "Read the error from the inside out. The caret points at `y`. Rust expected `i32`, the \
                  type of the left side of `+`, and found `i64`, the type of `y`. It cannot decide which \
                  one you meant, so it stops and asks rather than guessing.",
@@ -1200,7 +1200,7 @@ fn lesson_expressions() -> SeedLesson {
         "Expressions Produce Values",
         vec![
             labelled(
-                "CONCEPT",
+                "THE IDEA",
                 "In many languages a line of code is either a value or an action. In Rust almost \
                  everything produces a value, including a block of code.",
             ),
@@ -1219,7 +1219,7 @@ fn lesson_expressions() -> SeedLesson {
 }"#,
             ),
             labelled(
-                "EXPLANATION",
+                "LET'S BREAK IT DOWN",
                 "The rule that makes the block work: the final expression in a block, with no semicolon, is \
                  the block's value. Put a semicolon after `a + b` and the block instead produces `()`, the \
                  **unit** type — a value that means \"nothing\". One character is the entire difference.",
@@ -1248,7 +1248,7 @@ fn lesson_reading_errors() -> SeedLesson {
         "Reading Type Errors",
         vec![
             labelled(
-                "CONCEPT",
+                "THE IDEA",
                 "Compiler errors are not rejection notices. They are the closest thing Rust has to a \
                  patient engineer sitting next to you. Learn their shape and they stop being walls.",
             ),
@@ -1263,7 +1263,7 @@ fn lesson_reading_errors() -> SeedLesson {
                 "`found because of this expression` — the line that produced the real value.",
             ]),
             labelled(
-                "EXPLANATION",
+                "LET'S BREAK IT DOWN",
                 "Every `mismatched types` error has the same two-part shape: what Rust expected, and what \
                  it found. The extra lines point at where each belief came from. Scan for those two words \
                  and the error takes about three seconds instead of three minutes.",
@@ -1290,7 +1290,7 @@ fn lesson_common_mistakes() -> SeedLesson {
         "Things You Will Probably Break",
         vec![
             labelled(
-                "CONCEPT",
+                "THE IDEA",
                 "Six mistakes account for most of what beginners hit in their first week. None of them are \
                  stupid — all of them have a shape, and once you see the shape you stop making them.",
             ),
@@ -1306,7 +1306,7 @@ fn lesson_common_mistakes() -> SeedLesson {
                 ],
             ),
             labelled(
-                "EXPLANATION",
+                "LET'S BREAK IT DOWN",
                 "Two of these are worth a closer look. Out-of-range indexing (4) is the one mistake that is \
                  *not* caught at compile time — it compiles and then panics when it runs. And changing type \
                  by mutation (5) is impossible by design; shadowing is the tool, which is why it got its \
@@ -1328,7 +1328,7 @@ fn lesson_bridge() -> SeedLesson {
         "Putting It All Together",
         vec![
             labelled(
-                "CONCEPT",
+                "THE IDEA",
                 "You now have the vocabulary. Variables store information, types describe it, `mut` controls \
                  change, shadowing transforms, and conversions move between representations. Time to use \
                  all of it at once — and then notice what is still missing.",
@@ -1368,7 +1368,7 @@ fn main() {
 }"#,
             ),
             labelled(
-                "EXPLANATION",
+                "LET'S BREAK IT DOWN",
                 "That program uses a constant, immutable and mutable bindings, a tuple, an array, shadowing \
                  across a type change, an `as` conversion, and a `.parse()`. None of it is advanced; all of \
                  it is this module's vocabulary. Read it and notice that every choice had a reason.",

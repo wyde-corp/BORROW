@@ -20,7 +20,7 @@ fn returning_impl_iterator() -> SeedLesson {
         "Returning `impl Iterator`",
         vec![
             labelled(
-                "CONCEPT",
+                "THE IDEA",
                 "A function can return an iterator instead of a `Vec`, so the caller drives it and no \
                  intermediate collection is built. The return type is `impl Iterator<Item = ...>`, read \
                  as 'some type that yields these items'.",
@@ -66,7 +66,7 @@ fn main() {
 }"#,
             ),
             labelled(
-                "EXPLANATION",
+                "LET'S BREAK IT DOWN",
                 "`impl Iterator<Item = &str>` means 'a type I will not name, that yields `&str` items'. \
                  The concrete type is a filter wrapper around a map wrapper around a slice iterator — a \
                  mouthful nobody wants to write, which is exactly why `impl Trait` exists. The caller \
@@ -112,7 +112,7 @@ fn writing_an_iterator() -> SeedLesson {
         "Writing an Iterator by Hand",
         vec![
             labelled(
-                "CONCEPT",
+                "THE IDEA",
                 "You rarely need to, but you can implement `Iterator` yourself by providing `next`. The \
                  trait needs one method and one associated type, `Item` — the type each call yields.",
             ),
@@ -169,7 +169,7 @@ fn main() {
 }"#,
             ),
             labelled(
-                "EXPLANATION",
+                "LET'S BREAK IT DOWN",
                 "Because `Countdown` implements `Iterator`, every adapter and consumer works on it for \
                  free. `map`, `collect`, `filter`, `for` — all built from the one `next` method you \
                  wrote. This is the payoff of the trait being small: one method to implement, the whole \
@@ -190,7 +190,7 @@ fn common_mistakes() -> SeedLesson {
         "The Ten Common Mistakes",
         vec![
             labelled(
-                "CONCEPT",
+                "THE IDEA",
                 "These are the mistakes that survive after the syntax is learned. Read them as a \
                  checklist against your own understanding.",
             ),

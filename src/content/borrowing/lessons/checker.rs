@@ -23,7 +23,7 @@ fn rules_as_a_system() -> SeedLesson {
         "Borrowing Rules as a System",
         vec![
             labelled(
-                "CONCEPT",
+                "THE IDEA",
                 "Stop here and reconstruct the rules yourself before reading on. No new syntax — just \
                  the system the previous twenty parts have been building, stated once as a whole.",
             ),
@@ -42,7 +42,7 @@ fn rules_as_a_system() -> SeedLesson {
                 "        IMMUTABLE BORROWS\n        ┌────┬────┬────┐\n        ↓    ↓    ↓\n        READ READ READ\n\n\nOR\n\n\n        MUTABLE BORROW\n              ↓\n            WRITE",
             ),
             labelled(
-                "EXPLANATION",
+                "LET'S BREAK IT DOWN",
                 "The rule exists to prevent one thing: unsafe aliasing and mutation. Two views of the \
                  same memory are fine while both only read. The trouble begins when at least one of \
                  them writes, because then the other view can observe a value changing underneath it, \
@@ -65,7 +65,7 @@ fn the_borrow_checker() -> SeedLesson {
         "The Borrow Checker",
         vec![
             labelled(
-                "CONCEPT",
+                "THE IDEA",
                 "The borrow checker is the part of the compiler that enforces the borrowing rules. You \
                  do not need to know its internals. You need its procedure, so you can run it in your \
                  head before asking the compiler to.",
@@ -85,7 +85,7 @@ fn the_borrow_checker() -> SeedLesson {
                 "fn main() {\n    let mut s = String::from(\"hello\");\n\n    let r = &s;\n\n    s.push_str(\"!\");\n\n    println!(\"{r}\");\n}",
             ),
             labelled(
-                "EXPLANATION",
+                "LET'S BREAK IT DOWN",
                 "Step one: `s` owns the `String`. Step two: `r` is created before the push. Step \
                  three: it is immutable. Step four: `r` is used by the `println!` *after* the push, so \
                  its region covers the write. Step five: there is an active reader. Step seven: the \
@@ -111,7 +111,7 @@ fn reading_errors() -> SeedLesson {
         "Reading Borrow Checker Errors",
         vec![
             labelled(
-                "CONCEPT",
+                "THE IDEA",
                 "Borrow-checker errors are not noise. Each one names a first borrow, a second access \
                  that conflicts, and the places where the borrows are used. Reading those three facts \
                  tells you the whole story.",
@@ -134,7 +134,7 @@ fn reading_errors() -> SeedLesson {
                 "The conflict is that `r1`'s region extends past the point where exclusive access was requested.",
             ]),
             labelled(
-                "EXPLANATION",
+                "LET'S BREAK IT DOWN",
                 "The error is almost a proof. It points at the immutable borrow, the mutable borrow, \
                  and the later use that forces the overlap. The fix is to end the immutable borrow \
                  before taking the mutable one — reorder the prints, or drop `r1` sooner.",
@@ -162,7 +162,7 @@ fn common_mistakes() -> SeedLesson {
         "Common Borrowing Mistakes",
         vec![
             labelled(
-                "CONCEPT",
+                "THE IDEA",
                 "These ten mistakes account for almost every wrong mental model about borrowing. Read \
                  them as a checklist against your own understanding, not as trivia.",
             ),
@@ -202,7 +202,7 @@ fn common_mistakes() -> SeedLesson {
                 "fn longest(a: String, b: String) -> String {\n    if a.len() >= b.len() { a } else { b }\n}\n\nfn main() {\n    let x = String::from(\"short\");\n    let y = String::from(\"longer\");\n\n    let best = longest(x.clone(), y.clone());\n\n    println!(\"{best} {x} {y}\");\n}",
             ),
             labelled(
-                "EXPLANATION",
+                "LET'S BREAK IT DOWN",
                 "This compiles, and the clones are a warning sign. `longest` never needs to own either \
                  string. If it returned a reference it could borrow both and clone nothing. The clone \
                  is not wrong — it is a decision the code does not explain.",

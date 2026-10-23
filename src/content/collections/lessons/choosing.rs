@@ -22,7 +22,7 @@ fn decision_table() -> SeedLesson {
         "The Decision Table",
         vec![
             labelled(
-                "CONCEPT",
+                "THE IDEA",
                 "Three containers, three questions. Ask what shape your question is and the container \
                  follows. This lesson is the decision, stated once.",
             ),
@@ -68,7 +68,7 @@ fn more_containers() -> SeedLesson {
         "`BTreeMap` and `VecDeque`",
         vec![
             labelled(
-                "CONCEPT",
+                "THE IDEA",
                 "Two more containers are worth knowing by name, even though you will not use them yet. \
                  `BTreeMap` is a map that keeps its keys sorted. `VecDeque` is a list that is fast at \
                  both ends.",
@@ -95,7 +95,7 @@ fn main() {
 }"#,
             ),
             labelled(
-                "EXPLANATION",
+                "LET'S BREAK IT DOWN",
                 "`VecDeque` supports `push_front`, `pop_front`, `push_back`, and `pop_back` all at \
                  the same cost. A `Vec` only does the back cheaply — pushing to the front shifts every \
                  item. A queue where you always take the oldest item is a `VecDeque`.",
@@ -115,7 +115,7 @@ fn performance_intuition() -> SeedLesson {
         "A Little Performance Intuition",
         vec![
             labelled(
-                "CONCEPT",
+                "THE IDEA",
                 "You do not need formal analysis to choose well. One idea is enough: some operations \
                  take the same time no matter how big the collection is, and others take longer as it \
                  grows.",
@@ -132,7 +132,7 @@ fn performance_intuition() -> SeedLesson {
                 ],
             ),
             labelled(
-                "EXPLANATION",
+                "LET'S BREAK IT DOWN",
                 "The word for 'instant' here is *constant time* — the cost does not grow with the \
                  collection. The word for the others is *linear* — the cost grows in step with the \
                  number of items. A `HashMap` lookup and a `Vec` scan can both find a song; on a \
@@ -154,7 +154,7 @@ fn common_mistakes() -> SeedLesson {
         "The Ten Common Mistakes",
         vec![
             labelled(
-                "CONCEPT",
+                "THE IDEA",
                 "These are the mistakes that survive long after the syntax is learned. Read them as a \
                  checklist against your own understanding.",
             ),

@@ -24,7 +24,7 @@ fn experiments() -> SeedLesson {
         "Borrowing Experiments",
         vec![
             labelled(
-                "CONCEPT",
+                "THE IDEA",
                 "These are change-one-line experiments. Read each program, predict what happens, then \
                  move the named line and predict again. The point is cause and effect: which change \
                  turns a rejection into an acceptance.",
@@ -34,7 +34,7 @@ fn experiments() -> SeedLesson {
                 "fn main() {\n    let mut value = String::from(\"hello\");\n\n    let r = &value;\n\n    value.push('!');\n\n    println!(\"{r}\");\n}",
             ),
             labelled(
-                "EXPLANATION",
+                "LET'S BREAK IT DOWN",
                 "Moving the print above the push ends the immutable borrow before the write, so the \
                  write no longer overlaps a live reader. The program is accepted. Nothing about the \
                  value changed — only the ordering of a use.",
@@ -45,7 +45,7 @@ fn experiments() -> SeedLesson {
                 "fn main() {\n    let mut value = String::from(\"hello\");\n\n    let r1 = &value;\n    let r2 = &value;\n\n    println!(\"{r1}\");\n    println!(\"{r2}\");\n}",
             ),
             labelled(
-                "EXPLANATION",
+                "LET'S BREAK IT DOWN",
                 "Turning `r2` into `&mut value` creates a reader and a writer whose regions overlap, \
                  because both are used at the end. The visit to Experiment 1 shows the escape: put a \
                  gap between them, or reorder so the reader finishes first. A mutable borrow is not \
@@ -57,7 +57,7 @@ fn experiments() -> SeedLesson {
                 "fn main() {\n    let mut value = String::from(\"hello\");\n\n    let r = &mut value;\n    r.push('!');\n\n    let r2 = &mut value;\n    r2.push('?');\n\n    println!(\"{value}\");\n}",
             ),
             labelled(
-                "EXPLANATION",
+                "LET'S BREAK IT DOWN",
                 "There are two mutable references, but they are not simultaneous. `r` is created, used \
                  once, and finished before `r2` exists. The rule is about overlap, not count. This is \
                  the same liveness idea from Part 08, now doing real work.",
@@ -77,7 +77,7 @@ fn detective() -> SeedLesson {
         "Borrowing Detective",
         vec![
             labelled(
-                "CONCEPT",
+                "THE IDEA",
                 "For every snippet, determine the owner, the references, whether each is immutable or \
                  mutable, when each borrow becomes active, when it ends, whether there is a conflict, \
                  and the minimal conceptual fix. 'It does not compile' is not an answer — say why.",
@@ -88,7 +88,7 @@ fn detective() -> SeedLesson {
                 "fn main() {\n    let mut name = String::from(\"Gus\");\n\n    let first = &name;\n    let second = &name;\n\n    println!(\"{first}\");\n    println!(\"{second}\");\n\n    let edit = &mut name;\n    edit.push('!');\n\n    println!(\"{name}\");\n}",
             ),
             labelled(
-                "EXPLANATION",
+                "LET'S BREAK IT DOWN",
                 "Compiles. The two immutable borrows finish at their prints, before `edit` is created. \
                  The mutable borrow then has the value to itself. Three borrows, no overlap.",
             ),
@@ -97,7 +97,7 @@ fn detective() -> SeedLesson {
                 "fn main() {\n    let mut name = String::from(\"Gus\");\n\n    let first = &name;\n\n    let edit = &mut name;\n    edit.push('!');\n\n    println!(\"{first}\");\n}",
             ),
             labelled(
-                "EXPLANATION",
+                "LET'S BREAK IT DOWN",
                 "Rejected. `first` is used after `edit` takes exclusive access, so the reader's region \
                  spans the write. The fix is to print `first` before the edit, or drop it first. The \
                  owner is `name` throughout; the conflict is between two borrows, not with the owner.",
@@ -123,7 +123,7 @@ fn design_decisions() -> SeedLesson {
         "Borrowing Design Decisions",
         vec![
             labelled(
-                "CONCEPT",
+                "THE IDEA",
                 "Borrowing is not only compiler law. It is an API-design vocabulary. The parameter \
                  type you choose tells every caller what your function does with their value.",
             ),
@@ -141,7 +141,7 @@ fn design_decisions() -> SeedLesson {
                 ],
             ),
             labelled(
-                "EXPLANATION",
+                "LET'S BREAK IT DOWN",
                 "The starting point is always 'does this function need to keep the value?'. If not, \
                  borrow. Then ask whether it must change the value; if so, `&mut`. Taking ownership \
                  when a borrow would do forces every caller to hand over something they wanted to keep, \
@@ -163,7 +163,7 @@ fn ownership_together() -> SeedLesson {
         "Borrowing and Ownership Together",
         vec![
             labelled(
-                "CONCEPT",
+                "THE IDEA",
                 "Bring the whole model together on one small program. Every line is either ownership, \
                  immutable borrowing, or mutable borrowing, and you should be able to name which.",
             ),
@@ -179,7 +179,7 @@ fn ownership_together() -> SeedLesson {
                 "At the end of `main`, `message` is still the sole owner and frees the String once.",
             ]),
             labelled(
-                "EXPLANATION",
+                "LET'S BREAK IT DOWN",
                 "Notice that ownership never left `main`. The two functions borrowed what they needed: \
                  one to read, one to write. Both borrows were temporary, and each ended before the \
                  next began. Nothing was cloned and nothing was moved.",
@@ -199,7 +199,7 @@ fn what_it_does_not_mean() -> SeedLesson {
         "What Borrowing Does NOT Mean",
         vec![
             labelled(
-                "CONCEPT",
+                "THE IDEA",
                 "These five misconceptions survive long after the syntax is learned. Correct them \
                  explicitly, because each one leads to a wrong prediction under pressure.",
             ),
@@ -235,12 +235,12 @@ fn final_model() -> SeedLesson {
         "Final Borrowing Mental Model",
         vec![
             labelled(
-                "CONCEPT",
+                "THE IDEA",
                 "One compact model to leave the module with. Each line is a question you can ask of \
                  unfamiliar code, in order.",
             ),
             table(
-                &["Concept", "The question it answers"],
+                &["Idea", "The question it answers"],
                 &[
                     &["Ownership", "who is responsible?"],
                     &["Immutable borrowing", "who may read?"],

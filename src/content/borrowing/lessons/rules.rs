@@ -17,7 +17,7 @@ fn immutable_borrowing() -> SeedLesson {
         "Immutable Borrowing",
         vec![
             labelled(
-                "CONCEPT",
+                "THE IDEA",
                 "An immutable borrow is a read-only view. `&s` gives you a reference you can look \
                  through but cannot write through. Because nothing can change, any number of readers \
                  can hold a view at the same time without getting in each other's way.",
@@ -36,7 +36,7 @@ fn immutable_borrowing() -> SeedLesson {
                 "             ┌── r1\n             │\ns ───────────┼── r2\n             │\n             ↓\n          \"hello\"",
             ),
             labelled(
-                "EXPLANATION",
+                "LET'S BREAK IT DOWN",
                 "Why is this safe? A reader cannot observe a change, because there are no changes to \
                  observe. Two readers of the same bytes will always agree, and neither can invalidate \
                  the other's view. That is the whole argument. It is not that Rust permits two \
@@ -62,7 +62,7 @@ fn mutable_borrowing() -> SeedLesson {
         "Mutable Borrowing",
         vec![
             labelled(
-                "CONCEPT",
+                "THE IDEA",
                 "A mutable borrow is a read-write view. `&mut s` gives you a reference you may write \
                  through. Because a write can be observed by anyone else looking at the same value, a \
                  mutable borrow needs exclusive access while it is active.",
@@ -119,7 +119,7 @@ fn the_core_rule() -> SeedLesson {
         "The Core Borrowing Rule",
         vec![
             labelled(
-                "CONCEPT",
+                "THE IDEA",
                 "Here is the rule the rest of the module is built on. At any point in time, a value \
                  may have either any number of immutable references, or exactly one mutable reference — \
                  but not both at once.",
@@ -143,7 +143,7 @@ fn the_core_rule() -> SeedLesson {
                 "fn main() {\n    let mut s = String::from(\"hello\");\n\n    let r1 = &s;\n    let r2 = &mut s;\n\n    println!(\"{r1} {r2}\");\n}",
             ),
             labelled(
-                "EXPLANATION",
+                "LET'S BREAK IT DOWN",
                 "The third program is rejected, and the reason is not bureaucracy. It has a reader \
                  (`r1`) and a writer (`r2`) alive over the same value at the same time. If `r2` is \
                  allowed to change the string, what does `r1` see? The reader can no longer make any \

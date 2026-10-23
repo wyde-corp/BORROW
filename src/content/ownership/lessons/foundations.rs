@@ -23,13 +23,13 @@ fn why_ownership_exists() -> SeedLesson {
         "What is Ownership",
         vec![
             labelled(
-                "CONCEPT",
+                "THE IDEA",
                 "Every running program needs memory. Not some of it — all of it. Every number you add, \
                  every string you hold, every struct you build lives somewhere in RAM. And that somewhere \
                  has to be handed back when you are finished, or your program slowly eats the machine alive.",
             ),
             labelled(
-                "EXPLANATION",
+                "LET'S BREAK IT DOWN",
                 "There are exactly two honest answers to the question 'what happens when we are done with \
                  this memory?'. The first is 'someone works it out while the program runs' — a garbage \
                  collector walks the heap, finds what nothing points at any more, and frees it. You pay for \
@@ -112,13 +112,13 @@ fn stack_and_heap() -> SeedLesson {
         "Memory: Stack and Heap",
         vec![
             labelled(
-                "CONCEPT",
+                "THE IDEA",
                 "Two regions, two different jobs. The stack is a stack of fixed-size slots tied to the \
                  call stack — cheap, automatic, rigid. The heap is general-purpose storage you can ask for \
                  at runtime — flexible, manual, and the reason ownership exists at all.",
             ),
             labelled(
-                "EXPLANATION",
+                "LET'S BREAK IT DOWN",
                 "Imagine a clerk's counter with a spike of forms behind it. Every form you take goes on top \
                  of the pile, and you hand forms back in exactly the reverse order — last one out, first \
                  one in. Nothing is labelled, nothing is searched for, and nothing is ever out of order. \
@@ -209,13 +209,13 @@ fn what_is_a_value() -> SeedLesson {
         "What Is a Value?",
         vec![
             labelled(
-                "CONCEPT",
+                "THE IDEA",
                 "The variable is not the data. It is a name that currently refers to a value. Once you \
                  separate the two, moves stop being mysterious — because only the *value* gets transferred, \
                  and the name is just a label that comes off it.",
             ),
             labelled(
-                "EXPLANATION",
+                "LET'S BREAK IT DOWN",
                 "You have written `let x = 5;` a hundred times and read it as \"x is five\". That is fine \
                  shorthand and it will quietly mislead you the moment the value is a `String`. Think of a \
                  mug. `s` is not the coffee and it is not the mug — `s` is the label stuck to the side of \
@@ -296,13 +296,13 @@ fn scope_and_lifetime() -> SeedLesson {
         "Scope and the Lifetime of a Variable",
         vec![
             labelled(
-                "CONCEPT",
+                "THE IDEA",
                 "A variable's lifetime starts where it is declared and ends where its scope ends. Rust \
                  knows exactly when that is, which means Rust knows exactly when you are finished with a \
                  value — without you telling it.",
             ),
             labelled(
-                "EXPLANATION",
+                "LET'S BREAK IT DOWN",
                 "Scope is not a Rust idea, it is a programming idea. What is new is that Rust *uses* it. \
                  In most languages the end of a scope means the compiler stops caring about a name. Here \
                  it means the value is cleaned up, right there, on that line, in that order, with no \
@@ -368,13 +368,13 @@ fn the_three_rules() -> SeedLesson {
         "The Three Ownership Rules",
         vec![
             labelled(
-                "CONCEPT",
+                "THE IDEA",
                 "Three rules. One owner per value. Ownership can move. Out of scope means gone. Every \
                  behaviour in this module is a consequence of these three sentences, and the compiler \
                  never enforces anything else about ownership.",
             ),
             labelled(
-                "EXPLANATION",
+                "LET'S BREAK IT DOWN",
                 "These read like trivia and they are not. They are the *whole* system. Rust does not have \
                  a hidden fourth rule about ownership that it will spring on you in module 6 — it has \
                  these three, and everything else you will learn is detail about how they apply. If a \

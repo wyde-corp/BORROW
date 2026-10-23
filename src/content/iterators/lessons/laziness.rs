@@ -21,7 +21,7 @@ fn nothing_until_a_consumer() -> SeedLesson {
         "Nothing Runs Until a Consumer",
         vec![
             labelled(
-                "CONCEPT",
+                "THE IDEA",
                 "Adapters are lazy. Calling `.filter(...)` or `.map(...)` builds a description; not one \
                  element moves until a consumer asks for the first value. This is the single most \
                  important thing to understand about iterators.",
@@ -81,7 +81,7 @@ fn main() {
 }"#,
             ),
             labelled(
-                "EXPLANATION",
+                "LET'S BREAK IT DOWN",
                 "You can prove the laziness yourself: put a `println!` inside the filter closure. Build \
                  the chain and print 'built' — the closure has not run. Not until `.collect()` (or \
                  `.count()`, or a `for` loop) does it run, once per element. The pipeline is a recipe \
@@ -102,7 +102,7 @@ fn infinite_iterators() -> SeedLesson {
         "Infinite Iterators",
         vec![
             labelled(
-                "CONCEPT",
+                "THE IDEA",
                 "Because adapters are lazy, an infinite iterator is safe — as long as you combine it with \
                  something that stops. `0..` goes on forever, `repeat(x)` never ends, `cycle()` repeats a \
                  list endlessly; `take` bounds them.",
@@ -127,7 +127,7 @@ fn infinite_iterators() -> SeedLesson {
 }"#,
             ),
             labelled(
-                "EXPLANATION",
+                "LET'S BREAK IT DOWN",
                 "`0..` is an infinite range — it would run forever on its own. `filter` is lazy, so it \
                  does nothing yet. `take(5)` is the bound: it pulls only until it has five values, then \
                  stops, and the source is never asked for a sixth. Infinite sources are useful when the \
@@ -156,7 +156,7 @@ fn driving_with_next() -> SeedLesson {
         "Driving with `next`",
         vec![
             labelled(
-                "CONCEPT",
+                "THE IDEA",
                 "When you want elements one at a time — not a whole collection — call `.next()` in a \
                  `while let` loop. This is the manual form of `for`, and it is what makes `next` the \
                  heart of the trait.",
@@ -192,7 +192,7 @@ while let Some(square) = it.next() {
 }"#,
             ),
             labelled(
-                "EXPLANATION",
+                "LET'S BREAK IT DOWN",
                 "`next()` returns `Option`, so `while let Some(x) = it.next()` runs until it is `None` — \
                  or until your own `break`. Because the source is infinite, the termination is in the \
                  body, which is exactly the control you sometimes need and a `for` loop does not offer.",
@@ -212,7 +212,7 @@ fn exhausted_once() -> SeedLesson {
         "An Iterator Is Exhausted Once",
         vec![
             labelled(
-                "CONCEPT",
+                "THE IDEA",
                 "An iterator is a *stream with a cursor*. Once a consumer has pulled it to `None`, it \
                  stays `None`. A second loop over the same iterator finds nothing — you need a fresh \
                  one from the collection.",
@@ -250,7 +250,7 @@ fn exhausted_once() -> SeedLesson {
 }"#,
             ),
             labelled(
-                "EXPLANATION",
+                "LET'S BREAK IT DOWN",
                 "The fix is to call `.iter()` again — each call returns a fresh iterator positioned at \
                  the start. The exhausted iterator in the previous example was a single cursor over the \
                  vector, and a cursor only moves forward. `by_ref` was the tool for handing the same \

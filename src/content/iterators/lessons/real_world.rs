@@ -14,7 +14,7 @@ fn assembled() -> SeedLesson {
         "The Log Analyzer, Assembled",
         vec![
             labelled(
-                "CONCEPT",
+                "THE IDEA",
                 "Here is the whole analyzer. Raw text is split into lines and parsed into entries; the \
                  entries are filtered, mapped, counted, and grouped — every question answered by an \
                  iterator rather than a hand-written index loop.",
@@ -97,7 +97,7 @@ fn main() {
 }"#,
             ),
             labelled(
-                "EXPLANATION",
+                "LET'S BREAK IT DOWN",
                 "Trace the pipeline, not the lines. `raw.lines()` is an iterator; `.filter_map(parse)` \
                  parses each line and drops the failures; `.collect()` runs it into a `Vec<LogEntry>`. \
                  Then `.filter(...).map(...).collect()` answers the first question. The two counting \
@@ -128,7 +128,7 @@ fn filtering_counting_top_n() -> SeedLesson {
         "Filtering, Counting, Top N",
         vec![
             labelled(
-                "CONCEPT",
+                "THE IDEA",
                 "The three questions the analyzer exists to answer, each as a pipeline. Notice that the \
                  chain describes the work and the consumer runs it.",
             ),
@@ -173,7 +173,7 @@ fn filtering_counting_top_n() -> SeedLesson {
 }"#,
             ),
             labelled(
-                "EXPLANATION",
+                "LET'S BREAK IT DOWN",
                 "Counting matches is `filter(...).count()` — no collection is built. Top N needs the \
                  values ordered first, so the code sorts and then `take(2)`; there is no single adapter \
                  for 'the N largest', and reaching for `sort` then `take` is the honest answer. The \

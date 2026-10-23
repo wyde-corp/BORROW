@@ -17,7 +17,7 @@ fn borrowing_and_scope() -> SeedLesson {
         "Borrowing and Scope",
         vec![
             labelled(
-                "CONCEPT",
+                "THE IDEA",
                 "A borrow does not last forever, and it does not necessarily last to the end of its \
                  enclosing `{}`. It lasts from the point it is created to the last point it is *used*. \
                  After that final use, the borrow is over and the owner is free again.",
@@ -37,7 +37,7 @@ fn borrowing_and_scope() -> SeedLesson {
                 "fn main() {\n    let mut s = String::from(\"hello\");\n\n    let r = &mut s;\n\n    println!(\"{r}\");\n\n    let r2 = &mut s;\n    r2.push('!');\n\n    println!(\"{s}\");\n}",
             ),
             labelled(
-                "EXPLANATION",
+                "LET'S BREAK IT DOWN",
                 "This compiles, even though `r` and `r2` both mutably borrow `s` in the same outer \
                  scope. They do not overlap: `r` is last used by the `println!`, and `r2` is created \
                  after that. The first borrow is finished before the second begins. Modern Rust \
@@ -67,7 +67,7 @@ fn multiple_immutable() -> SeedLesson {
         "Multiple Immutable Borrows",
         vec![
             labelled(
-                "CONCEPT",
+                "THE IDEA",
                 "Several immutable borrows are always allowed to coexist. The moment that becomes a \
                  problem is not when the references *exist*, but when a write is attempted while a \
                  reader is still going to be used.",
@@ -81,7 +81,7 @@ fn multiple_immutable() -> SeedLesson {
                 "fn main() {\n    let mut s = String::from(\"hello\");\n\n    let a = &s;\n    let b = &s;\n\n    s.push_str(\"!\");\n\n    println!(\"{a}\");\n    println!(\"{b}\");\n}",
             ),
             labelled(
-                "EXPLANATION",
+                "LET'S BREAK IT DOWN",
                 "The compiler rejects this because `a` and `b` are immutable borrows of `s`, and the \
                  direct mutation `s.push_str(\"!\")` needs mutable access to `s`. The borrows are still \
                  *used* by the `println!` calls after the mutation, so their regions overlap the write \
@@ -107,7 +107,7 @@ fn exclusivity() -> SeedLesson {
         "Mutable Borrowing and Exclusivity",
         vec![
             labelled(
-                "CONCEPT",
+                "THE IDEA",
                 "A mutable borrow is exclusive while it is active. Two mutable references to the same \
                  value cannot both be live and used at once — that would be two writers over one value, \
                  which is exactly the aliasing the rule forbids.",
@@ -116,7 +116,7 @@ fn exclusivity() -> SeedLesson {
                 "fn main() {\n    let mut s = String::from(\"hello\");\n\n    let r1 = &mut s;\n    let r2 = &mut s;\n\n    r1.push('!');\n    r2.push('?');\n\n    println!(\"{s}\");\n}",
             ),
             labelled(
-                "EXPLANATION",
+                "LET'S BREAK IT DOWN",
                 "`r1` and `r2` both claim mutable access to `s`, and both are used after the second is \
                  created. There is no point at which only one of them is live and the other finished, \
                  so the compiler cannot make either of them exclusive. The error names the second \

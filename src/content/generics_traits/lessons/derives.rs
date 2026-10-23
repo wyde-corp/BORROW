@@ -18,7 +18,7 @@ fn what_derive_does() -> SeedLesson {
         "What `#[derive]` Does",
         vec![
             labelled(
-                "CONCEPT",
+                "THE IDEA",
                 "`#[derive(Debug)]` is not magic. It tells the compiler to write an `impl Debug for \
                  ...` on your behalf, using a sensible default: print the type name and every field.",
             ),
@@ -60,7 +60,7 @@ fn main() {
 }"#,
             ),
             labelled(
-                "EXPLANATION",
+                "LET'S BREAK IT DOWN",
                 "The derive saves you from writing that impl by hand for every type. It only works when \
                  every field also implements the trait — you cannot `derive(Debug)` for a struct \
                  containing a type that is not `Debug`. When it fails, the error names the field that \
@@ -81,7 +81,7 @@ fn the_common_derives() -> SeedLesson {
         "The Common Derives",
         vec![
             labelled(
-                "CONCEPT",
+                "THE IDEA",
                 "A handful of derives cover almost everything a data type needs. Each one gives the type \
                  a specific ability, and each requires every field to have the same ability.",
             ),
@@ -127,7 +127,7 @@ fn main() {
 }"#,
             ),
             labelled(
-                "EXPLANATION",
+                "LET'S BREAK IT DOWN",
                 "Each derive is independent, and you list the ones you need. `Debug` and `Clone` are the \
                  most common; `PartialEq` comes next; `Hash` only when the type becomes a map key. \
                  Deriving a trait you do not use adds a little compile time and binary size, nothing \
@@ -148,7 +148,7 @@ fn when_derive_is_not_enough() -> SeedLesson {
         "When Derive Is Not Enough",
         vec![
             labelled(
-                "CONCEPT",
+                "THE IDEA",
                 "Derive gives a sensible default, but sometimes you want a specific one. A `Summary` \
                  trait has no derive at all — you must write the impl — and even for standard traits, \
                  you can write your own instead of deriving.",
@@ -179,7 +179,7 @@ fn main() {
 }"#,
             ),
             labelled(
-                "EXPLANATION",
+                "LET'S BREAK IT DOWN",
                 "There is no `#[derive(Display)]` because Rust cannot guess how you want a type shown \
                  to users. `Debug` has an obvious default; `Display` does not. So `Display` — and your \
                  own traits like `Summary` — are always written by hand. Derive only exists for traits \

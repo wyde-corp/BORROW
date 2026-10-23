@@ -1631,7 +1631,7 @@ Each project must contain:
 * Estimated time
 * Goal
 * Requirements
-* Concepts practiced
+* What you'll practice
 * Constraints
 * Example interaction/output where useful
 * Stretch goals

@@ -24,7 +24,7 @@ fn map() -> SeedLesson {
         "`map`",
         vec![
             labelled(
-                "CONCEPT",
+                "THE IDEA",
                 "`map` transforms each element. Give it a function or closure, and it returns a new \
                  iterator that yields the transformed values — one for one.",
             ),
@@ -53,7 +53,7 @@ fn main() {
 }"#,
             ),
             labelled(
-                "EXPLANATION",
+                "LET'S BREAK IT DOWN",
                 "`map` reads the closure once per element and yields the result. Here it turns each \
                  `&LogEntry` into a `&str` — the message. The count of elements is unchanged: `map` is \
                  one-in, one-out. To *remove* elements, that is `filter`.",
@@ -73,7 +73,7 @@ fn filter() -> SeedLesson {
         "`filter`",
         vec![
             labelled(
-                "CONCEPT",
+                "THE IDEA",
                 "`filter` keeps only the elements for which a closure returns `true`. It takes a \
                  predicate and returns an iterator that skips the rest.",
             ),
@@ -110,7 +110,7 @@ fn main() {
 }"#,
             ),
             labelled(
-                "EXPLANATION",
+                "LET'S BREAK IT DOWN",
                 "The closure receives a reference to each element and answers a yes/no question. `filter` \
                  keeps the `true`s and drops the `false`s. Unlike `map`, the number of elements can \
                  shrink — here from three entries to two errors.",
@@ -137,7 +137,7 @@ fn take_and_skip() -> SeedLesson {
         "`take` and `skip`",
         vec![
             labelled(
-                "CONCEPT",
+                "THE IDEA",
                 "`take(n)` yields at most the first `n` elements. `skip(n)` drops the first `n` and \
                  yields the rest. Together they slice a stream without building a `Vec` first.",
             ),
@@ -171,7 +171,7 @@ let after_first: Vec<&LogEntry> = entries
 }"#,
             ),
             labelled(
-                "EXPLANATION",
+                "LET'S BREAK IT DOWN",
                 "`take(3)` stops after three elements; it does not even look at the rest. `skip(1)` drops \
                  the first and yields the rest. Chaining `skip(1).take(2)` gives a window in the middle. \
                  These are the cheapest way to say 'the first N' or 'everything after the header'.",
@@ -191,7 +191,7 @@ fn enumerate() -> SeedLesson {
         "`enumerate`",
         vec![
             labelled(
-                "CONCEPT",
+                "THE IDEA",
                 "`enumerate` pairs each element with its index, yielding `(0, first), (1, second), …`. It \
                  replaces the index loop you would otherwise write by hand.",
             ),
@@ -223,7 +223,7 @@ fn main() {
 }"#,
             ),
             labelled(
-                "EXPLANATION",
+                "LET'S BREAK IT DOWN",
                 "`enumerate` yields a tuple `(usize, Item)`, so destructuring in the loop header gives \
                  both. The index starts at 0. This is the concise replacement for `for i in 0..v.len()` \
                  when the loop body needs the position as well as the value.",
@@ -243,7 +243,7 @@ fn zip_and_chain() -> SeedLesson {
         "`zip` and `chain`",
         vec![
             labelled(
-                "CONCEPT",
+                "THE IDEA",
                 "`zip` walks two iterators together, yielding pairs until the shorter runs out. `chain` \
                  glues two iterators end to end, yielding all of the first, then all of the second.",
             ),
@@ -274,7 +274,7 @@ let joined: Vec<i32> = vec![1, 2].into_iter().chain(vec![3, 4]).collect();"#,
 }"#,
             ),
             labelled(
-                "EXPLANATION",
+                "LET'S BREAK IT DOWN",
                 "`zip` pairs element 0 with element 0, element 1 with element 1, and stops when either \
                  side is exhausted — so a longer side is truncated. `chain` runs the second iterator \
                  after the first. One combines corresponding positions; the other concatenates.",
@@ -301,7 +301,7 @@ fn filter_map_and_flat_map() -> SeedLesson {
         "`filter_map` and `flat_map`",
         vec![
             labelled(
-                "CONCEPT",
+                "THE IDEA",
                 "`filter_map` filters and transforms in one step: the closure returns an `Option`, and \
                  only the `Some`s are kept. `flat_map` maps each element to an iterator and flattens \
                  the results into one stream.",
@@ -340,7 +340,7 @@ let words: Vec<&str> = lines.iter().____(|line| line.split_whitespace()).collect
 }"#,
             ),
             labelled(
-                "EXPLANATION",
+                "LET'S BREAK IT DOWN",
                 "`filter_map` is the common 'parse and drop failures' shape: return `Option` from the \
                  closure and let the adapter discard the `None`s. `flat_map` takes a closure returning \
                  an iterator and splices those iterators together — so a list of lines becomes a single \

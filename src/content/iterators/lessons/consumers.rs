@@ -24,7 +24,7 @@ fn collect() -> SeedLesson {
         "`collect`",
         vec![
             labelled(
-                "CONCEPT",
+                "THE IDEA",
                 "`collect` runs a pipeline and gathers the results into a collection. Which collection \
                  is decided by the type you ask for, so the target usually appears in an annotation.",
             ),
@@ -62,7 +62,7 @@ fn main() {
 }"#,
             ),
             labelled(
-                "EXPLANATION",
+                "LET'S BREAK IT DOWN",
                 "`collect` is one consumer with many targets. Ask for a `Vec` and it builds a vector; ask \
                  for a `HashSet` and it de-duplicates; ask for a `String` or a `HashMap` and it builds \
                  those. The type on the binding is what tells `collect` which constructor to call — the \
@@ -83,7 +83,7 @@ fn sum_and_product() -> SeedLesson {
         "`sum` and `product`",
         vec![
             labelled(
-                "CONCEPT",
+                "THE IDEA",
                 "`sum` adds every element; `product` multiplies them. Both consume the iterator and give \
                  one number, and both work for any numeric type.",
             ),
@@ -116,7 +116,7 @@ fn main() {
 }"#,
             ),
             labelled(
-                "EXPLANATION",
+                "LET'S BREAK IT DOWN",
                 "`sum` is exactly the `total += ...` you would have written in a loop, but the accumulator \
                  is handled for you. It needs a starting value, which comes from the type — hence the \
                  annotation on `total`. `product` is the multiplicative twin, used far less often but \
@@ -137,7 +137,7 @@ fn count_any_all() -> SeedLesson {
         "`count`, `any`, `all`",
         vec![
             labelled(
-                "CONCEPT",
+                "THE IDEA",
                 "Three consumers answer questions about a whole stream. `count` says how many elements \
                  there are; `any` says whether at least one passes; `all` says whether every one does.",
             ),
@@ -173,7 +173,7 @@ fn main() {
 }"#,
             ),
             labelled(
-                "EXPLANATION",
+                "LET'S BREAK IT DOWN",
                 "`count` consumes the whole iterator. `any` and `all` take a predicate and stop early \
                  when the outcome is settled. All three turn a pipeline into a single answer — a number \
                  or a `bool` — and none of them build a collection.",
@@ -200,7 +200,7 @@ fn find_and_position() -> SeedLesson {
         "`find` and `position`",
         vec![
             labelled(
-                "CONCEPT",
+                "THE IDEA",
                 "`find` returns the first element that passes, wrapped in `Option`. `position` returns \
                  its index instead. Both stop the moment they find it.",
             ),
@@ -233,7 +233,7 @@ fn main() {
 }"#,
             ),
             labelled(
-                "EXPLANATION",
+                "LET'S BREAK IT DOWN",
                 "`find` returns `Option<&LogEntry>` — the same 'might be missing' type from Module 09 — \
                  so you handle the none case with `if let`. `position` returns `Option<usize>`: the index \
                  of the first match, or `None`. Both short-circuit, so on a huge log you stop at the \
@@ -254,7 +254,7 @@ fn fold() -> SeedLesson {
         "`fold`",
         vec![
             labelled(
-                "CONCEPT",
+                "THE IDEA",
                 "`fold` is the general consumer behind `sum`, `count`, and almost everything else. It \
                  carries an accumulator from element to element: start with a value, and for each \
                  element produce the next accumulator.",
@@ -304,7 +304,7 @@ fn main() {
 }"#,
             ),
             labelled(
-                "EXPLANATION",
+                "LET'S BREAK IT DOWN",
                 "Read `fold` as two arguments: the starting accumulator (`0`) and a closure that takes \
                  the accumulator-so-far and the current element and returns the new accumulator. The \
                  second example folds strings into one — joining with a comma — which no built-in \
@@ -333,7 +333,7 @@ fn picking() -> SeedLesson {
         "`max_by`, `min_by`, `last`",
         vec![
             labelled(
-                "CONCEPT",
+                "THE IDEA",
                 "Some consumers pick one element out. `max_by` and `min_by` take a comparison and return \
                  the largest or smallest, wrapped in `Option`. `last` returns the final element, also as \
                  an `Option`.",
@@ -368,7 +368,7 @@ fn main() {
 }"#,
             ),
             labelled(
-                "EXPLANATION",
+                "LET'S BREAK IT DOWN",
                 "`max_by` takes a comparator — `a.cmp(b)` — and returns `Option<&LogEntry>`. Use `Option` \
                  because an empty iterator has no maximum. `last` consumes the iterator and returns the \
                  final element, or `None` if it was empty. Both finish with the `Option` handling you \

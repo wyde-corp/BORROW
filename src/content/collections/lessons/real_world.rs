@@ -16,7 +16,7 @@ fn assembled() -> SeedLesson {
         "The Playlist, Assembled",
         vec![
             labelled(
-                "CONCEPT",
+                "THE IDEA",
                 "Here is the whole program as it stands. A `Vec<Song>` keeps the playlist in order. A \
                  method builds a `HashMap` index from artist to titles. Another collects the distinct \
                  genres into a `HashSet`. Each container is chosen for the question it answers.",
@@ -97,7 +97,7 @@ fn main() {
 }"#,
             ),
             labelled(
-                "EXPLANATION",
+                "LET'S BREAK IT DOWN",
                 "Trace the containers, not the lines. `songs` is a `Vec` because order matters and \
                  we ask 'what is in the playlist'. `by_artist` is a `HashMap` because we ask 'which \
                  songs are by this artist'. `genres` is a `HashSet` because we ask 'which genres \
@@ -127,7 +127,7 @@ fn searching_and_reporting() -> SeedLesson {
         "Searching and Reporting",
         vec![
             labelled(
-                "CONCEPT",
+                "THE IDEA",
                 "Two more methods make the playlist useful: finding one song by title, and reporting \
                  the artist index. Both borrow the playlist and return references, so nothing is \
                  copied.",
@@ -181,7 +181,7 @@ fn main() {
 }"#,
             ),
             labelled(
-                "EXPLANATION",
+                "LET'S BREAK IT DOWN",
                 "`find` scans the `Vec` because it is an ordered list and we are searching once — \
                  fine for a playlist. The result is `Option<&Song>`, borrowed from the playlist. \
                  `by_artist` builds a map whose keys and values borrow from the songs, so the index \
@@ -233,7 +233,7 @@ fn change_the_design() -> SeedLesson {
         "Change the Design",
         vec![
             labelled(
-                "CONCEPT",
+                "THE IDEA",
                 "Reading the program proves you can follow Rust. Changing it proves you can write it. \
                  Work through these, deciding the container each one needs.",
             ),

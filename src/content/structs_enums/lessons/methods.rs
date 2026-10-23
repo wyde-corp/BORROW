@@ -26,7 +26,7 @@ fn methods_with_impl() -> SeedLesson {
         "Methods with `impl`",
         vec![
             labelled(
-                "CONCEPT",
+                "THE IDEA",
                 "A method is a function that belongs to a type. You attach it in an `impl` block: \
                  `impl Pizza { fn price(&self) -> u32 { … } }`. Inside, `self` is the value the method \
                  was called on.",
@@ -80,7 +80,7 @@ fn main() {
 }"#,
             ),
             labelled(
-                "EXPLANATION",
+                "LET'S BREAK IT DOWN",
                 "`pizza.topping_total()` is sugar for `Pizza::topping_total(&pizza)`. The first \
                  parameter `&self` is what makes it a method rather than a free function, and it is \
                  why you call it with a dot. The method borrows the pizza, sums the fields, and gives \
@@ -101,7 +101,7 @@ fn receivers() -> SeedLesson {
         "The Three Receivers",
         vec![
             labelled(
-                "CONCEPT",
+                "THE IDEA",
                 "A method's first parameter is always some form of `self`, and there are three: \
                  `&self` to read, `&mut self` to change, and `self` to take ownership. Choosing the \
                  right one is the method-level version of the borrowing decision you already know.",
@@ -173,7 +173,7 @@ fn associated_functions() -> SeedLesson {
         "Associated Functions",
         vec![
             labelled(
-                "CONCEPT",
+                "THE IDEA",
                 "A function in an `impl` block with no `self` is an *associated function*. It belongs \
                  to the type but is called as `Pizza::new(...)`, not `pizza.new(...)`. Constructors \
                  are the classic example.",
@@ -220,7 +220,7 @@ let b = Pizza____();"#,
                 ],
             ),
             labelled(
-                "EXPLANATION",
+                "LET'S BREAK IT DOWN",
                 "`Pizza::new` is a convention many Rust types follow, not a keyword. It returns a \
                  `Pizza`. `Pizza::margherita` is a second constructor that names a common \
                  configuration. Both are ordinary associated functions — the only difference from a \
@@ -240,7 +240,7 @@ fn multiple_impls() -> SeedLesson {
         "Multiple `impl` Blocks",
         vec![
             labelled(
-                "CONCEPT",
+                "THE IDEA",
                 "A type may have more than one `impl` block, and there is no behavioural difference. \
                  They are a way to organise methods by intention.",
             ),
@@ -269,7 +269,7 @@ fn main() {
 }"#,
             ),
             labelled(
-                "EXPLANATION",
+                "LET'S BREAK IT DOWN",
                 "Splitting `impl` blocks changes nothing the compiler sees; the methods all attach to \
                  `Pizza`. The usual reasons to split are to keep constructors together, or — in later \
                  modules — to separate methods provided by different traits. Do not split just to \
@@ -290,7 +290,7 @@ fn derive_debug() -> SeedLesson {
         "Deriving `Debug`",
         vec![
             labelled(
-                "CONCEPT",
+                "THE IDEA",
                 "You cannot print a struct with `{}` — Rust does not know how you would like it \
                  formatted. `{}` is for types with a human display; `{:?}` is the developer view, and \
                  `#[derive(Debug)]` gives your struct one.",
@@ -351,7 +351,7 @@ fn derive_clone_eq() -> SeedLesson {
         "Deriving `Clone` and `PartialEq`",
         vec![
             labelled(
-                "CONCEPT",
+                "THE IDEA",
                 "Two more derives earn their place quickly: `Clone` lets you copy a struct on purpose, \
                  and `PartialEq` lets `==` compare two of them. Both are opt-in, and both only work \
                  when every field supports them.",
@@ -373,7 +373,7 @@ fn main() {
 }"#,
             ),
             labelled(
-                "EXPLANATION",
+                "LET'S BREAK IT DOWN",
                 "Without `Clone`, `let b = a;` would move and `a` would be gone. With it, \
                  `a.clone()` produces a second, independent value, and `a` is still usable. Without \
                  `PartialEq`, `a == b` is a compile error even though the fields match; the derive \
@@ -418,7 +418,7 @@ fn consuming_methods() -> SeedLesson {
         "Methods That Consume `self`",
         vec![
             labelled(
-                "CONCEPT",
+                "THE IDEA",
                 "A method whose first parameter is `self` — no ampersand — takes ownership of the \
                  value. The caller cannot use it afterwards. This is right when the method transforms \
                  the value into a new one and the old one has no further use.",
@@ -450,7 +450,7 @@ fn main() {
 }"#,
             ),
             labelled(
-                "EXPLANATION",
+                "LET'S BREAK IT DOWN",
                 "`with_cheese(mut self)` takes the pizza, adds a topping, and returns the same pizza \
                  back so calls can be chained. Because each call consumes and returns, the original \
                  binding is replaced by the result. This builder style reads top to bottom and never \
@@ -475,7 +475,7 @@ fn main() {
 }"#,
             ),
             labelled(
-                "EXPLANATION",
+                "LET'S BREAK IT DOWN",
                 "`into_size(self)` moved the whole pizza in, so `pizza` is consumed and `pizza.size` \
                  afterwards is a use-after-move. The name `into_` signals consumption by convention; \
                  the receiver `self` is what enforces it. If the size were not needed enough to \

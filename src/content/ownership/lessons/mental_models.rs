@@ -24,12 +24,12 @@ fn mental_models() -> SeedLesson {
         "Ownership Mental Models",
         vec![
             labelled(
-                "CONCEPT",
+                "THE IDEA",
                 "Three pictures that answer most ownership questions faster than the rules do. Rules \
                  tell you what is allowed. Models tell you what is happening.",
             ),
             labelled(
-                "EXPLANATION",
+                "LET'S BREAK IT DOWN",
                 "You now have the facts. What follows is the compression — three ways of holding the same \
                  idea in your head so you can reach for them when the compiler says something you did not \
                  expect. Pick whichever one clicks. Most people end up using all three without noticing.",
@@ -101,13 +101,13 @@ fn myths() -> SeedLesson {
         "Rust Ownership Myths",
         vec![
             labelled(
-                "CONCEPT",
+                "THE IDEA",
                 "Eight things people are confident about ownership that are not true. Most of them are \
                  half-true, and a half-truth is worse than a lie because it survives contact with code \
                  until the day it does not.",
             ),
             labelled(
-                "EXPLANATION",
+                "LET'S BREAK IT DOWN",
                 "You will meet all eight of these within a month of writing Rust, usually from someone \
                  who learned it last week. Having them written down means you can check the next one you \
                  hear against a list instead of against a feeling.",
@@ -196,13 +196,13 @@ fn compiler_errors() -> SeedLesson {
         "Common Ownership Compiler Errors",
         vec![
             labelled(
-                "CONCEPT",
+                "THE IDEA",
                 "Five errors cover almost every ownership mistake you will make. Each one is a \
                  statement about a *rule*, not a random complaint, and once you can read them that way you \
                  will not need to look them up.",
             ),
             labelled(
-                "EXPLANATION",
+                "LET'S BREAK IT DOWN",
                 "A good error message tells you the rule, the evidence, and the fix. Rust's ownership \
                  errors are unusually good at this — they annotate the move and then annotate the use, and \
                  draw you a line between them. The habit worth building is reading it *bottom-up* from \
@@ -319,12 +319,12 @@ fn debugging_exercises() -> SeedLesson {
         "Ownership Debugging Exercises",
         vec![
             labelled(
-                "CONCEPT",
+                "THE IDEA",
                 "Predicting the compiler is a trainable skill, and like any skill it needs reps in the \
                  form that matters: a small program, an honest guess, then a check. Here is the procedure.",
             ),
             labelled(
-                "EXPLANATION",
+                "LET'S BREAK IT DOWN",
                 "Everything so far has been recognition — someone showed you a moved value and you worked \
                  out what happened. This lesson is generation: you produce the outcome, and then check. \
                  The gap between your prediction and the compiler is the useful part. If you are right, \
@@ -390,13 +390,13 @@ fn what_you_can_do_now() -> SeedLesson {
         "What You Can Do Now",
         vec![
             labelled(
-                "CONCEPT",
+                "THE IDEA",
                 "Ownership is not finished until you can use it to *predict* rather than to react. This \
                  is the whole module in one checklist, and the only honest way to use it is to try each \
                  item on code you have not seen before.",
             ),
             labelled(
-                "EXPLANATION",
+                "LET'S BREAK IT DOWN",
                 "You arrived knowing that Rust has ownership. You are leaving able to look at a line of \
                  code and say what will happen to a value before running it — and, more usefully, say why \
                  the language is built this way. The difference is the difference between memorising a \

@@ -5,6 +5,12 @@ name: release
 # `app.yml` is the gate for every push; this runs on version tags (or by
 # hand), builds in release mode, packages per platform, and attaches the
 # artifacts plus their checksums to the GitHub release.
+#
+# Sign-in and billing are baked at compile time from repository variables
+# (Settings → Secrets and variables → Actions → Variables):
+# BORROW_CONVEX_SITE_URL, BORROW_GOOGLE_CLIENT_ID, BORROW_GITHUB_CLIENT_ID.
+# The workflow refuses to build if any is missing — a tagged release must
+# never ship with sign-in unconfigured.
 
 on:
   push:
@@ -18,6 +24,10 @@ jobs:
   package:
     name: package · ${{ matrix.os }}
     runs-on: ${{ matrix.os }}
+    env:
+      BORROW_CONVEX_SITE_URL: ${{ vars.BORROW_CONVEX_SITE_URL }}
+      BORROW_GOOGLE_CLIENT_ID: ${{ vars.BORROW_GOOGLE_CLIENT_ID }}
+      BORROW_GITHUB_CLIENT_ID: ${{ vars.BORROW_GITHUB_CLIENT_ID }}
     strategy:
       # One platform failing must not hide the others' artifacts.
       fail-fast: false
@@ -32,6 +42,19 @@ jobs:
 
     steps:
       - uses: actions/checkout@v4
+
+      # Fail before the long build, not after it.
+      - name: Require baked sign-in configuration
+        shell: bash
+        run: |
+          missing=0
+          for v in BORROW_CONVEX_SITE_URL BORROW_GOOGLE_CLIENT_ID BORROW_GITHUB_CLIENT_ID; do
+            if [ -z "${!v}" ]; then
+              echo "::error::$v is unset — add it as a repository variable before releasing"
+              missing=1
+            fi
+          done
+          exit "$missing"
 
       - name: Install Linux GUI build dependencies
         if: runner.os == 'Linux'

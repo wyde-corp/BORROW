@@ -29,7 +29,7 @@ fn the_scan_problem() -> SeedLesson {
         "The Scan Problem",
         vec![
             labelled(
-                "CONCEPT",
+                "THE IDEA",
                 "Finding a song by title in a `Vec` means walking the list and checking each one. It \
                  works, and it is the wrong tool once you do it often. The problem is not speed yet \
                  — it is that the code is doing a *lookup* and the data is not shaped for it.",
@@ -63,7 +63,7 @@ fn main() {
 }"#,
             ),
             labelled(
-                "EXPLANATION",
+                "LET'S BREAK IT DOWN",
                 "The `for` loop scans from the front and stops when it finds a match. Ask for the \
                  last item and it has to look at all of them. Now imagine asking 'which songs are by \
                  Radiohead?' or 'how many songs do I have?' — each question means another scan. The \
@@ -88,7 +88,7 @@ fn creating_a_map() -> SeedLesson {
         "Creating a `HashMap` and Inserting",
         vec![
             labelled(
-                "CONCEPT",
+                "THE IDEA",
                 "A `HashMap<K, V>` stores values under keys. You create it with `HashMap::new()` and \
                  add entries with `insert(key, value)`. Reading it back is `get`.",
             ),
@@ -123,7 +123,7 @@ fn main() {
 }"#,
             ),
             labelled(
-                "EXPLANATION",
+                "LET'S BREAK IT DOWN",
                 "The type is `HashMap<String, u32>` — keys are owned strings, values are durations. \
                  `insert` takes the key and value by value, so the map owns both. `get(\"Nude\")` \
                  looks up by `&str` and returns `Option<&u32>`.",
@@ -143,7 +143,7 @@ fn looking_up() -> SeedLesson {
         "Looking Up with `get`",
         vec![
             labelled(
-                "CONCEPT",
+                "THE IDEA",
                 "`map.get(&key)` returns `Option<&V>`: `Some` if the key is present, `None` if it is \
                  not. `get_mut` does the same and hands back a mutable reference, so you can change \
                  the stored value in place.",
@@ -208,7 +208,7 @@ fn key_ownership() -> SeedLesson {
         "Who Owns the Keys and Values",
         vec![
             labelled(
-                "CONCEPT",
+                "THE IDEA",
                 "A `HashMap` owns its keys and values. When you `insert` a `String`, that string \
                  moves into the map. But you can look it up with a borrowed `&str`, so you do not \
                  need to build a `String` just to ask a question.",
@@ -242,7 +242,7 @@ fn main() {
 }"#,
             ),
             labelled(
-                "EXPLANATION",
+                "LET'S BREAK IT DOWN",
                 "`insert(key, value)` takes both by value, so the map owns them. `get` takes a \
                  reference, so a `&str` is enough even though the key is a `String` — that is why \
                  `durations.get(\"Nude\")` compiles without `String::from`. The map is the owner; \
@@ -261,7 +261,7 @@ fn main() {
 }"#,
             ),
             labelled(
-                "EXPLANATION",
+                "LET'S BREAK IT DOWN",
                 "Using `key` after inserting it is a use-after-move — Module 05 again. If you need \
                  the key afterwards, look up with a `&str`, or clone before inserting (and be ready \
                  to justify the clone).",
@@ -275,7 +275,7 @@ fn entry_api() -> SeedLesson {
         "The `entry` API",
         vec![
             labelled(
-                "CONCEPT",
+                "THE IDEA",
                 "The common pattern 'insert this key if it is not there, then give me the value' has \
                  a dedicated method: `entry`. It looks the key up once and lets you decide what to do \
                  if it is missing.",
@@ -308,7 +308,7 @@ fn main() {
 }"#,
             ),
             labelled(
-                "EXPLANATION",
+                "LET'S BREAK IT DOWN",
                 "`entry(artist)` returns a handle to that key's slot. `or_insert(0)` says 'if the slot \
                  is empty, put `0` there' and returns a `&mut u32` to the value — whether it was just \
                  inserted or already present. `*count += 1` then increments it. One lookup, no \
@@ -350,7 +350,7 @@ fn iterating_a_map() -> SeedLesson {
         "Iterating a `HashMap`",
         vec![
             labelled(
-                "CONCEPT",
+                "THE IDEA",
                 "Iterating a map yields `(key, value)` pairs, but the order is not guaranteed. The \
                  map stores entries by hash, not by when you added them, so do not depend on any \
                  particular sequence.",
@@ -393,7 +393,7 @@ fn main() {
 }"#,
             ),
             labelled(
-                "EXPLANATION",
+                "LET'S BREAK IT DOWN",
                 "`&durations` borrows the map, and each item is a `(&K, &V)` pair — here `(&String, \
                  &u32)`. Destructuring in the loop header binds the two. The map is untouched, and \
                  you can still use it after the loop.",
@@ -413,7 +413,7 @@ fn counting() -> SeedLesson {
         "Counting with a Map",
         vec![
             labelled(
-                "CONCEPT",
+                "THE IDEA",
                 "Counting is the canonical map exercise: for each item, add one to its running total. \
                  The `entry` API makes it three lines and impossible to get wrong.",
             ),
@@ -450,7 +450,7 @@ fn main() {
 }"#,
             ),
             labelled(
-                "EXPLANATION",
+                "LET'S BREAK IT DOWN",
                 "The loop takes one genre at a time. `entry(genre).or_insert(0)` gives a mutable \
                  reference to that genre's count, creating it as `0` on first sight. The `+= 1` \
                  increments through the reference. After the loop, the map holds one entry per \
@@ -471,7 +471,7 @@ fn map_of_vectors() -> SeedLesson {
         "A Map of Vectors",
         vec![
             labelled(
-                "CONCEPT",
+                "THE IDEA",
                 "A map's value can be any type, including a `Vec`. An index from artist to that \
                  artist's songs is `HashMap<String, Vec<String>>` — a lookup whose result is a list.",
             ),
@@ -517,7 +517,7 @@ fn main() {
 }"#,
             ),
             labelled(
-                "EXPLANATION",
+                "LET'S BREAK IT DOWN",
                 "`or_insert_with(Vec::new)` is like `or_insert(0)` for a count, but it builds a fresh \
                  empty vector only when the key is missing. Then `.push` appends. The result is a map \
                  from artist to all their titles — a lookup that returns a list.",
@@ -545,7 +545,7 @@ fn updating_removing() -> SeedLesson {
         "Updating and Removing Entries",
         vec![
             labelled(
-                "CONCEPT",
+                "THE IDEA",
                 "Inserting a key that already exists replaces the old value. To ask whether a key is \
                  present without changing anything, use `contains_key`. To take an entry out, use \
                  `remove`, which returns the value if there was one.",
@@ -578,7 +578,7 @@ fn main() {
                 ],
             ),
             labelled(
-                "EXPLANATION",
+                "LET'S BREAK IT DOWN",
                 "`insert` is 'put this value under this key', replacing whatever was there. \
                  `contains_key` borrows and returns a `bool` without touching the map. `remove` takes \
                  the key, deletes the entry, and returns `Option<V>` — `Some(old_value)` if it \
@@ -599,7 +599,7 @@ fn when_order_matters() -> SeedLesson {
         "When Order Matters",
         vec![
             labelled(
-                "CONCEPT",
+                "THE IDEA",
                 "`HashMap` gives no ordering. If you need entries kept sorted by key, Rust has \
                  `BTreeMap`. It has the same methods, and iterates in key order.",
             ),
@@ -619,7 +619,7 @@ fn main() {
 }"#,
             ),
             labelled(
-                "EXPLANATION",
+                "LET'S BREAK IT DOWN",
                 "The same code with `BTreeMap` prints the songs in alphabetical key order — always. \
                  The cost is that lookups are a little slower in theory, because the map keeps its \
                  keys sorted rather than placing them by hash. For a beginner program, either is \

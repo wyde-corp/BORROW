@@ -22,7 +22,7 @@ fn choosing_the_shape() -> SeedLesson {
         "`match`, `if let`, `let else`",
         vec![
             labelled(
-                "CONCEPT",
+                "THE IDEA",
                 "The three shapes for opening an `Option` or `Result` are the same three from Module \
                  07. Which you reach for is decided by how much the failing case matters.",
             ),
@@ -71,7 +71,7 @@ fn main() {
 }"#,
             ),
             labelled(
-                "EXPLANATION",
+                "LET'S BREAK IT DOWN",
                 "`let Some(task) = ... else { return ... };` binds `task` on success and bails out on \
                  failure, so the rest of the function reads at one indent level. Compare it to the \
                  `match` version, where the real work sits inside an arm. Both are correct; `let else` \
@@ -92,7 +92,7 @@ fn early_return() -> SeedLesson {
         "Early Return versus Nesting",
         vec![
             labelled(
-                "CONCEPT",
+                "THE IDEA",
                 "A chain of fallible steps written with `match` nests one level per step. The same \
                  chain written with `?` stays flat. Flatter code is easier to read, and `?` is the tool \
                  that gets you there.",
@@ -154,7 +154,7 @@ fn main() {
 }"#,
             ),
             labelled(
-                "EXPLANATION",
+                "LET'S BREAK IT DOWN",
                 "Without `?`, each call would be a `match` with an `Err` arm that returns, and the \
                  success path would sink one level deeper per step. With `?`, the fallible steps read \
                  as a list, and all the failure handling happens in one line each. This is why `?` is \
@@ -175,7 +175,7 @@ fn several_errors() -> SeedLesson {
         "Several Errors in One Function",
         vec![
             labelled(
-                "CONCEPT",
+                "THE IDEA",
                 "A function can fail in more than one way, and `?` handles each of them — as long as \
                  they all convert into the function's one error type. Mixing an IO error and a parse \
                  error in a single function is the normal case, and `From` is what makes it work.",
@@ -211,7 +211,7 @@ fn main() {
 }"#,
             ),
             labelled(
-                "EXPLANATION",
+                "LET'S BREAK IT DOWN",
                 "Two different failures travel out of one function. The IO error converts via `From` at \
                  the first `?`. The parse error does not come with a `From`, so it is converted by \
                  hand with `map_err`. Both come out as `TodoError`, which is what lets one `match` at \
@@ -233,7 +233,7 @@ fn first_failure() -> SeedLesson {
         "Stopping at the First Failure",
         vec![
             labelled(
-                "CONCEPT",
+                "THE IDEA",
                 "When you map over a list of fallible steps, `collect` can gather them into a *single* \
                  `Result`: `Ok` with all the values, or the first `Err`. One line turns a pile of \
                  results into a result of a pile.",
@@ -277,7 +277,7 @@ fn main() {
 }"#,
             ),
             labelled(
-                "EXPLANATION",
+                "LET'S BREAK IT DOWN",
                 "The `collect` target is `Result<Vec<u32>, String>`, not `Vec<Result<...>>`. Given that \
                  target, `collect` keeps collecting while the results are `Ok` and returns the first \
                  `Err` immediately. The type of the annotation is doing the work, exactly as it did \

@@ -25,7 +25,7 @@ fn match_basics() -> SeedLesson {
         "`match` Basics",
         vec![
             labelled(
-                "CONCEPT",
+                "THE IDEA",
                 "A `match` takes a value and a list of arms. Each arm is a pattern, `=>`, and the \
                  code to run if the pattern fits. Exactly one arm runs, because the value is exactly \
                  one variant.",
@@ -51,7 +51,7 @@ fn main() {
 }"#,
             ),
             labelled(
-                "EXPLANATION",
+                "LET'S BREAK IT DOWN",
                 "Read each arm as a question: 'is it `Size::Small`? then 800.' The patterns use the \
                  variant names with the enum prefix. Because `price` returns a `u32`, each arm must \
                  produce a `u32`, and all three do. The result of the chosen arm becomes the result \
@@ -80,7 +80,7 @@ fn matching_variant_data() -> SeedLesson {
         "Matching Variant Data",
         vec![
             labelled(
-                "CONCEPT",
+                "THE IDEA",
                 "When a variant carries data, the pattern can pull that data out into a name. \
                  `OrderStatus::Preparing { since_minutes }` both checks the variant and binds the \
                  value inside it.",
@@ -131,7 +131,7 @@ fn main() {
 }"#,
             ),
             labelled(
-                "EXPLANATION",
+                "LET'S BREAK IT DOWN",
                 "Matching by reference (`status: &OrderStatus`) means the bound `since_minutes` is a \
                  copy, because `u32` is `Copy`. If the variant held a `String`, the pattern would \
                  need `ref` or the match would move — a detail Module 06 has prepared you for.",
@@ -150,7 +150,7 @@ fn exhaustiveness() -> SeedLesson {
         "Exhaustiveness",
         vec![
             labelled(
-                "CONCEPT",
+                "THE IDEA",
                 "A `match` must cover every possible variant. Miss one and the program does not \
                  compile. This is the feature that makes enums safe: you cannot forget a case, and \
                  adding a variant later turns every incomplete `match` into an error that points at \
@@ -175,7 +175,7 @@ fn main() {
 }"#,
             ),
             labelled(
-                "EXPLANATION",
+                "LET'S BREAK IT DOWN",
                 "The compiler reports a non-exhaustive pattern and names the missing variant, \
                  `Size::Large`. It is not being pedantic: `price(Size::Large)` has no answer, and the \
                  compiler refuses to let that become a runtime surprise. Adding the arm fixes it.",
@@ -214,7 +214,7 @@ fn wildcards() -> SeedLesson {
         "Wildcards and `_`",
         vec![
             labelled(
-                "CONCEPT",
+                "THE IDEA",
                 "Sometimes many variants share one outcome, and listing them separately is noise. A \
                  `_` arm matches anything not already handled. It satisfies exhaustiveness, but it \
                  also opts out of the compiler's future warnings — which is a real trade.",
@@ -250,7 +250,7 @@ fn main() {
 }"#,
             ),
             labelled(
-                "EXPLANATION",
+                "LET'S BREAK IT DOWN",
                 "`_ => true` covers `Placed`, `Preparing`, and `Delivered`. It reads well here because \
                  they genuinely share an outcome. But if you later add a `Refunded` variant, this \
                  `match` will *not* fail — `_` swallows it, and `is_active` silently answers `true` \
@@ -300,7 +300,7 @@ fn if_let() -> SeedLesson {
         "`if let`",
         vec![
             labelled(
-                "CONCEPT",
+                "THE IDEA",
                 "When you care about exactly one variant and want to ignore the rest, a full `match` \
                  is heavy. `if let Some(x) = …` runs its block only when the pattern matches, and \
                  says nothing about the other cases.",
@@ -330,7 +330,7 @@ fn main() {
 }"#,
             ),
             labelled(
-                "EXPLANATION",
+                "LET'S BREAK IT DOWN",
                 "`if let Some(found) = find(...)` runs the block only when the result is `Some`, \
                  binding the topping to `found`. The `else` is optional. It is shorthand for a \
                  `match` with one real arm and a wildcard, and it is the idiomatic way to act on a \
@@ -351,7 +351,7 @@ fn let_else() -> SeedLesson {
         "`let … else`",
         vec![
             labelled(
-                "CONCEPT",
+                "THE IDEA",
                 "`if let` buries the main path inside an `if`. `let … else` puts the main path first \
                  and sends the unmatched case away in the `else` block, which must leave the \
                  surrounding function — `return`, `break`, `continue`, or panic.",
@@ -406,7 +406,7 @@ fn main() {
 }"#,
             ),
             labelled(
-                "EXPLANATION",
+                "LET'S BREAK IT DOWN",
                 "`let Some(size) = parse(text) else { return 1000; };` reads as: bind `size` if the \
                  parse succeeded, otherwise leave now. The happy path then runs at the top level of \
                  the function instead of being indented inside a branch. The `else` block must \

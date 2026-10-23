@@ -14,7 +14,7 @@ fn final_model() -> SeedLesson {
         "Final Mental Model",
         vec![
             labelled(
-                "CONCEPT",
+                "THE IDEA",
                 "Two questions decide almost every modelling choice in this module. Ask them in order, \
                  and the type you need is usually obvious.",
             ),

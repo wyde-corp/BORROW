@@ -31,7 +31,7 @@ fn why_functions_exist() -> SeedLesson {
         "Why Functions Exist",
         vec![
             labelled(
-                "CONCEPT",
+                "THE IDEA",
                 "A function is basically you admitting that this piece of logic deserves a name. That is \
                  the whole idea. Everything else is detail.",
             ),
@@ -44,7 +44,7 @@ fn why_functions_exist() -> SeedLesson {
                 "fn main() {\n    // get user input\n    let raw = \"42\";\n\n    // validate input\n    let value = match raw.parse::<i32>() {\n        Ok(n) => n,\n        Err(_) => { println!(\"bad input\"); return; }\n    };\n\n    // calculate result\n    let doubled = value * 2;\n    let taxed = doubled as f64 * 1.2;\n\n    // format result\n    let message = format!(\"Result: {}\", taxed);\n\n    // print result\n    println!(\"{}\", message);\n}",
             ),
             labelled(
-                "EXPLANATION",
+                "LET'S BREAK IT DOWN",
                 "Every one of those comments marks a job. Get input. Validate it. Calculate. Format. \
                  Print. Five distinct behaviours, tangled together, sharing variables in a scope that keeps \
                  growing. To change the tax rate you have to read past the validation logic. To reuse the \
@@ -102,7 +102,7 @@ fn defining_calling() -> SeedLesson {
         "Defining and Calling Functions",
         vec![
             labelled(
-                "CONCEPT",
+                "THE IDEA",
                 "Defining a function tells Rust what the name means. Calling it does the thing. Keeping \
                  those two apart is the only thing this lesson is about.",
             ),
@@ -129,7 +129,7 @@ fn defining_calling() -> SeedLesson {
                 "  DEFINE                CALL\n  \"here is what          \"do that thing\n   this does\"            now\"\n\n  repeated freely        runs, then control\n                         returns to the line\n                         after the call",
             ),
             labelled(
-                "EXPLANATION",
+                "LET'S BREAK IT DOWN",
                 "The semicolon on `greet();` matters for a reason you already know from the control flow \
                  module. A bare `greet` is an expression that produces a value — here, the unit type — and a \
                  `greet()` followed by a semicolon is a statement that throws that value away. For a function \
@@ -177,13 +177,13 @@ fn reading_a_signature() -> SeedLesson {
         "Reading a Function Signature",
         vec![
             labelled(
-                "CONCEPT",
+                "THE IDEA",
                 "This is the single most valuable skill in this module. If you can read a signature, you \
                  can use a function you have never seen. If you cannot, every function in the standard \
                  library is a wall of noise.",
             ),
             labelled(
-                "EXPLANATION",
+                "LET'S BREAK IT DOWN",
                 "A signature is a label on a jar. You have all labelled jars in your kitchen without reading \
                  the recipe inside. `flour, 500g` tells you what is in there and whether you can use it, \
                  without telling you how to bake. A Rust signature is exactly that: the name says what the \
@@ -269,13 +269,13 @@ fn parameters_arguments() -> SeedLesson {
         "Parameters and Arguments",
         vec![
             labelled(
-                "CONCEPT",
+                "THE IDEA",
                 "A function that cannot receive information cannot do anything interesting. Parameters \
                  are the named, typed slots in the signature. Arguments are what you put in them at the \
                  call site.",
             ),
             labelled(
-                "EXPLANATION",
+                "LET'S BREAK IT DOWN",
                 "A parameter is a labelled box the function owns while it works. `greet(name: &str)` sets \
                  one box aside, labelled `name`, and the function is not allowed to look anywhere else for \
                  it. When you call `greet(\"Gus\")` you are deciding what goes in that box. The parameter \
@@ -350,7 +350,7 @@ fn return_values() -> SeedLesson {
         "Return Values",
         vec![
             labelled(
-                "CONCEPT",
+                "THE IDEA",
                 "So far your functions have printed things. That is a one-way street — the value goes to \
                  the screen and is gone. The arrow in a signature opens the other direction.",
             ),
@@ -363,7 +363,7 @@ fn return_values() -> SeedLesson {
                 "  add(10, 20)\n     │\n     ▼\n  a + b  evaluates to 30\n     │\n     ▼\n  30 is returned out of the function\n     │\n     ▼\n  stored in result\n     │\n     ▼\n  you decide what to do with it next",
             ),
             labelled(
-                "EXPLANATION",
+                "LET'S BREAK IT DOWN",
                 "There is no `return` keyword here, and that is not an oversight. A function's body is a \
                  block, and a block's value is its final expression when that expression has no semicolon. \
                  You met this in the control flow module. Functions just use it more.",
@@ -420,12 +420,12 @@ fn unit_type() -> SeedLesson {
         "The Unit Type ()",
         vec![
             labelled(
-                "CONCEPT",
+                "THE IDEA",
                 "A function that returns nothing still returns *something*. That something is `()`, called \
                  the unit type. It is Rust's way of saying 'this ran, and there is no value here'.",
             ),
             labelled(
-                "EXPLANATION",
+                "LET'S BREAK IT DOWN",
                 "In most languages a function that gives you nothing back returns a null, an undefined, or \
                  nothing at all, and you have to guess which. Rust refuses the guess. Every function \
                  produces a value, always, and when there is no interesting value the value is `()` — the \
@@ -494,12 +494,12 @@ fn expressions_inside() -> SeedLesson {
         "Expressions Inside Functions",
         vec![
             labelled(
-                "CONCEPT",
+                "THE IDEA",
                 "Function bodies are blocks, and blocks are expressions. So a function body can be built \
                  out of the same expression machinery you have been using for three modules.",
             ),
             labelled(
-                "EXPLANATION",
+                "LET'S BREAK IT DOWN",
                 "Think of a function body as the last line of a sum written on a receipt. Everything above \
                  it is working out; whatever is left at the bottom is what you walk away with. A semicolon \
                  is a full stop that says 'I am done with this, it produced nothing, keep going'. No \
@@ -565,13 +565,13 @@ fn explicit_return() -> SeedLesson {
         "Explicit Return and Early Returns",
         vec![
             labelled(
-                "CONCEPT",
+                "THE IDEA",
                 "You do not need `return` — the final expression handles it. Sometimes you want it anyway, \
                  because an early exit makes a long function readable. Both styles are legitimate. This is \
                  not a style rule, it is a judgement call.",
             ),
             labelled(
-                "EXPLANATION",
+                "LET'S BREAK IT DOWN",
                 "This is a bouncer's rule. Someone who is not on the list does not walk to the back of the \
                  queue to be turned away there — they are stopped at the door, and the queue behind them \
                  never forms. `return` is the door. Every check you pass lets the next person through; the \
@@ -649,12 +649,12 @@ fn scope() -> SeedLesson {
         "Scope",
         vec![
             labelled(
-                "CONCEPT",
+                "THE IDEA",
                 "A variable belongs to the place it was created. Inside that place, you can use its name. \
                  Outside, the name simply does not mean anything.",
             ),
             labelled(
-                "EXPLANATION",
+                "LET'S BREAK IT DOWN",
                 "A name is a label on a thing that only works in the room the thing is in. Write it on the \
                  whiteboard in the meeting, and everyone in that meeting knows exactly what it means. Step \
                  into the next room and the label is meaningless — not because it is wrong, but because \
@@ -721,13 +721,13 @@ fn ownership_across_calls() -> SeedLesson {
         "Ownership Across Function Calls",
         vec![
             labelled(
-                "CONCEPT",
+                "THE IDEA",
                 "Function parameters are ordinary bindings, and they obey every rule you have already met. \
                  Including the one that is about to get its own module: when a value moves, the original \
                  stops being usable.",
             ),
             labelled(
-                "EXPLANATION",
+                "LET'S BREAK IT DOWN",
                 "Handing someone a `String` in Rust is not lending it, it is giving it away. They now have \
                  the only copy, and when their function ends it is dropped — gone, for both of you. That \
                  sounds harsh until you notice the alternative: if they might keep it, you get to keep it \
@@ -800,7 +800,7 @@ fn mutable_parameters() -> SeedLesson {
         "Mutable Parameters",
         vec![
             labelled(
-                "CONCEPT",
+                "THE IDEA",
                 "Sometimes a function needs to change something. It cannot change it by magic — the caller \
                  has to hand over permission, and the parameter has to ask for it. Two keywords, both \
                  required.",
@@ -810,7 +810,7 @@ fn mutable_parameters() -> SeedLesson {
                 "fn double(value: &mut i32) {\n    *value *= 2;\n}\n\nfn main() {\n    let mut number = 10;\n\n    double(&mut number);\n\n    println!(\"{}\", number);   // 20\n}",
             ),
             labelled(
-                "EXPLANATION",
+                "LET'S BREAK IT DOWN",
                 "Three things have to line up here, and if any one is missing the program will not compile. \
                  That is a good property. It means a function that mutates something always *looks* like it \
                  mutates something.",
@@ -874,7 +874,7 @@ fn functions_calling_functions() -> SeedLesson {
         "Functions Calling Functions",
         vec![
             labelled(
-                "CONCEPT",
+                "THE IDEA",
                 "This is where functions stop being a tidiness habit and start being how you actually build \
                  things. Every non-trivial program is a graph of small functions calling each other.",
             ),
@@ -887,7 +887,7 @@ fn functions_calling_functions() -> SeedLesson {
                 "  main()\n   │\n   ├── calculate_total(10.0, 3)\n   │      │\n   │      └── returns 30.0\n   │\n   └── print_total(30.0)\n          │\n          └── returns ()\n\n  main orchestrates; the helpers do one job each",
             ),
             labelled(
-                "EXPLANATION",
+                "LET'S BREAK IT DOWN",
                 "Notice what `main` does here: it calls two things and stitches the result between them. \
                  It does no arithmetic and no formatting itself. That is the shape to aim for — `main` reads \
                  like a summary of the program, and every detail lives somewhere it can be found, named, and \
@@ -938,12 +938,12 @@ fn designing_good_functions() -> SeedLesson {
         "Designing Good Functions",
         vec![
             labelled(
-                "CONCEPT",
+                "THE IDEA",
                 "Everything so far has been syntax. This is the part where you start making decisions, and \
                  where programming stops being a language problem and becomes a design problem.",
             ),
             labelled(
-                "EXPLANATION",
+                "LET'S BREAK IT DOWN",
                 "A compiler will happily accept a function that does six things badly. Nothing in Rust is \
                  going to stop you, which means the only thing standing between a working program and a \
                  readable one is your judgement about where the seams go. The test is embarrassingly \
@@ -1015,7 +1015,7 @@ fn recursion() -> SeedLesson {
         "Recursion",
         vec![
             labelled(
-                "CONCEPT",
+                "THE IDEA",
                 "A function that calls itself. That is the whole definition. The interesting part is not \
                  the calling — it is knowing when to stop.",
             ),
@@ -1024,7 +1024,7 @@ fn recursion() -> SeedLesson {
                 "fn countdown(n: i32) {\n    if n == 0 {\n        return;\n    }\n\n    println!(\"{}\", n);\n    countdown(n - 1);\n}\n\nfn main() {\n    countdown(3);\n}",
             ),
             labelled(
-                "EXPLANATION",
+                "LET'S BREAK IT DOWN",
                 "Every recursive function needs two things. A **base case** — the condition that stops the \
                  recursion, here `n == 0`. And a **recursive case** — the part that calls itself, here \
                  `countdown(n - 1)`. Get either wrong and you have either an infinite loop or a function \
@@ -1078,13 +1078,13 @@ fn things_you_will_break() -> SeedLesson {
         "Things You Will Probably Break",
         vec![
             labelled(
-                "CONCEPT",
+                "THE IDEA",
                 "Seven mistakes that account for most of what beginners hit in their first week of \
                  functions. None of them are stupid. Each one has a shape, and once you see the shape you \
                  stop making them.",
             ),
             labelled(
-                "EXPLANATION",
+                "LET'S BREAK IT DOWN",
                 "The good news about compiler errors is that there are only so many of them. Rust does not \
                  invent a new way to be confused each week — it has about seven, and every function bug \
                  you are ever going to write is one of them wearing a different variable name. So this is \
@@ -1183,7 +1183,7 @@ fn putting_it_together() -> SeedLesson {
         "Putting It All Together",
         vec![
             labelled(
-                "CONCEPT",
+                "THE IDEA",
                 "You can now define functions, pass them information, get values back, understand where \
                  their variables live, and know what happens to a value when it crosses a call boundary. \
                  That is the vocabulary. This lesson is the sentence.",
@@ -1193,7 +1193,7 @@ fn putting_it_together() -> SeedLesson {
                 "struct Order {\n    subtotal: f64,\n    member: bool,\n}\n\nfn discount_rate(member: bool) -> f64 {\n    if member { 0.10 } else { 0.0 }\n}\n\nfn discounted(subtotal: f64, rate: f64) -> f64 {\n    subtotal * (1.0 - rate)\n}\n\nfn with_tax(amount: f64) -> f64 {\n    amount * 1.2\n}\n\nfn describe(order: &Order) -> String {\n    let base = discounted(order.subtotal, discount_rate(order.member));\n    let total = with_tax(base);\n    format!(\"total {:.2} (member: {})\", total, order.member)\n}\n\nfn main() {\n    let order = Order { subtotal: 100.0, member: true };\n    println!(\"{}\", describe(&order));\n}",
             ),
             labelled(
-                "EXPLANATION",
+                "LET'S BREAK IT DOWN",
                 "Four functions, each doing one job, each named for what it does. `describe` reads as a \
                  summary of the whole calculation. Note the two shapes of return: `discount_rate` uses a \
                  bare `if` expression as its final value, while `describe` builds a `String` through several \

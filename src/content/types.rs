@@ -418,7 +418,7 @@ pub fn text_block(text: &str) -> serde_json::Value {
     json!({ "type": "text", "text": text })
 }
 
-/// A paragraph tagged with a 6-step label, e.g. "CONCEPT — ...".
+/// A paragraph tagged with a step label, e.g. "THE IDEA — ..." or "LET'S BREAK IT DOWN — ...".
 pub fn labelled(label: &str, body: &str) -> serde_json::Value {
     json!({ "type": "text", "text": format!("{label} — {body}") })
 }

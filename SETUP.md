@@ -86,11 +86,80 @@ npx convex env set CHECKOUT_CANCEL_URL     https://<deployment>.convex.site/chec
 ```
 
 Each Convex deployment carries its own values — repeat step 5 on every new
-deployment. Going live later is: new values on a prod deployment
-(`sk_live_…`, `BACHS_API_URL=https://api.bachs.io`, recreated product and
-endpoint), nothing in the code.
+deployment. Going live later is step 5b below — new values on a prod
+deployment, nothing in the code.
 
 Verify: `npx convex env ls` lists them all.
+
+## 5b. Going live
+
+The code defaults to sandbox (`BACHS_API_URL` falls back to
+`sandbox-api.bachs.io`), so a misconfigured deployment can never charge a real
+card. Live only happens when a **prod Convex deployment** carries live values.
+Keep the dev deployment on sandbox — it stays your test-card playground.
+
+1. **Create the prod deployment** (once):
+
+   ```sh
+   npx convex deploy            # promotes current code to the prod deployment
+   npx convex env ls --prod     # confirms you're looking at prod
+   ```
+
+2. **Live Bachs setup** — mirror of step 4, live side:
+
+   ```sh
+   bachs login                  # live session; bachs whoami must say live
+   ```
+
+   - Recreate the product in live (5.00 USD, monthly — cadence is immutable;
+     the sandbox product id does not exist in live). Copy the new `prod_…`.
+   - Copy a **live API key** (`sk_live_…`) from the dashboard.
+   - Register a **live webhook endpoint** pointing at the *prod* deployment:
+     `https://<prod-deployment>.convex.site/webhooks/bachs`, same five events
+     as step 4. Copy the new `whsec_…` — shown once.
+
+3. **Set the prod env vars** — step 5 again, on prod, with live values:
+
+   ```sh
+   npx convex env set --prod SESSION_HASH_KEY        <fresh 64 hex chars>
+   npx convex env set --prod GOOGLE_CLIENT_ID        <client id from step 2>
+   npx convex env set --prod GOOGLE_CLIENT_SECRET    <client secret from step 2>
+   npx convex env set --prod GITHUB_CLIENT_ID        <client id from step 3>
+   npx convex env set --prod GITHUB_CLIENT_SECRET    <client secret from step 3>
+   npx convex env set --prod BACHS_API_KEY           sk_live_…
+   npx convex env set --prod BACHS_WEBHOOK_SECRET    whsec_…
+   npx convex env set --prod BACHS_PRODUCT_ID        prod_…        # the live one
+   npx convex env set --prod BACHS_API_URL           https://api.bachs.io
+   npx convex env set --prod CHECKOUT_SUCCESS_URL    https://<prod-deployment>.convex.site/checkout/success
+   npx convex env set --prod CHECKOUT_CANCEL_URL     https://<prod-deployment>.convex.site/checkout/cancel
+   ```
+
+   Never put `sk_live_…` or the live `BACHS_API_URL` on the dev deployment.
+
+4. **Point the desktop at prod** — same three vars as step 6, prod values:
+
+   ```sh
+   BORROW_CONVEX_SITE_URL=https://<prod-deployment>.convex.site \
+   BORROW_GOOGLE_CLIENT_ID=<google client id> \
+   BORROW_GITHUB_CLIENT_ID=<github client id> \
+   cargo run --bin borrow-app
+   ```
+
+5. **Verify with a real card** — sandbox test cards do not work in live.
+   Run the step-7 checklist against prod: sign in, module 4 paywall, one real
+   $5 charge, unlock within ~2 s, MANAGE BILLING opens the portal, and the
+   Bachs dashboard shows the webhook delivery succeeding. A failed delivery
+   shows there first.
+
+Watch-outs once live:
+
+- **Bachs disables webhook endpoints after ~72 h of continuous failure** —
+  if the prod deployment sits idle/broken, fix deliveries before they
+  accumulate or the endpoint is cut off.
+- The 7-day grace window has only been proven by the unit suite and sandbox
+  webhooks — the first real cancellation is worth watching end to end.
+- A pending cancellation (cancel-at-period-end) is not yet shown in the app
+  until the period actually ends.
 
 ## 6. Run the desktop app against it
 
@@ -111,6 +180,11 @@ cargo build --release
 
 (Only the **client ids** are baked — they are public. Secrets live in
 Convex; the shipped binary holds none.)
+
+Tagged releases get the same three from `release.yml`, which reads them as
+repository variables (`BORROW_CONVEX_SITE_URL`, `BORROW_GOOGLE_CLIENT_ID`,
+`BORROW_GITHUB_CLIENT_ID` — GitHub → Settings → Secrets and variables →
+Actions → Variables) and refuses to build if any is missing.
 
 ## 7. Manual end-to-end check
 

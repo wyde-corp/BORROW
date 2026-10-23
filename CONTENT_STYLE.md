@@ -25,6 +25,17 @@ widget or an exercise.
 
 ---
 
+## 1b. Paragraph labels
+
+- Prose paragraphs introduced with `labelled()` use exactly two default
+  labels, in uppercase with an em-dash: **`THE IDEA`** (introduces the idea)
+  and **`LET'S BREAK IT DOWN`** (unpacks it).
+- Never `CONCEPT` / `EXPLANATION` — they read like a textbook, not a person.
+- Free-form labels are allowed when the paragraph is a specific experiment or
+  case (`"Experiment 1 — …"`), but they keep the same warm register.
+
+---
+
 ## 2. Defined-first rules
 
 - The first use of any term, type, or syntax is defined in the same paragraph or

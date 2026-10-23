@@ -29,7 +29,7 @@ fn one_to_many() -> SeedLesson {
         "From One Value to Many",
         vec![
             labelled(
-                "CONCEPT",
+                "THE IDEA",
                 "A playlist is many songs, and so far the only tool you have for 'many' is to name \
                  each one. Let us write a four-song playlist that way, then notice the shape of the \
                  problem.",
@@ -56,7 +56,7 @@ fn one_to_many() -> SeedLesson {
 }"#,
             ),
             labelled(
-                "EXPLANATION",
+                "LET'S BREAK IT DOWN",
                 "This works, and it does not scale. Adding a fifth song means four more lines. There \
                  is no way to ask 'how many songs', no way to loop over them, and no way to pass the \
                  whole playlist to a function without listing eight variables in the signature. The \
@@ -86,7 +86,7 @@ fn creating_a_vec() -> SeedLesson {
         "Creating a `Vec`",
         vec![
             labelled(
-                "CONCEPT",
+                "THE IDEA",
                 "A `Vec<T>` holds zero or more values of type `T`, in order. You make an empty one \
                  with `Vec::new()`, or a full one with the `vec!` macro.",
             ),
@@ -116,7 +116,7 @@ println!("{} songs", playlist.len());"#,
 }"#,
             ),
             labelled(
-                "EXPLANATION",
+                "LET'S BREAK IT DOWN",
                 "The type is `Vec<String>` — a vector of owned strings. It must be `mut` to `push`, \
                  exactly as in Module 02. When the type is not obvious, you write it on the binding, \
                  as above.",
@@ -161,7 +161,7 @@ fn push_and_pop() -> SeedLesson {
         "`push` and `pop`",
         vec![
             labelled(
-                "CONCEPT",
+                "THE IDEA",
                 "A `Vec` grows and shrinks from the end. `push` adds an item and `pop` removes the \
                  last one, handing it back (or `None` if the vector is empty).",
             ),
@@ -190,7 +190,7 @@ println!("{:?}", last);"#,
 }"#,
             ),
             labelled(
-                "EXPLANATION",
+                "LET'S BREAK IT DOWN",
                 "`pop` returns an `Option<T>`, not a `T`, because a vector can be empty. The last \
                  item here is `Some(\"Nude\")`, and the vector is back to one song. This is the same \
                  `Option` from Module 07 — absence is a real possibility, so the type says so.",
@@ -210,7 +210,7 @@ fn indexing_vs_get() -> SeedLesson {
         "Indexing vs `get`",
         vec![
             labelled(
-                "CONCEPT",
+                "THE IDEA",
                 "There are two ways to read an item by position, and they differ in what happens \
                  when the position does not exist. `playlist[0]` panics. `playlist.get(0)` returns \
                  `Option<&T>`.",
@@ -249,7 +249,7 @@ fn indexing_vs_get() -> SeedLesson {
 }"#,
             ),
             labelled(
-                "EXPLANATION",
+                "LET'S BREAK IT DOWN",
                 "`get` returns `Option<&T>`: `Some(&song)` when the position exists, `None` when it \
                  does not. Because `None` is a real value, `match` and `if let` handle it without any \
                  risk of crashing. Indexing is fine when you *know* the position exists; `get` is for \
@@ -277,7 +277,7 @@ fn iterate_by_ref() -> SeedLesson {
         "Iterating by Reference",
         vec![
             labelled(
-                "CONCEPT",
+                "THE IDEA",
                 "The usual way to visit every item is `for song in &playlist`. The `&` borrows the \
                  vector, so you get a reference to each song and the vector is untouched.",
             ),
@@ -310,7 +310,7 @@ println!("still {} songs", playlist.len());"#,
 }"#,
             ),
             labelled(
-                "EXPLANATION",
+                "LET'S BREAK IT DOWN",
                 "Iterating by reference is the default you want most of the time: you read each item \
                  and keep the collection. It is Module 06's shared borrow, applied to a container. \
                  Because the loop only reads, it can run as long as it likes without conflict.",
@@ -330,7 +330,7 @@ fn iterate_mutably() -> SeedLesson {
         "Iterating Mutably",
         vec![
             labelled(
-                "CONCEPT",
+                "THE IDEA",
                 "To change every item in place, iterate with `&mut playlist`. Each item is a mutable \
                  reference, and the vector is borrowed exclusively for the loop — so nothing else may \
                  touch it until the loop ends.",
@@ -364,7 +364,7 @@ println!("{:?}", playlist);"#,
 }"#,
             ),
             labelled(
-                "EXPLANATION",
+                "LET'S BREAK IT DOWN",
                 "`song` is a `&mut String`, so `song.to_uppercase()` reads through it and `*song = \
                  ...` writes through it. This is the mutable borrow from Module 06, once per item, \
                  released before the next. The `mut` is required on the binding because the items \
@@ -381,7 +381,7 @@ println!("{:?}", playlist);"#,
 }"#,
             ),
             labelled(
-                "EXPLANATION",
+                "LET'S BREAK IT DOWN",
                 "Pushing inside the loop needs a second, mutable borrow of the same vector while the \
                  loop already holds one exclusively — the collection conflict from Module 06, and the \
                  same wall you hit in Module 07. Collect the additions and push after the loop.",
@@ -395,7 +395,7 @@ fn iterate_by_value() -> SeedLesson {
         "Iterating by Value",
         vec![
             labelled(
-                "CONCEPT",
+                "THE IDEA",
                 "Write `for song in playlist` with no `&`, and the loop *consumes* the vector. Each \
                  item is an owned value, and the playlist is gone afterwards.",
             ),
@@ -442,7 +442,7 @@ fn insert_and_remove() -> SeedLesson {
         "Inserting and Removing in the Middle",
         vec![
             labelled(
-                "CONCEPT",
+                "THE IDEA",
                 "`push` and `pop` work at the end. To change an item in the middle you use `insert` \
                  and `remove`, which take a position — and cost more, because everything after that \
                  position must shift along.",
@@ -474,7 +474,7 @@ println!("removed: {:?}", removed);"#,
 }"#,
             ),
             labelled(
-                "EXPLANATION",
+                "LET'S BREAK IT DOWN",
                 "`insert(1, value)` slides every item from position 1 onward one slot to the right, \
                  then drops the new value into the gap. `remove(1)` returns the item and slides the \
                  rest left. Both take `&mut self`, because they change the vector.",
@@ -498,7 +498,7 @@ fn vec_of_structs() -> SeedLesson {
         "A `Vec` of Structs",
         vec![
             labelled(
-                "CONCEPT",
+                "THE IDEA",
                 "A `Vec<T>` holds any single type, including a struct you defined. A playlist is a \
                  `Vec<Song>`, and every song is a full value with its own fields.",
             ),
@@ -554,7 +554,7 @@ fn main() {
 }"#,
             ),
             labelled(
-                "EXPLANATION",
+                "LET'S BREAK IT DOWN",
                 "This is the 'collection of structs' shape from Module 07, now the backbone of the \
                  playlist. `playlist[0].title` reads a field of the first song. The loop borrows the \
                  vector and reads each `song.duration_secs`, summing them without moving anything.",
@@ -574,7 +574,7 @@ fn capacity() -> SeedLesson {
         "Capacity and Reallocation",
         vec![
             labelled(
-                "CONCEPT",
+                "THE IDEA",
                 "A `Vec` knows two different sizes: its *length* (how many items it holds) and its \
                  *capacity* (how many it could hold before it has to ask for more memory). When a \
                  push runs out of capacity, the vector reallocates: it asks for a bigger block, \
@@ -614,7 +614,7 @@ println!("{first}");"#,
                 "before push(3):        after push(3):\n\nold buffer (cap 2)      old buffer freed\n [1][2]                 (dangling)\n                          new buffer (cap 4)\n                           [1][2][3][ ]",
             ),
             labelled(
-                "EXPLANATION",
+                "LET'S BREAK IT DOWN",
                 "The takeaway is not the allocator, it is the rule it produces: **a reference into a \
                  vector cannot survive an operation that might reallocate it**. Rust does not guess \
                  whether this particular push reallocates — it treats any `push` as potentially \
@@ -631,7 +631,7 @@ println!("{first}");"#,
 }"#,
             ),
             labelled(
-                "EXPLANATION",
+                "LET'S BREAK IT DOWN",
                 "This is the same error in miniature, and the same one you met in Module 06's \
                  collection section. The fix is to end the borrow first — copy the value out, or do \
                  the push before taking the reference.",

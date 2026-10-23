@@ -25,7 +25,7 @@ fn borrowing_in_functions() -> SeedLesson {
         "Borrowing in Functions",
         vec![
             labelled(
-                "CONCEPT",
+                "THE IDEA",
                 "The place you feel ownership most is the parameter list. A function that only reads \
                  its argument should say so in its signature, so every caller knows the value comes \
                  back to them.",
@@ -41,7 +41,7 @@ fn borrowing_in_functions() -> SeedLesson {
                 "fn print_name(name: &String) {\n    println!(\"{name}\");\n}\n\nfn main() {\n    let name = String::from(\"Gus\");\n    print_name(&name);\n\n    println!(\"{name}\");\n}",
             ),
             labelled(
-                "EXPLANATION",
+                "LET'S BREAK IT DOWN",
                 "The first version consumes the string: whatever `main` held is gone after the call. \
                  The second version lends it for the duration of the call and takes nothing. The \
                  signature is the only difference a caller needs to read — `name: String` means 'I \
@@ -71,7 +71,7 @@ fn ref_vs_mut_ref() -> SeedLesson {
         "`&T` vs `&mut T`",
         vec![
             labelled(
-                "CONCEPT",
+                "THE IDEA",
                 "The two reference forms answer two different requests. `&T` asks for permission to \
                  read. `&mut T` asks for permission to read and write, and promises exclusivity in \
                  exchange.",
@@ -94,7 +94,7 @@ fn ref_vs_mut_ref() -> SeedLesson {
                 "fn add_suffix(s: &mut String) {\n    s.push_str(\"!\");\n}\n\nfn main() {\n    let mut s = String::from(\"hello\");\n    add_suffix(&mut s);\n    println!(\"{s}\");\n}",
             ),
             labelled(
-                "EXPLANATION",
+                "LET'S BREAK IT DOWN",
                 "`&mut T` does not mean 'the reference itself is mutable'. A reference variable is \
                  just a variable; if you wanted to reassign which value it points at you would write \
                  `let mut r`, and that is a separate topic. `&mut T` means *this reference grants \
@@ -119,7 +119,7 @@ fn owner_vs_reference() -> SeedLesson {
         "Mutable Owner vs Mutable Reference",
         vec![
             labelled(
-                "CONCEPT",
+                "THE IDEA",
                 "These two lines are different claims about different things. `let mut s` says the \
                  *binding* `s` may have its value modified or replaced. `&mut s` says a *reference* \
                  grants write access to whatever `s` currently refers to.",
@@ -138,7 +138,7 @@ fn owner_vs_reference() -> SeedLesson {
                 "fn main() {\n    let mut s = String::from(\"hello\");\n\n    let r = &s;\n    println!(\"{r}\");\n\n    // r is read-only even though s is mutable\n}",
             ),
             labelled(
-                "EXPLANATION",
+                "LET'S BREAK IT DOWN",
                 "Why would you borrow a mutable value immutably? Because while that immutable borrow \
                  is active, no one may write through `s` — the shared borrow wins. The owner's `mut` is \
                  a capability, not an obligation, and it is temporarily suspended when a read-only \
@@ -167,7 +167,7 @@ fn borrowing_vs_moving() -> SeedLesson {
         "Borrowing vs Moving",
         vec![
             labelled(
-                "CONCEPT",
+                "THE IDEA",
                 "For any function call you make a design decision: hand over the value, lend it for \
                  reading, or lend it for writing. The three options are `T`, `&T`, and `&mut T`, and \
                  they are visible in the signature.",
@@ -181,7 +181,7 @@ fn borrowing_vs_moving() -> SeedLesson {
                 "fn inspect_string(s: &String) {\n    println!(\"{s}\");\n}\n\nfn main() {\n    let s = String::from(\"hello\");\n    inspect_string(&s);\n\n    println!(\"{s}\");\n}",
             ),
             labelled(
-                "EXPLANATION",
+                "LET'S BREAK IT DOWN",
                 "Walk both calls through the same six questions. Before the call, `main` owns the \
                  string in each case. Inside `use_string`, the function owns it and `main` does not. \
                  Inside `inspect_string`, `main` still owns it and the function holds a borrow. After \
@@ -214,7 +214,7 @@ fn returning_references() -> SeedLesson {
         "Returning References",
         vec![
             labelled(
-                "CONCEPT",
+                "THE IDEA",
                 "A function may return a reference, but only to something that will still exist after \
                  it returns. The one safe source is the data the function borrowed from its caller.",
             ),
@@ -223,7 +223,7 @@ fn returning_references() -> SeedLesson {
                 "fn first_character(s: &str) -> &str {\n    &s[..1]\n}\n\nfn main() {\n    let text = String::from(\"hello\");\n    println!(\"{}\", first_character(&text));\n}",
             ),
             labelled(
-                "EXPLANATION",
+                "LET'S BREAK IT DOWN",
                 "The returned `&str` points into the string the caller lent to the function. Because \
                  the caller still owns that string after the call, the reference remains valid. The \
                  rule of thumb is simple: a returned reference must come from an input, because inputs \
@@ -234,7 +234,7 @@ fn returning_references() -> SeedLesson {
                 "fn bad() -> &String {\n    let s = String::from(\"hello\");\n    &s\n}\n\nfn main() {\n    println!(\"{}\", bad());\n}",
             ),
             labelled(
-                "EXPLANATION",
+                "LET'S BREAK IT DOWN",
                 "Inside `bad`, `s` owns a freshly created `String`. When the function returns, `s` goes \
                  out of scope and the string is freed. The reference the function tried to return would \
                  point at freed memory. The compiler rejects this before such a reference can be \
@@ -256,7 +256,7 @@ fn dangling_references() -> SeedLesson {
         "Dangling References",
         vec![
             labelled(
-                "CONCEPT",
+                "THE IDEA",
                 "A dangling reference is a reference to a value that no longer exists. Rust makes this \
                  impossible to create in safe code — not by tracking memory cleverly at runtime, but by \
                  refusing to compile programs that would need it.",
@@ -269,7 +269,7 @@ fn dangling_references() -> SeedLesson {
                 "function creates value\n       ↓\nvalue exists\n       ↓\nfunction ends\n       ↓\nvalue dropped\n       ↓\nreturned reference points nowhere",
             ),
             labelled(
-                "EXPLANATION",
+                "LET'S BREAK IT DOWN",
                 "Read the diagram top to bottom. The value is created, then the function ends, then the \
                  value is dropped, and only then does the caller try to use the reference. In C or C++ \
                  the last step would read freed memory — a use-after-free, and a classic security bug. \

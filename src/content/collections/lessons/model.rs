@@ -14,7 +14,7 @@ fn final_model() -> SeedLesson {
         "Final Mental Model",
         vec![
             labelled(
-                "CONCEPT",
+                "THE IDEA",
                 "Three containers, three questions. Ask the question first and the container follows; \
                  the syntax is the small part.",
             ),

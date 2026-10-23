@@ -16,7 +16,7 @@ fn parsing_a_line() -> SeedLesson {
         "Parsing a Todo Line",
         vec![
             labelled(
-                "CONCEPT",
+                "THE IDEA",
                 "A task line looks like `1|buy milk|todo`. Parsing it can fail in two ways — the wrong \
                  number of parts, or an id that is not a number — and both should return an error that \
                  carries the offending line, not panic.",
@@ -60,7 +60,7 @@ fn main() {
 }"#,
             ),
             labelled(
-                "EXPLANATION",
+                "LET'S BREAK IT DOWN",
                 "The bad-parts case returns early with `Parse(line)`. The bad-id case converts the \
                  parse error with `map_err` and uses `?` to return it. Both errors carry the original \
                  line, so the eventual message can quote exactly what failed. A well-behaved parser \
@@ -93,7 +93,7 @@ fn loading_and_saving() -> SeedLesson {
         "Loading and Saving",
         vec![
             labelled(
-                "CONCEPT",
+                "THE IDEA",
                 "Reading and writing files both return `Result`, and both can fail for a reason the \
                  user should hear. With `From<io::Error>` in place, `?` carries them into the \
                  program's own error type without a `match`.",
@@ -132,7 +132,7 @@ fn main() {
 }"#,
             ),
             labelled(
-                "EXPLANATION",
+                "LET'S BREAK IT DOWN",
                 "`read_to_string` and `write` return `Result<_, io::Error>`. The `?` converts that into \
                  `TodoError::Io` via the `From` impl, so both functions speak the program's error \
                  type. A missing file is an `Err`, printed as data — not a crash.",
@@ -166,7 +166,7 @@ fn assembled() -> SeedLesson {
         "The Todo CLI, Assembled",
         vec![
             labelled(
-                "CONCEPT",
+                "THE IDEA",
                 "Here is the whole program. A `Vec<Task>` owns the tasks, `find` returns `Option`, \
                  `add` and `mark_done` return `Result`, file IO uses `From` and `?`, the error type \
                  implements `Display` and `Error`, and `main` returns `Result<(), TodoError>` so any \

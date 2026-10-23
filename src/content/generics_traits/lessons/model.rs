@@ -14,7 +14,7 @@ fn final_model() -> SeedLesson {
         "Final Mental Model",
         vec![
             labelled(
-                "CONCEPT",
+                "THE IDEA",
                 "Four ideas, each answering one question. Together they are the whole of generics and \
                  traits, and you have already met every one of them under another name.",
             ),

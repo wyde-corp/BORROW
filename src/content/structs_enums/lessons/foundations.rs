@@ -27,7 +27,7 @@ fn five_variable_problem() -> SeedLesson {
         "The Five-Variable Problem",
         vec![
             labelled(
-                "CONCEPT",
+                "THE IDEA",
                 "A pizza is one thing: a name, a size, a cost, whether it is vegetarian, whether it \
                  is available. The only way you know how to group data so far is to write each piece \
                  in its own variable. Let us do exactly that and watch the seams show.",
@@ -45,7 +45,7 @@ fn five_variable_problem() -> SeedLesson {
 }"#,
             ),
             labelled(
-                "EXPLANATION",
+                "LET'S BREAK IT DOWN",
                 "This compiles and prints the right thing. Nothing is technically wrong. But these \
                  five variables only mean anything *together*: pass them to a function and the \
                  parameter list becomes a small crowd, and nothing stops one caller from handing \
@@ -56,7 +56,7 @@ fn five_variable_problem() -> SeedLesson {
                 "name       size      extra_cost   vegetarian   available\n  │          │            │           │            │\n  └──────────┴────────────┴───────────┴────────────┘\n                    five separate things",
             ),
             labelled(
-                "EXPLANATION",
+                "LET'S BREAK IT DOWN",
                 "There is a second, quieter problem. A topping's cost is a number; a pizza's cost is \
                  also a number. Both are `u32`. If you accidentally use one where the other belongs, \
                  the compiler cannot tell — they are the same type. The only thing that ever knew \
@@ -82,7 +82,7 @@ fn defining_a_struct() -> SeedLesson {
         "Defining a Struct",
         vec![
             labelled(
-                "CONCEPT",
+                "THE IDEA",
                 "A struct definition names a group and lists the fields inside it. It is a plan, not \
                  a value: it describes what every topping looks like without creating a topping.",
             ),
@@ -111,7 +111,7 @@ fn main() {
 }"#,
             ),
             labelled(
-                "EXPLANATION",
+                "LET'S BREAK IT DOWN",
                 "Read the definition from the top. `struct Topping` introduces a new type called \
                  `Topping` — capitalised, because it is a type and `rustc` will warn if you are not. \
                  Inside the braces, each field has a name and a type, separated by a colon, and each \
@@ -137,7 +137,7 @@ fn creating_a_value() -> SeedLesson {
         "Creating a Value",
         vec![
             labelled(
-                "CONCEPT",
+                "THE IDEA",
                 "To make a topping you write its name, then a pair of braces with every field set to \
                  a value. This is a *struct literal*, and it is how every struct value begins life.",
             ),
@@ -158,7 +158,7 @@ fn main() {
 }"#,
             ),
             labelled(
-                "EXPLANATION",
+                "LET'S BREAK IT DOWN",
                 "Each line inside the braces names a field and gives it a value. The order does not \
                  have to match the definition — `extra_cost` before `name` works just as well — \
                  because the field name is what connects the value to its slot. But every field must \
@@ -202,7 +202,7 @@ fn reading_and_changing() -> SeedLesson {
         "Reading and Changing Fields",
         vec![
             labelled(
-                "CONCEPT",
+                "THE IDEA",
                 "A field is reached with a dot: `pizza.name`. Reading needs nothing special. Writing \
                  needs the value behind the binding to be declared `mut`, exactly as a plain variable \
                  did in Module 02.",
@@ -226,7 +226,7 @@ fn main() {
 }"#,
             ),
             labelled(
-                "EXPLANATION",
+                "LET'S BREAK IT DOWN",
                 "Reading `olives.name` copies nothing and moves nothing — it gives you a reference to \
                  the field for the length of the expression. Assigning `olives.extra_cost = 200` \
                  needs `let mut olives`, because that is a mutation of the struct.",
@@ -273,7 +273,7 @@ fn fields_are_ownership() -> SeedLesson {
         "Field Types Are Ownership",
         vec![
             labelled(
-                "CONCEPT",
+                "THE IDEA",
                 "A struct does not get a special memory model. When a field's type is `String`, the \
                  struct *owns* that string — and moving a value into a struct field moves the value, \
                  under all the rules from Modules 05 and 06.",
@@ -306,7 +306,7 @@ fn main() {
 }"#,
             ),
             labelled(
-                "EXPLANATION",
+                "LET'S BREAK IT DOWN",
                 "Nothing new happened — this is the move you learned in Module 05, just with a struct \
                  as the destination. The struct is now responsible for the string and will free it \
                  when the struct is dropped. If the caller still needed the name, they would pass a \
@@ -327,7 +327,7 @@ fn tuple_structs() -> SeedLesson {
         "Tuple Structs",
         vec![
             labelled(
-                "CONCEPT",
+                "THE IDEA",
                 "Sometimes the fields do not need names — the *type* is the point. A tuple struct \
                  gives the whole value a name while leaving the fields numbered, which stops two \
                  different numbers from being confused for each other.",
@@ -360,7 +360,7 @@ fn main() {
 }"#,
             ),
             labelled(
-                "EXPLANATION",
+                "LET'S BREAK IT DOWN",
                 "`Cents(u32)` is a struct with one unnamed field, reached as `.0`. The reason to write \
                  it rather than `u32` is the function signature: `total(a: Cents, b: Cents)` cannot be \
                  called with a plain number, so a `u32` that meant something else can never be passed \
@@ -388,7 +388,7 @@ fn unit_structs() -> SeedLesson {
         "Unit Structs",
         vec![
             labelled(
-                "CONCEPT",
+                "THE IDEA",
                 "A struct with no fields at all is a *unit struct*. It carries no data, but it still \
                  has a name and a type, which is occasionally exactly what you need.",
             ),
@@ -407,7 +407,7 @@ fn main() {
 }"#,
             ),
             labelled(
-                "EXPLANATION",
+                "LET'S BREAK IT DOWN",
                 "`Takeaway` and `DineIn` hold nothing, yet the compiler can tell them apart. That is \
                  the whole trick: a value of type `Takeaway` can never be passed where `DineIn` is \
                  expected, even though both are empty. You will meet this again when an enum variant \
@@ -427,7 +427,7 @@ fn choosing_a_shape() -> SeedLesson {
         "Struct vs Tuple vs Loose Variables",
         vec![
             labelled(
-                "CONCEPT",
+                "THE IDEA",
                 "You now have three ways to hold grouped data. This lesson is a decision table rather \
                  than new syntax, because choosing well is the skill the rest of the module depends \
                  on.",
@@ -455,7 +455,7 @@ fn choosing_a_shape() -> SeedLesson {
                 ],
             ),
             labelled(
-                "EXPLANATION",
+                "LET'S BREAK IT DOWN",
                 "The tuple `(String, u32)` would work, but every reader has to remember which slot is \
                  which, and nothing stops a caller writing `(250, \"Olives\")`. Naming both fields makes \
                  the value self-describing and the mistake impossible. That is the trade: a few more \

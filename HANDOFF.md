@@ -325,10 +325,12 @@ What has never run yet:
   and there is no POSIX shell on Windows. Run timeout works everywhere; the
   memory cap does not. Documented in `services::sandbox.rs` as a platform
   table. Closing it needs `setrlimit` on Unix and job objects on Windows.
-- **Release CI does not bake the Convex/OAuth env vars.** They are read with
-  `option_env!` at compile time and `release.yml` passes none, so a tagged
-  build ships with sign-in unconfigured. Bake them before the first public
-  release.
+- **Release CI now bakes the Convex/OAuth env vars** (`release.yml` reads the
+  three `BORROW_*` repository variables and fails fast if any is missing).
+  The remaining operator step: set `BORROW_CONVEX_SITE_URL`,
+  `BORROW_GOOGLE_CLIENT_ID`, `BORROW_GITHUB_CLIENT_ID` as repository
+  variables before the first public tag. Going live is runbooked in
+  `SETUP.md` §5b — env values on a prod deployment, nothing in the code.
 - **A pending cancellation is invisible in the app.** Cancel-at-period-end
   keeps the status `active` until the period actually ends — the 7-day
   countdown only appears once the subscription has ended, and nothing shows

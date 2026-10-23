@@ -27,7 +27,7 @@ fn the_failing_operation() -> SeedLesson {
         "The Failing Operation",
         vec![
             labelled(
-                "CONCEPT",
+                "THE IDEA",
                 "Finding a task can miss, which is absence. *Marking* a task done can fail, because it \
                  is an operation with consequences: either the task existed and is now done, or it did \
                  not and nothing happened. That is a `Result`.",
@@ -58,7 +58,7 @@ fn main() {
 }"#,
             ),
             labelled(
-                "EXPLANATION",
+                "LET'S BREAK IT DOWN",
                 "The function returns `Result<(), String>`: `Ok(())` when it worked, and `Err(...)` \
                  with a reason when it did not. The `()` in `Ok(())` is the unit type — it means \
                  'succeeded, and there is no value to hand back'. The caller now has a choice, \
@@ -83,7 +83,7 @@ fn ok_and_err() -> SeedLesson {
         "`Ok` and `Err`",
         vec![
             labelled(
-                "CONCEPT",
+                "THE IDEA",
                 "`Result<T, E>` is an enum with two variants: `Ok(T)` for success and `Err(E)` for \
                  failure. You build one by wrapping a value in the right variant, and read it by \
                  matching.",
@@ -124,7 +124,7 @@ fn main() {
 }"#,
             ),
             labelled(
-                "EXPLANATION",
+                "LET'S BREAK IT DOWN",
                 "`Result<u32, String>` is 'either a `u32` or a `String` explaining what went wrong'. \
                  `Ok(title.len() as u32)` is success carrying a value; `Err(String::from(...))` is \
                  failure carrying a reason. The `match` binds the value in the `Ok` arm and the reason \
@@ -152,7 +152,7 @@ fn reading_the_error() -> SeedLesson {
         "Reading the Error",
         vec![
             labelled(
-                "CONCEPT",
+                "THE IDEA",
                 "The `Err` variant carries data. Matching it lets you read *which* failure happened and \
                  act on it — not just report that something went wrong.",
             ),
@@ -201,7 +201,7 @@ fn main() {
 }"#,
             ),
             labelled(
-                "EXPLANATION",
+                "LET'S BREAK IT DOWN",
                 "Because the error is an enum, each failure shape gets its own arm, and the \
                  `NotFound(id)` pattern pulls the id out so the message can name it. This is the same \
                  enum-plus-match skill from Module 07, now doing its most common real job: explaining \
@@ -222,7 +222,7 @@ fn question_mark_on_result() -> SeedLesson {
         "`?` on `Result`",
         vec![
             labelled(
-                "CONCEPT",
+                "THE IDEA",
                 "Inside a function that returns `Result`, `?` opens a `Result`: on success it gives \
                  you the value, and on failure it returns the `Err` from the function immediately. \
                  No `match`, no nesting.",
@@ -275,7 +275,7 @@ fn main() {
 }"#,
             ),
             labelled(
-                "EXPLANATION",
+                "LET'S BREAK IT DOWN",
                 "The `?` is shorthand for 'if this is `Err`, return it now; otherwise continue with the \
                  value'. The function's return type must be a `Result` whose error type matches, or can \
                  be converted into it (next lessons). This is the single most common way errors travel \
@@ -300,7 +300,7 @@ fn map_and_map_err() -> SeedLesson {
         "`map` and `map_err`",
         vec![
             labelled(
-                "CONCEPT",
+                "THE IDEA",
                 "`map` transforms the success value, leaving any error alone. `map_err` transforms the \
                  error, leaving the success alone. Together they let you shape a `Result` without a \
                  `match`.",
@@ -334,7 +334,7 @@ println!("{:?}", friendlier);"#,
                 ],
             ),
             labelled(
-                "EXPLANATION",
+                "LET'S BREAK IT DOWN",
                 "`ok.map(|n| n * 2)` turns `Ok(3)` into `Ok(6)`; if it had been `Err`, the error would \
                  pass through untouched. `map_err` is the mirror: it rewrites the reason, useful when \
                  you are converting a low-level error into your program's own error type.",
@@ -353,7 +353,7 @@ fn chaining() -> SeedLesson {
         "`and_then` and Chaining",
         vec![
             labelled(
-                "CONCEPT",
+                "THE IDEA",
                 "`and_then` runs a second operation on the success value, when that operation can \
                  itself fail. It chains fallible steps into a pipeline, stopping at the first failure.",
             ),
@@ -378,7 +378,7 @@ fn main() {
 }"#,
             ),
             labelled(
-                "EXPLANATION",
+                "LET'S BREAK IT DOWN",
                 "`parse_id(\"21\")` gives `Ok(21)`; `and_then(double)` then runs `double(21)` to get \
                  `Ok(42)`. With `\"nope\"`, the first step already failed, so `and_then` never calls \
                  `double` — the error passes straight through. A chain of `and_then` is a sequence of \
@@ -417,7 +417,7 @@ fn defaults_on_result() -> SeedLesson {
         "Defaults on `Result`",
         vec![
             labelled(
-                "CONCEPT",
+                "THE IDEA",
                 "`Result` has the same default methods as `Option`. `unwrap_or` gives the success value \
                  or a substitute; `unwrap_or_default` uses the value type's default; \
                  `unwrap_or_else` builds the substitute lazily.",
@@ -443,7 +443,7 @@ println!("{n}");"#,
 }"#,
             ),
             labelled(
-                "EXPLANATION",
+                "LET'S BREAK IT DOWN",
                 "`unwrap_or(0)` gives the success value or `0`. `unwrap_or_default()` gives the value or \
                  `u32::default()` — which is `0`, but you did not have to say so. \
                  `unwrap_or_else(|_| 99)` runs the closure only on failure. None of these panic; each \
@@ -472,7 +472,7 @@ fn combining() -> SeedLesson {
         "Combining `Option` and `Result`",
         vec![
             labelled(
-                "CONCEPT",
+                "THE IDEA",
                 "Real programs mix the two. A lookup returns `Option`; the operation that uses it \
                  returns `Result`. `ok_or` and `ok()` are the crossings between them.",
             ),

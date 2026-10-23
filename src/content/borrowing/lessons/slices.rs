@@ -22,7 +22,7 @@ fn borrowing_collections() -> SeedLesson {
         "Borrowing and Collections",
         vec![
             labelled(
-                "CONCEPT",
+                "THE IDEA",
                 "A `Vec<T>` owns its elements. Borrowing works exactly the same as it does for a \
                  `String`: you can take a reference to an element, and while that reference lives, the \
                  collection may not be mutated in a way that would move or invalidate it.",
@@ -32,7 +32,7 @@ fn borrowing_collections() -> SeedLesson {
                 "fn main() {\n    let names = vec![\n        String::from(\"Gus\"),\n        String::from(\"Alice\"),\n        String::from(\"Bob\"),\n    ];\n\n    let first = &names[0];\n    println!(\"{first}\");\n}",
             ),
             labelled(
-                "EXPLANATION",
+                "LET'S BREAK IT DOWN",
                 "`names` owns the three `String`s. `first` borrows the first element; it does not own \
                  it, and it cannot outlive the vector. This is the same owner/borrower relationship as \
                  a single `String`, just reached through an index.",
@@ -63,7 +63,7 @@ fn slices() -> SeedLesson {
         "Slices: Borrowing Part of a Value",
         vec![
             labelled(
-                "CONCEPT",
+                "THE IDEA",
                 "A slice is a reference to a contiguous portion of a collection. It does not own the \
                  elements it covers; it borrows a range of them. For strings, that gives you the most \
                  common borrowed type in Rust: `&str`.",
@@ -73,7 +73,7 @@ fn slices() -> SeedLesson {
                 "fn main() {\n    let s = String::from(\"hello world\");\n\n    let hello = &s[0..5];\n    println!(\"{hello}\");\n}",
             ),
             labelled(
-                "EXPLANATION",
+                "LET'S BREAK IT DOWN",
                 "`&s[0..5]` borrows the first five bytes of the string, from index 0 up to but not \
                  including 5. The slice refers to a part of the text `s` owns. It is a view, not a \
                  copy: no new characters were allocated, and the slice cannot outlive `s`.",
@@ -106,7 +106,7 @@ fn string_vs_str() -> SeedLesson {
         "`String` vs `&str`",
         vec![
             labelled(
-                "CONCEPT",
+                "THE IDEA",
                 "`String` is an owned, growable UTF-8 string. `&str` is a borrowed string slice — a \
                  view onto text someone else owns. This is the single most common owned/borrowed pair \
                  in Rust, and the clearest illustration of the whole module.",
@@ -123,7 +123,7 @@ fn string_vs_str() -> SeedLesson {
                 "fn main() {\n    let owned = String::from(\"hello\");\n    let borrowed: &str = &owned;\n\n    println!(\"{owned} {borrowed}\");\n}",
             ),
             labelled(
-                "EXPLANATION",
+                "LET'S BREAK IT DOWN",
                 "`borrowed` does not own text. It points at the characters `owned` is responsible for. \
                  Because it is a slice, it can also point at *part* of that text — which is what makes \
                  functions like this possible:",
@@ -152,7 +152,7 @@ fn slice_ranges() -> SeedLesson {
         "Slice Ranges and Borrowing",
         vec![
             labelled(
-                "CONCEPT",
+                "THE IDEA",
                 "A range selects which part of the collection a slice covers. `start..end` runs from \
                  `start` up to but not including `end`, and the shorthand forms cover the obvious \
                  whole-prefix and whole-suffix cases.",
@@ -176,7 +176,7 @@ fn slice_ranges() -> SeedLesson {
                 ],
             ),
             labelled(
-                "EXPLANATION",
+                "LET'S BREAK IT DOWN",
                 "Every one of these is a borrow of `s`. `whole` covers all of it, `beginning` and \
                  `ending` cover parts, and all three obey the same rule: they may not outlive `s`, and \
                  `s` may not be mutated while they are live.",
@@ -186,7 +186,7 @@ fn slice_ranges() -> SeedLesson {
                 "fn main() {\n    let text = String::from(\"héllo\");\n\n    let bad = &text[0..2];\n    println!(\"{bad}\");\n}",
             ),
             labelled(
-                "EXPLANATION",
+                "LET'S BREAK IT DOWN",
                 "The `é` occupies two bytes, so index 2 is not a character boundary. Rust refuses to \
                  build a slice there and panics at runtime rather than handing back text that is not \
                  valid UTF-8. The fix is to slice on boundaries — using character-aware methods when \

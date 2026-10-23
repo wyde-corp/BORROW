@@ -27,7 +27,7 @@ fn display_and_to_string() -> SeedLesson {
         "`Display` and `ToString`",
         vec![
             labelled(
-                "CONCEPT",
+                "THE IDEA",
                 "`Display` is how a type shows itself to a user: `println!(\"{item}\")`. Implement it \
                  by hand — there is no derive — and `ToString` comes along for free.",
             ),
@@ -69,7 +69,7 @@ fn main() {
 }"#,
             ),
             labelled(
-                "EXPLANATION",
+                "LET'S BREAK IT DOWN",
                 "`Display` is the trait behind `{}`. Because implementing `Display` is enough to define \
                  a string form, the standard library provides `ToString` automatically for any type \
                  that has one — so `.to_string()` works without you writing another impl.",
@@ -97,7 +97,7 @@ fn from_and_into() -> SeedLesson {
         "`From` and `Into`",
         vec![
             labelled(
-                "CONCEPT",
+                "THE IDEA",
                 "`From` converts one type into another: `Title::from(\"Dune\")`. Implement `From` once \
                  and `Into` is provided automatically, so both `Title::from(x)` and `x.into()` work.",
             ),
@@ -141,7 +141,7 @@ fn main() {
 }"#,
             ),
             labelled(
-                "EXPLANATION",
+                "LET'S BREAK IT DOWN",
                 "`From` is the trait `?` uses when it converts errors — the `impl From<io::Error> for \
                  TodoError` from Module 09 was exactly this. `.into()` is the mirrored call: for every \
                  `impl From<A> for B`, `Into<B>` is implemented for `A`, so you never write `Into` by \
@@ -162,7 +162,7 @@ fn implement_vs_derive() -> SeedLesson {
         "Implementing versus Deriving",
         vec![
             labelled(
-                "CONCEPT",
+                "THE IDEA",
                 "The derived `PartialEq` compares every field. Sometimes that is not what two equal \
                  items means — two editions of a book can share a title and still be 'the same book' \
                  for your purposes.",
@@ -226,7 +226,7 @@ fn iterator_preview() -> SeedLesson {
         "`Iterator` — a Preview",
         vec![
             labelled(
-                "CONCEPT",
+                "THE IDEA",
                 "`Iterator` is an ordinary trait, and the methods you have been calling — `.map`, \
                  `.filter`, `.sum`, `.collect` — are its provided methods. This lesson names it; \
                  Module 11 teaches it.",
@@ -251,7 +251,7 @@ fn main() {
 }"#,
             ),
             labelled(
-                "EXPLANATION",
+                "LET'S BREAK IT DOWN",
                 "`shelf.iter()` produces something that implements `Iterator`. `.map(...)` transforms \
                  each item and returns another iterator; `.sum()` consumes it and adds them up. Every \
                  one of those is a method on the `Iterator` trait — a trait you have been using \
@@ -272,7 +272,7 @@ fn operator_traits() -> SeedLesson {
         "Operator Traits",
         vec![
             labelled(
-                "CONCEPT",
+                "THE IDEA",
                 "Operators like `+` are sugar for trait methods. `a + b` calls `Add::add`. Implementing \
                  the right trait makes `+` work on your own type.",
             ),
@@ -303,7 +303,7 @@ fn main() {
 }"#,
             ),
             labelled(
-                "EXPLANATION",
+                "LET'S BREAK IT DOWN",
                 "`impl Add for Point` makes `+` work on points. The `type Output = Point` line is an \
                  *associated type* — it names what `add` produces. You do not need the full story yet; \
                  for now, note that operators are traits, which is why you could write `+` on a `String` \
@@ -334,7 +334,7 @@ fn common_mistakes() -> SeedLesson {
         "The Ten Common Mistakes",
         vec![
             labelled(
-                "CONCEPT",
+                "THE IDEA",
                 "These are the mistakes that survive after the syntax is learned. Read them as a \
                  checklist against your own understanding.",
             ),
@@ -395,7 +395,7 @@ fn assembled() -> SeedLesson {
         "The Media Library, Assembled",
         vec![
             labelled(
-                "CONCEPT",
+                "THE IDEA",
                 "Here is the whole library. A `Summary` trait with a default method, two media types \
                  implementing it, a `Display` impl by hand, a generic `Library<T: Summary>`, a bounded \
                  function, and a mixed shelf of `Box<dyn Summary>` — every idea in the module in one \
@@ -509,7 +509,7 @@ fn main() {
                 ],
             ),
             labelled(
-                "EXPLANATION",
+                "LET'S BREAK IT DOWN",
                 "The `books` library is static: `Library<Book>` and one concrete `notify` per type. The \
                  `mixed` shelf is dynamic: one `Box<dyn Summary>` vector holding books and videos, with \
                  each `summarise` resolved through the vtable. Both coexist, because they answer \
@@ -531,7 +531,7 @@ fn change_the_design() -> SeedLesson {
         "Change the Design",
         vec![
             labelled(
-                "CONCEPT",
+                "THE IDEA",
                 "Reading the program proves you can follow Rust. Changing it proves you can write it. \
                  Each of these asks you to extend the library, and each is a generics-or-traits \
                  decision.",

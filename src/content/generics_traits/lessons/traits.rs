@@ -26,7 +26,7 @@ fn missing_shared_behaviour() -> SeedLesson {
         "The Missing Shared Behaviour",
         vec![
             labelled(
-                "CONCEPT",
+                "THE IDEA",
                 "Every item in the media library can be summarised — a book by title and pages, a video \
                  by title and length. But there is no type that is 'a book, an article, and a video', \
                  so the summarising code gets written three times.",
@@ -64,7 +64,7 @@ fn main() {
 }"#,
             ),
             labelled(
-                "EXPLANATION",
+                "LET'S BREAK IT DOWN",
                 "A generic function cannot help here the way `largest<T>` did, because the two types \
                  have no shared field — a `Book` has `pages`, a `Video` has `minutes`. What they share \
                  is not their *data*; it is a *behaviour*: both can be summarised. Generics cover \
@@ -85,7 +85,7 @@ fn defining_a_trait() -> SeedLesson {
         "Defining a Trait",
         vec![
             labelled(
-                "CONCEPT",
+                "THE IDEA",
                 "A trait lists method signatures that implementing types must provide. `trait Summary` \
                  with `fn summarise(&self) -> String` says: any type that claims to be `Summary` must \
                  have a `summarise` method returning a `String`.",
@@ -118,7 +118,7 @@ fn main() {
 }"#,
             ),
             labelled(
-                "EXPLANATION",
+                "LET'S BREAK IT DOWN",
                 "The method body is just a semicolon — this is a *requirement*, not an implementation. \
                  A trait is a contract: 'any implementor must provide this method'. Nothing compiles \
                  against it until at least one type implements it.",
@@ -137,7 +137,7 @@ fn implementing_a_trait() -> SeedLesson {
         "Implementing a Trait",
         vec![
             labelled(
-                "CONCEPT",
+                "THE IDEA",
                 "`impl Summary for Book { ... }` provides the method for one type. The `for` is what \
                  connects a trait to a type, and you write one impl block per type.",
             ),
@@ -179,7 +179,7 @@ fn main() {
 }"#,
             ),
             labelled(
-                "EXPLANATION",
+                "LET'S BREAK IT DOWN",
                 "The impl block gives `Book` a `summarise` method. The body uses `self`, just like a \
                  normal method, because that is what it is — a method that happens to be required by a \
                  trait. Now `book.summarise()` works.",
@@ -199,7 +199,7 @@ fn calling_trait_methods() -> SeedLesson {
         "Calling Trait Methods",
         vec![
             labelled(
-                "CONCEPT",
+                "THE IDEA",
                 "Once a type implements a trait, the trait's methods are available on values of that \
                  type with ordinary dot syntax. One condition: the trait must be *in scope* where you \
                  call it.",
@@ -228,7 +228,7 @@ fn main() {
 }"#,
             ),
             labelled(
-                "EXPLANATION",
+                "LET'S BREAK IT DOWN",
                 "`video.summarise()` looks just like calling a method defined on `Video`, and that is \
                  the point — trait methods feel native. Behind the scenes the compiler looks up the \
                  trait implementation, but you never write anything different.",
@@ -279,7 +279,7 @@ fn default_methods() -> SeedLesson {
         "Default Methods",
         vec![
             labelled(
-                "CONCEPT",
+                "THE IDEA",
                 "A trait can provide a method body as a default. Implementors get that behaviour for \
                  free, and can override it when they need something different.",
             ),
@@ -341,7 +341,7 @@ fn main() {
 }"#,
             ),
             labelled(
-                "EXPLANATION",
+                "LET'S BREAK IT DOWN",
                 "`Book` overrides `author` to return the real one; `Video` does not, so it uses the \
                  default `\"unknown\"`. A default method can also call other trait methods — that is \
                  how you build rich behaviour on top of a single required method.",
@@ -361,7 +361,7 @@ fn trait_bounds() -> SeedLesson {
         "Trait Bounds",
         vec![
             labelled(
-                "CONCEPT",
+                "THE IDEA",
                 "A bound on a generic says what the type must be able to do. `fn notify<T: Summary>` \
                  accepts any `T` that implements `Summary`, and inside the function you may call \
                  `summarise` on it.",
@@ -407,7 +407,7 @@ fn main() {
 }"#,
             ),
             labelled(
-                "EXPLANATION",
+                "LET'S BREAK IT DOWN",
                 "Without the bound, `item.summarise()` would be an error — the compiler cannot know \
                  that `T` has such a method. `T: Summary` guarantees it. Now `notify` works for any \
                  current or future type that implements `Summary`, and the compiler checks every call \
@@ -429,7 +429,7 @@ fn bounds_on_impls() -> SeedLesson {
         "Bounds on `impl` Blocks",
         vec![
             labelled(
-                "CONCEPT",
+                "THE IDEA",
                 "A generic type's `impl` block can require a bound too. `impl<T: Summary> Library<T>` \
                  means: these methods exist only for libraries whose items can be summarised.",
             ),
@@ -494,7 +494,7 @@ fn main() {
 }"#,
             ),
             labelled(
-                "EXPLANATION",
+                "LET'S BREAK IT DOWN",
                 "The bound sits on the block, not on each method, so every method may use `T`'s \
                  `Summary` abilities. `Library<Book>` works; a `Library<i32>` would exist as a type but \
                  would have no methods, because `i32` is not `Summary` — and the compiler says so the \
@@ -515,7 +515,7 @@ fn multiple_bounds() -> SeedLesson {
         "Multiple Bounds",
         vec![
             labelled(
-                "CONCEPT",
+                "THE IDEA",
                 "A type can be required to satisfy more than one trait. `T: Summary + Clone` needs both \
                  abilities, and the `+` joins them.",
             ),
@@ -559,7 +559,7 @@ fn main() {
                 ],
             ),
             labelled(
-                "EXPLANATION",
+                "LET'S BREAK IT DOWN",
                 "`duplicate` both summarises and clones, so it needs both bounds. The `+` is cumulative \
                  — each bound narrows the set of types that qualify. With several bounds, a `where` \
                  clause (from the generics lessons) is usually easier to read.",

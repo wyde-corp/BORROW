@@ -24,7 +24,7 @@ fn field_init_shorthand() -> SeedLesson {
         "Field Init Shorthand",
         vec![
             labelled(
-                "CONCEPT",
+                "THE IDEA",
                 "When a local variable has exactly the same name as a field, you can write the field \
                  once instead of twice. `Topping { name: name }` becomes `Topping { name }`.",
             ),
@@ -59,7 +59,7 @@ fn main() {
 }"#,
             ),
             labelled(
-                "EXPLANATION",
+                "LET'S BREAK IT DOWN",
                 "Shorthand does not change what the value is; the variable is still moved into the \
                  field. It removes the repetition of `name: name`, which is where typos breed. When \
                  the variable name and the field name differ, you write the long form, as before.",
@@ -78,7 +78,7 @@ fn struct_update() -> SeedLesson {
         "Struct Update Syntax",
         vec![
             labelled(
-                "CONCEPT",
+                "THE IDEA",
                 "To build a new value that is mostly a copy of an existing one, name only the fields \
                  that change and finish with `..old`. Everything else is taken from `old`.",
             ),
@@ -106,7 +106,7 @@ fn main() {
 }"#,
             ),
             labelled(
-                "EXPLANATION",
+                "LET'S BREAK IT DOWN",
                 "`fancy_olives` takes `name` and `vegetarian` from `olives`, and uses the new \
                  `extra_cost`. The `..olives` must come last, and it behaves like a move: any field \
                  that is not `Copy` moves out of `olives`, so `olives` may not be fully usable \
@@ -134,7 +134,7 @@ fn main() {
 }"#,
             ),
             labelled(
-                "EXPLANATION",
+                "LET'S BREAK IT DOWN",
                 "The update moved the `String` out of `a` into `b`. Using `a.name` afterwards is a \
                  use-after-move — the same error as Module 05. If `a` is still needed, clone the field \
                  explicitly with `name: a.name.clone()` instead of relying on the update.",
@@ -153,7 +153,7 @@ fn defaults() -> SeedLesson {
         "Defaults",
         vec![
             labelled(
-                "CONCEPT",
+                "THE IDEA",
                 "`#[derive(Default)]` lets a struct build an all-zero version of itself, and update \
                  syntax then fills in only the fields you care about. It is the cleanest way to build \
                  a value with many optional fields.",
@@ -192,7 +192,7 @@ fn main() {
 }"#,
             ),
             labelled(
-                "EXPLANATION",
+                "LET'S BREAK IT DOWN",
                 "`Settings::default()` gives `cheese: false, size: 0` — the default for each field's \
                  type. The update form builds the same thing and then overrides `cheese`. This is \
                  shorter and, more importantly, will not break if a new field is added later: the \
@@ -213,7 +213,7 @@ fn nested_structs() -> SeedLesson {
         "Nested Structs",
         vec![
             labelled(
-                "CONCEPT",
+                "THE IDEA",
                 "A field can be any type, including another struct. A `Pizza` has a size and a list of \
                  toppings; the toppings are their own values, each with a name and a cost.",
             ),
@@ -272,7 +272,7 @@ fn collections_of_structs() -> SeedLesson {
         "Collections of Structs",
         vec![
             labelled(
-                "CONCEPT",
+                "THE IDEA",
                 "A `Vec<Topping>` is one of the most common shapes in Rust. Iterating it gives you a \
                  reference to each struct, and you reach the fields through the reference.",
             ),
@@ -299,7 +299,7 @@ fn main() {
 }"#,
             ),
             labelled(
-                "EXPLANATION",
+                "LET'S BREAK IT DOWN",
                 "`for topping in &toppings` borrows each element, so the vector keeps its contents. \
                  `topping` is `&Topping`, and `topping.name` reaches a field through the reference. \
                  If you iterated by value (`for topping in toppings`), each topping would be moved out \

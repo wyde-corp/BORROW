@@ -39,7 +39,7 @@ fn thinking() -> SeedLesson {
         "Thinking in Control Flow",
         vec![
             labelled(
-                "CONCEPT",
+                "THE IDEA",
                 "So far your programs have been a straight line. Top to bottom, every statement, no \
                  detours. Which is fine right up until the moment it isn't, because real software is full of \
                  questions. Should I do this? Should I skip that? Which case am I dealing with? How many \
@@ -57,7 +57,7 @@ fn thinking() -> SeedLesson {
                  happen next? Every tool in this module maps to one of those questions.",
             ),
             labelled(
-                "EXPLANATION",
+                "LET'S BREAK IT DOWN",
                 "Before any Rust syntax, here is the idea in plain language. If it is raining, take an \
                  umbrella. Otherwise, leave it at home. If it is raining harder, take the good one. If you \
                  are already outside, forget it. That is control flow. You have been doing it in your head \
@@ -99,7 +99,7 @@ fn deciding() -> SeedLesson {
         "if: Teaching Your Program to Decide",
         vec![
             labelled(
-                "CONCEPT",
+                "THE IDEA",
                 "`if` runs a block of code when a condition is true. That is the entire tool. The syntax is \
                  four tokens, and the only real rule is that the condition must be a `bool`.",
             ),
@@ -108,7 +108,7 @@ fn deciding() -> SeedLesson {
                 "fn main() {\n    let logged_in = true;\n\n    if logged_in {\n        println!(\"Welcome back\");\n    }\n\n    println!(\"End of program\");\n}",
             ),
             labelled(
-                "EXPLANATION",
+                "LET'S BREAK IT DOWN",
                 "Read it top to bottom. `logged_in` is true, so the block runs. Then the last line runs \
                  regardless, because it is not inside the `if`. The braces matter — they are the boundary \
                  of the branch. Anything between them is conditional, anything outside is unconditional.",
@@ -169,7 +169,7 @@ fn multiple_conditions() -> SeedLesson {
         "Multiple Conditions",
         vec![
             labelled(
-                "CONCEPT",
+                "THE IDEA",
                 "Real decisions rarely have two outcomes. They have several. `else if` lets you test a \
                  second condition when the first fails, and `else` catches everything left over.",
             ),
@@ -178,7 +178,7 @@ fn multiple_conditions() -> SeedLesson {
                 "fn main() {\n    let temperature: i32 = 32;\n\n    if temperature > 30 {\n        println!(\"Hot — drink water\");\n    } else if temperature > 20 {\n        println!(\"Warm — pleasant\");\n    } else if temperature > 10 {\n        println!(\"Cool — maybe a jacket\");\n    } else {\n        println!(\"Cold — stay inside\");\n    }\n}",
             ),
             labelled(
-                "EXPLANATION",
+                "LET'S BREAK IT DOWN",
                 "Rust tests these in order and stops at the first match. At 32 degrees, the first branch \
                  wins and the other three never run. That ordering is not a detail — it is the whole design. \
                  It means you should write your conditions from most specific to most general.",
@@ -194,7 +194,7 @@ fn multiple_conditions() -> SeedLesson {
                 "fn main() {\n    let score = 85;\n    let passing = 70;\n\n    if score == 100 {\n        println!(\"Perfect!\");\n    } else if score >= passing {\n        println!(\"Passed with {}\", score);\n    } else if score >= 50 {\n        println!(\"Borderline fail\");\n    } else {\n        println!(\"Failed badly\");\n    }\n}",
             ),
             labelled(
-                "EXPLANATION",
+                "LET'S BREAK IT DOWN",
                 "You can combine conditions with `&&` (and) and `||` (or). They short-circuit, which means \
                  if the left side settles it, the right side is never evaluated. That is occasionally a \
                  performance trick and always a safety tool when the right side would panic on some inputs.",
@@ -231,7 +231,7 @@ fn if_as_expression() -> SeedLesson {
         "if as an Expression",
         vec![
             labelled(
-                "CONCEPT",
+                "THE IDEA",
                 "Here is the part that trips up nearly everyone, and the part that will pay you back for \
                  the next five years. In Rust, `if` is not a statement. It is an expression, and expressions \
                  produce values.",
@@ -241,7 +241,7 @@ fn if_as_expression() -> SeedLesson {
                 "fn main() {\n    let logged_in = true;\n\n    let message = if logged_in {\n        \"Welcome back\"\n    } else {\n        \"Please log in\"\n    };\n\n    println!(\"{}\", message);\n}",
             ),
             labelled(
-                "EXPLANATION",
+                "LET'S BREAK IT DOWN",
                 "Compare that with the `if` you already know, where the branches printed things and \
                  produced nothing. Here, each branch evaluates to a value, and the whole `if` evaluates to \
                  whichever value the matching branch produced. The `if` has become a thing that can be \
@@ -268,7 +268,7 @@ fn if_as_expression() -> SeedLesson {
                 "error[E0004]: non-exhaustive patterns: type `&str` is not covered\n --> src/main.rs:4:22\n  |\n4 |     let access = if admin {\n  |                   ^^^^ this if has no else branch",
             ),
             labelled(
-                "EXPLANATION",
+                "LET'S BREAK IT DOWN",
                 "That error says exactly what is wrong: an `if` used for a value has no else branch, so \
                  it might not produce anything. Add the `else` and the problem disappears.",
             ),
@@ -318,7 +318,7 @@ fn match_intro() -> SeedLesson {
         "match: Rust's Pattern-Matching Powerhouse",
         vec![
             labelled(
-                "CONCEPT",
+                "THE IDEA",
                 "Remember the `else if` chain from two lessons ago? It works, but it gets unwieldy fast, and \
                  nothing stops you forgetting a case. `match` is the tool Rust gives you when there are \
                  several distinct possibilities and you want to be sure you handled all of them.",
@@ -328,7 +328,7 @@ fn match_intro() -> SeedLesson {
                 "fn main() {\n    let number = 2;\n\n    match number {\n        1 => println!(\"one\"),\n        2 => println!(\"two\"),\n        3 => println!(\"three\"),\n        _ => println!(\"something else\"),\n    }\n}",
             ),
             labelled(
-                "EXPLANATION",
+                "LET'S BREAK IT DOWN",
                 "The vocabulary, piece by piece. `number` is the expression being matched. Each line inside \
                  is an *arm*. The thing before `=>` is a *pattern* — a description of what you are looking \
                  for. The thing after is the code to run if it matches. The comma at the end separates \
@@ -388,7 +388,7 @@ fn match_values() -> SeedLesson {
         "Matching Values",
         vec![
             labelled(
-                "CONCEPT",
+                "THE IDEA",
                 "Patterns are not limited to single literals. Once you can describe a value, you can describe \
                  a *set* of values — a range, or a list of alternatives — with one arm.",
             ),
@@ -411,7 +411,7 @@ fn match_values() -> SeedLesson {
                  should not fall through to your catch-all.",
             ),
             labelled(
-                "EXPLANATION",
+                "LET'S BREAK IT DOWN",
                 "Ranges are only valid in patterns, not in ordinary expressions. You cannot write \
                  `let x = 1..=5;` and use it with `<`. The `RangeInclusive` type exists and is real, but \
                  the pattern syntax is a separate, nicer thing. Worth knowing, easy to forget.",
@@ -447,7 +447,7 @@ fn match_enums() -> SeedLesson {
         "Matching Enums",
         vec![
             labelled(
-                "CONCEPT",
+                "THE IDEA",
                 "This is where `match` stops being useful and starts being the reason people choose Rust. \
                  When you have a value that can be one of a fixed set of things, `match` handles every one \
                  of them, in one place, with the compiler checking you got them all.",
@@ -457,7 +457,7 @@ fn match_enums() -> SeedLesson {
                 "enum Status {\n    Online,\n    Offline,\n    Away,\n}\n\nfn main() {\n    let status = Status::Away;\n\n    match status {\n        Status::Online => println!(\"Active now\"),\n        Status::Offline => println!(\"Not reachable\"),\n        Status::Away => println!(\"Idle, will reply later\"),\n    }\n}",
             ),
             labelled(
-                "EXPLANATION",
+                "LET'S BREAK IT DOWN",
                 "No catch-all arm this time, and it compiles. Why? Because `Status` can only be one of \
                  three things, and you handled all three. The compiler knows the full set of possibilities \
                  because the type tells it. This is the exhaustiveness check doing real work for you \
@@ -474,7 +474,7 @@ fn match_enums() -> SeedLesson {
                 "enum Message {\n    Text(String),\n    Number(i32),\n    Quit,\n}\n\nfn main() {\n    let message = Message::Text(String::from(\"hello\"));\n\n    match message {\n        Message::Text(text) => println!(\"Got text: {}\", text),\n        Message::Number(number) => println!(\"Got number: {}\", number),\n        Message::Quit => println!(\"Shutting down\"),\n    }\n}",
             ),
             labelled(
-                "EXPLANATION",
+                "LET'S BREAK IT DOWN",
                 "Look at `Message::Text(text)`. That is not a comparison. It is a *pattern* that says: \
                  'if this is a Text variant, and it carries a String, pull that String out and call it \
                  `text`.' The parentheses are the binding. The compiler guarantees the binding is \
@@ -515,7 +515,7 @@ fn catch_all() -> SeedLesson {
         "Patterns, _, and Catch-All Cases",
         vec![
             labelled(
-                "CONCEPT",
+                "THE IDEA",
                 "You have now met two kinds of pattern: literal patterns that match a specific value, and \
                  variant patterns that match a shape and pull data out. There is a third kind, and it is the \
                  most useful one.",
@@ -530,7 +530,7 @@ fn catch_all() -> SeedLesson {
                 "fn main() {\n    let value = 7;\n\n    match value {\n        0 => println!(\"zero\"),\n        1 => println!(\"one\"),\n        _ => println!(\"many\"),\n    }\n}",
             ),
             labelled(
-                "EXPLANATION",
+                "LET'S BREAK IT DOWN",
                 "`_` is the wildcard. It matches every value that the arms above it did not, and it binds \
                  nothing, so you cannot use the matched value inside the arm. Sometimes you want a named \
                  binding instead, and you can have one:",
@@ -582,7 +582,7 @@ fn match_guards() -> SeedLesson {
         "Match Guards",
         vec![
             labelled(
-                "CONCEPT",
+                "THE IDEA",
                 "Patterns match values exactly. Guards let you add a condition on top of a pattern. When \
                  the pattern matches, the guard is checked, and the arm only runs if the guard is also true.",
             ),
@@ -591,7 +591,7 @@ fn match_guards() -> SeedLesson {
                 "fn main() {\n    let number = 15;\n\n    match number {\n        n if n > 10 => println!(\"big: {}\", n),\n        n if n < 0 => println!(\"negative: {}\", n),\n        n => println!(\"small: {}\", n),\n    }\n}",
             ),
             labelled(
-                "EXPLANATION",
+                "LET'S BREAK IT DOWN",
                 "Read `n if n > 10` as 'if the value, bound to the name n, is greater than 10'. The \
                  binding happens first, then the guard runs, then the arm's body runs. If the guard is \
                  false, Rust moves on to the next arm — and eventually to whatever catch-all you have.",
@@ -644,7 +644,7 @@ fn nested_match() -> SeedLesson {
         "Nested match and Combining Patterns",
         vec![
             labelled(
-                "CONCEPT",
+                "THE IDEA",
                 "Sometimes the shape of the data has a shape. A move in a chess game has a piece and a \
                  square. Handling that means a `match` inside a `match`.",
             ),
@@ -653,7 +653,7 @@ fn nested_match() -> SeedLesson {
                 "enum Color {\n    Red,\n    Green,\n    Blue,\n}\n\nfn main() {\n    let pair = (Color::Red, 5);\n\n    match pair {\n        (Color::Red, 0) => println!(\"dark red\"),\n        (Color::Red, n) => println!(\"red, brightness {}\", n),\n        (_, 0) => println!(\"pure color, no brightness\"),\n        _ => println!(\"something else\"),\n    }\n}",
             ),
             labelled(
-                "EXPLANATION",
+                "LET'S BREAK IT DOWN",
                 "The outer `match` destructures a tuple. Each arm's pattern is itself a tuple pattern, \
                  which means each position can have its own pattern. `(Color::Red, 0)` matches only red at \
                  exactly 0. `(Color::Red, n)` matches any red. `(_, 0)` matches any colour at 0 — the \
@@ -700,7 +700,7 @@ fn loop_basics() -> SeedLesson {
         "loop: Repeat Until You Say Stop",
         vec![
             labelled(
-                "CONCEPT",
+                "THE IDEA",
                 "Three loop tools, three different shapes. `loop` repeats forever until you break out. \
                  `while` repeats as long as a condition holds. `for` walks over a sequence. Start with the \
                  first one, because it is the one that teaches the others.",
@@ -719,7 +719,7 @@ fn loop_basics() -> SeedLesson {
                 "fn main() {\n    let mut attempts = 0;\n\n    loop {\n        attempts += 1;\n        println!(\"attempt {}\", attempts);\n\n        if attempts == 3 {\n            break;\n        }\n    }\n}",
             ),
             labelled(
-                "EXPLANATION",
+                "LET'S BREAK IT DOWN",
                 "This is the pattern for 'keep going until something happens'. The stopping condition is \
                  discovered inside the loop body, usually by checking state that changes. That is what \
                  makes `loop` different from `while`: with `while`, the exit condition is known before you \
@@ -768,7 +768,7 @@ fn break_continue() -> SeedLesson {
         "break and continue",
         vec![
             labelled(
-                "CONCEPT",
+                "THE IDEA",
                 "Two keywords, two different jobs. `break` leaves the loop entirely. `continue` skips the \
                  rest of this iteration and starts the next one. Neither one is complicated. Both are \n                 genuinely useful.",
             ),
@@ -777,7 +777,7 @@ fn break_continue() -> SeedLesson {
                 "fn main() {\n    let numbers = [10, -5, 3, 0, 8, -1, 12];\n    let mut negatives = 0;\n\n    for n in numbers {\n        if n < 0 {\n            negatives += 1;\n            continue;\n        }\n\n        println!(\"processing {}\", n);\n    }\n\n    println!(\"skipped {} negatives\", negatives);\n}",
             ),
             labelled(
-                "EXPLANATION",
+                "LET'S BREAK IT DOWN",
                 "That pattern — check a condition, `continue` if it fails, otherwise do the work — is one \
                  of the most common shapes in all of programming. Notice it lets you keep the happy path \
                  at the top level of the loop body, unindented, instead of burying it under an `else`.",
@@ -830,7 +830,7 @@ fn loop_values() -> SeedLesson {
         "Returning Values From loop",
         vec![
             labelled(
-                "CONCEPT",
+                "THE IDEA",
                 "Everything so far has been a statement. Now we get the payoff: `loop` can produce a value, \
                  and so can every other block-shaped construct in Rust. Remember `loop { break 42; }`?",
             ),
@@ -839,7 +839,7 @@ fn loop_values() -> SeedLesson {
                 "fn main() {\n    let mut counter = 0;\n\n    let result = loop {\n        counter += 1;\n\n        if counter == 10 {\n            break counter;   // break WITH a value — the loop produces it\n        }\n    };\n\n    println!(\"counter reached {}\", result);\n}",
             ),
             labelled(
-                "EXPLANATION",
+                "LET'S BREAK IT DOWN",
                 "`break counter;` does not just exit. It exits *with that value attached*, and the whole \
                  `loop` expression evaluates to it. That is why `let result = loop { ... }` works. The loop \
                  has to be able to escape on every path, or the compiler will complain that the value is \
@@ -890,7 +890,7 @@ fn while_basics() -> SeedLesson {
         "while: Repeat While Something Is True",
         vec![
             labelled(
-                "CONCEPT",
+                "THE IDEA",
                 "When you know up front what stops the repetition, `while` says so directly. No `break` \
                  required, no manual flag. This is the loop you will reach for most often when the \
                  condition is known before you start.",
@@ -900,7 +900,7 @@ fn while_basics() -> SeedLesson {
                 "fn main() {\n    let mut countdown = 5;\n\n    while countdown > 0 {\n        println!(\"{}...\", countdown);\n        countdown -= 1;\n    }\n\n    println!(\"liftoff\");\n}",
             ),
             labelled(
-                "EXPLANATION",
+                "LET'S BREAK IT DOWN",
                 "Read the condition first, then the body. That ordering is different from `loop`, where the \
                  condition lives inside. Here the loop can never run zero times if the condition starts \
                  false, and it can never run forever as long as you update the thing the condition reads.",
@@ -957,7 +957,7 @@ fn while_let() -> SeedLesson {
         "while let",
         vec![
             labelled(
-                "CONCEPT",
+                "THE IDEA",
                 "Sometimes the loop condition is not a yes-or-no question but a pattern match. \
                  `while let` runs the loop as long as the pattern keeps matching. It is `while` and a \
                  `match` fused into one construct.",
@@ -967,7 +967,7 @@ fn while_let() -> SeedLesson {
                 "fn main() {\n    let mut stack = vec![1, 2, 3];\n\n    while let Some(top) = stack.pop() {\n        println!(\"popped {}\", top);\n    }\n\n    println!(\"stack is empty\");\n}",
             ),
             labelled(
-                "EXPLANATION",
+                "LET'S BREAK IT DOWN",
                 "`stack.pop()` gives you an `Option` — `Some(value)` if there was something, `None` if the \
                  stack is empty. The pattern `Some(top)` binds the value. While that pattern keeps \
                  matching, the loop runs. The moment it returns `None`, the pattern stops matching and the \
@@ -978,7 +978,7 @@ fn while_let() -> SeedLesson {
                 "  loop {\n      match stack.pop() {\n          Some(top) => { /* loop body */ }\n          None => break,      ← implicit in while let\n      }\n  }",
             ),
             labelled(
-                "EXPLANATION",
+                "LET'S BREAK IT DOWN",
                 "That is exactly what `while let Some(top) = stack.pop()` expands to. When you see \
                  `while let`, you are allowed to think of it as a loop whose exit condition is 'the pattern \
                  stopped matching'.",
@@ -1021,7 +1021,7 @@ fn for_loop() -> SeedLesson {
         "for: The Rust Way to Iterate",
         vec![
             labelled(
-                "CONCEPT",
+                "THE IDEA",
                 "If you take one thing from this module, take this. `for` is the loop you will use most, \
                  because it cannot have the three classic bugs: it cannot forget to update a condition, it \
                  cannot run forever, and it cannot index out of bounds.",
@@ -1031,7 +1031,7 @@ fn for_loop() -> SeedLesson {
                 "fn main() {\n    for number in 1..=5 {\n        println!(\"{}\", number);\n    }\n\n    let names = [\"Gus\", \"Alex\", \"Sam\"];\n\n    for name in names {\n        println!(\"Hello, {}\", name);\n    }\n}",
             ),
             labelled(
-                "EXPLANATION",
+                "LET'S BREAK IT DOWN",
                 "There is no counter. No index variable. No condition. `for` asks a *sequence* for its next \
                  item, over and over, until there are none left. The sequence could be a range, an array, a \
                  `Vec`, a `HashMap`, or something you wrote yourself. The loop body is the same regardless.",
@@ -1080,7 +1080,7 @@ fn ranges() -> SeedLesson {
         "Ranges",
         vec![
             labelled(
-                "CONCEPT",
+                "THE IDEA",
                 "Ranges are the most common sequence you will iterate. They come in two forms and the \
                  difference between them is a single `=` character that catches everybody once.",
             ),
@@ -1093,7 +1093,7 @@ fn ranges() -> SeedLesson {
                 "fn main() {\n    for n in 0..5 {\n        print!(\"{} \", n);\n    }\n    println!();   // 0 1 2 3 4\n\n    for n in 0..=5 {\n        print!(\"{} \", n);\n    }\n    println!();   // 0 1 2 3 4 5\n\n    for n in 5.. {\n        print!(\"{} \", n);\n        if n > 7 {\n            break;\n        }\n    }\n    println!();   // 5 6 7\n}",
             ),
             labelled(
-                "EXPLANATION",
+                "LET'S BREAK IT DOWN",
                 "`..` means 'up to but not including'. `..=` means 'up to and including'. The `=` is the \
                  only difference, which is why it is easy to miss in a long line. Read `..=` as \
                  'through' — the range goes *through* the end value.",
@@ -1135,7 +1135,7 @@ fn collections() -> SeedLesson {
         "Iterating Over Collections",
         vec![
             labelled(
-                "CONCEPT",
+                "THE IDEA",
                 "`for` does not care what it is iterating. A range, an array, a `Vec` — the syntax is \
                  identical. That is not a coincidence; it is the whole design. There is a trait called \
                  `IntoIterator` that all of them implement, and `for` just uses it.",
@@ -1145,7 +1145,7 @@ fn collections() -> SeedLesson {
                 "fn main() {\n    let names = vec![\"Gus\", \"Alex\", \"Sam\"];\n\n    for name in &names {\n        println!(\"{}\", name);\n    }\n}",
             ),
             labelled(
-                "EXPLANATION",
+                "LET'S BREAK IT DOWN",
                 "That `&` is a borrow, and it is not cosmetic. Without it, `for name in names` would take \
                  ownership of the vector and empty it. With it, you walk through the values while leaving \
                  the collection intact. The next lesson is entirely about why, so for now just notice that \
@@ -1209,7 +1209,7 @@ fn ownership_looping() -> SeedLesson {
         "Ownership While Looping",
         vec![
             labelled(
-                "CONCEPT",
+                "THE IDEA",
                 "This is a short lesson about something that will get a full module of its own. We are not \
                  teaching ownership here. We are teaching you to recognise the moment you see it.",
             ),
@@ -1222,7 +1222,7 @@ fn ownership_looping() -> SeedLesson {
                 "error[E0382]: borrow of moved value: `names`\n --> src/main.rs:7:24\n  |\n5 |     for name in names {\n  |                ----- value moved here\n6 |         println!(\"{}\", name);\n7 |     }\n  |     ^ value moved due to this\n8 |\n9 |     println!(\"{:?}\", names);\n  |                       ^^^^^ value borrowed here after move",
             ),
             labelled(
-                "EXPLANATION",
+                "LET'S BREAK IT DOWN",
                 "The loop took the `Vec` and consumed it. Iteration hands out each element, and for a \
                  `Vec<String>` each element is itself something that has to be given away rather than \
                  copied. So the whole collection is gone by the time the loop ends. The fix is one \
@@ -1243,7 +1243,7 @@ fn ownership_looping() -> SeedLesson {
                 "fn main() {\n    // Numbers are Copy, so this works without any & \n    let numbers = vec![1, 2, 3];\n\n    for n in numbers {\n        println!(\"{}\", n);\n    }\n\n    println!(\"{:?}\", numbers);   // compiles! numbers is Copy\n}",
             ),
             labelled(
-                "EXPLANATION",
+                "LET'S BREAK IT DOWN",
                 "Here is why some loops consume and some do not bother you. Small numbers like `i32` are \
                  cheap to copy, and Rust copies them silently. `String` owns heap memory, so giving one \
                  away is a real event. That distinction — types that are cheap to copy versus types that \
@@ -1278,7 +1278,7 @@ fn nested_labels() -> SeedLesson {
         "Nested Loops and Loop Labels",
         vec![
             labelled(
-                "CONCEPT",
+                "THE IDEA",
                 "Loops inside loops work exactly as you would expect: the inner loop finishes all of its \
                  iterations before the outer one advances. Occasionally you need to exit *both* at once, \
                  and that is what labels are for.",
@@ -1292,7 +1292,7 @@ fn nested_labels() -> SeedLesson {
                 "fn main() {\n    let mut grid = vec![vec![1, 2, 3], vec![4, 5, 6], vec![7, 8, 9]];\n\n    for row in &mut grid {\n        for cell in row {\n            *cell *= 10;\n        }\n    }\n\n    println!(\"{:?}\", grid);\n}",
             ),
             labelled(
-                "EXPLANATION",
+                "LET'S BREAK IT DOWN",
                 "The second example is the pattern you will write most: nested loops where the inner one \
                  modifies what the outer one handed it. Both loops use `&mut`, and that is why mutation \
                  works all the way down.",
@@ -1349,7 +1349,7 @@ fn blocks_expressions() -> SeedLesson {
         "Blocks Are Expressions Too",
         vec![
             labelled(
-                "CONCEPT",
+                "THE IDEA",
                 "You have seen blocks produce values twice already: `if` and `loop`. Now let us look at a \
                  plain block on its own, because it is the simplest of the three and the one you will use \
                  most while writing real functions.",
@@ -1359,7 +1359,7 @@ fn blocks_expressions() -> SeedLesson {
                 "fn main() {\n    let result = {\n        let x = 10;\n        let y = 20;\n\n        x + y\n    };\n\n    println!(\"{}\", result);   // 30\n}",
             ),
             labelled(
-                "EXPLANATION",
+                "LET'S BREAK IT DOWN",
                 "The block has three statements and then `x + y` with no semicolon. That final line is the \
                  block's value. The whole `let result = { ... };` is one expression, and it evaluated to 30. \
                  Nothing was returned, nothing was assigned inside — the block simply *was* a value.",
@@ -1416,7 +1416,7 @@ fn statements_expressions() -> SeedLesson {
         "Expressions vs Statements",
         vec![
             labelled(
-                "CONCEPT",
+                "THE IDEA",
                 "Rust draws a line between two things, and the line is drawn with one character: the \
                  semicolon. Understanding this one distinction removes an entire category of confusion.",
             ),
@@ -1430,7 +1430,7 @@ fn statements_expressions() -> SeedLesson {
                 ],
             ),
             labelled(
-                "EXPLANATION",
+                "LET'S BREAK IT DOWN",
                 "An expression is anything that evaluates to a value. A statement is an instruction that \
                  does the thing and, if it ends with a semicolon, evaluates to nothing. Almost every Rust \
                  construct is an expression, which is unusual — most languages have a much thinner set.",
@@ -1490,7 +1490,7 @@ fn option() -> SeedLesson {
         "Control Flow + Option",
         vec![
             labelled(
-                "CONCEPT",
+                "THE IDEA",
                 "Remember how `match` refused to compile unless you handled every case? Here is where that \
                  pays off completely. `Option` is a type with exactly two cases, and matching it is the \
                  single most common pattern in real Rust.",
@@ -1500,7 +1500,7 @@ fn option() -> SeedLesson {
                 "fn main() {\n    let username: Option<String> = Some(String::from(\"Gus\"));\n\n    match username {\n        Some(name) => println!(\"Hello, {}\", name),\n        None => println!(\"No username found\"),\n    }\n}",
             ),
             labelled(
-                "EXPLANATION",
+                "LET'S BREAK IT DOWN",
                 "`Option<T>` is either `Some(value)` or `None`. There is no third case — no null, no \
                  undefined, no 'maybe' that you can accidentally forget. If a function returns an \
                  `Option<String>`, the value is either a String or nothing, and the type says so. The \
@@ -1558,7 +1558,7 @@ fn result() -> SeedLesson {
         "Control Flow + Result",
         vec![
             labelled(
-                "CONCEPT",
+                "THE IDEA",
                 "Same idea, bigger stakes. `Result<T, E>` is either `Ok(value)` or `Err(error)`. Every \
                  operation that can fail returns one, and `match` on it is how you handle the failure. This \
                  is the pattern behind all of Rust's error handling.",
@@ -1568,7 +1568,7 @@ fn result() -> SeedLesson {
                 "fn main() {\n    let input = \"42\";\n    let result = input.parse::<i32>();\n\n    match result {\n        Ok(number) => println!(\"parsed: {}\", number),\n        Err(error) => println!(\"failed: {}\", error),\n    }\n}",
             ),
             labelled(
-                "EXPLANATION",
+                "LET'S BREAK IT DOWN",
                 "`parse` returns a `Result<i32, ParseIntError>`. It is either a number, or an explanation \
                  of why there is not one. Two cases, no third, and the compiler will not let you ignore \
                  either. Notice how the same match shape from the `Option` lesson now carries an error \
@@ -1625,7 +1625,7 @@ fn putting_it_together() -> SeedLesson {
         "Putting It All Together",
         vec![
             labelled(
-                "CONCEPT",
+                "THE IDEA",
                 "You have the whole toolkit now. `if` and `match` for decisions, `loop` / `while` / `for` \
                  for repetition, expressions everywhere, patterns everywhere, and the beginning of how \
                  `Option` and `Result` fit in. Time to see it working as one program.",
@@ -1635,7 +1635,7 @@ fn putting_it_together() -> SeedLesson {
                 "#[derive(Debug)]\nenum Item {\n    Weapon { name: String, damage: u32 },\n    Potion(u32),\n    Key,\n}\n\nfn describe(item: &Item) -> String {\n    match item {\n        Item::Weapon { name, damage } => format!(\"{} ({} dmg)\", name, damage),\n        Item::Potion(heal) => format!(\"potion (+{} hp)\", heal),\n        Item::Key => String::from(\"a key\"),\n    }\n}\n\nfn total_damage(items: &[Item]) -> u32 {\n    let mut total = 0;\n\n    for item in items {\n        match item {\n            Item::Weapon { damage, .. } => total += damage,\n            _ => continue,          // skip anything that is not a weapon\n        }\n    }\n\n    total\n}\n\nfn main() {\n    let inventory = [\n        Item::Weapon { name: String::from(\"Rusty Sword\"), damage: 12 },\n        Item::Potion(50),\n        Item::Weapon { name: String::from(\"Axe\"), damage: 20 },\n        Item::Key,\n    ];\n\n    for item in &inventory {\n        println!(\"inventory: {}\", describe(item));\n    }\n\n    let damage = total_damage(&inventory);\n    println!(\"total weapon damage: {}\", damage);\n\n    let grade = match damage {\n        0 => \"unarmed\",\n        d if d < 15 => \"lightly armed\",\n        d if d < 30 => \"dangerous\",\n        _ => \"lethal\",\n    };\n    println!(\"rating: {}\", grade);\n}",
             ),
             labelled(
-                "EXPLANATION",
+                "LET'S BREAK IT DOWN",
                 "That program is small and uses almost everything in this module. A `match` on an enum with \
                  named fields. A second `match` that only cares about one variant and skips the rest with \
                  `continue`. A `for` that borrows. A `match` with guards producing a `&str` value. \

@@ -23,13 +23,13 @@ fn the_problem() -> SeedLesson {
         "The Problem Borrowing Solves",
         vec![
             labelled(
-                "CONCEPT",
+                "THE IDEA",
                 "You have just spent a whole module learning that passing a `String` to a function \
                  moves it. That is correct, and it is also frequently the wrong thing to want. Most \
                  functions are not taking a value to keep it. They are taking it to look at it.",
             ),
             labelled(
-                "EXPLANATION",
+                "LET'S BREAK IT DOWN",
                 "Read this program as a designer rather than as a compiler. What does \
                  `calculate_length` actually need? It needs to read the length of the string. It does \
                  not need to store it, free it, or hand it on. Yet the signature says 'give me the \
@@ -77,7 +77,7 @@ fn references() -> SeedLesson {
         "References",
         vec![
             labelled(
-                "CONCEPT",
+                "THE IDEA",
                 "A reference is Rust's mechanism for borrowing. It is a value that says 'the thing you \
                  want lives over there, and I am allowed to look at it' — without becoming an owner of \
                  that thing.",
@@ -92,7 +92,7 @@ fn references() -> SeedLesson {
                  `s` is still usable after this line.",
             ]),
             labelled(
-                "EXPLANATION",
+                "LET'S BREAK IT DOWN",
                 "The important facts, stated precisely. `s` owns the `String`. `r` does not own the \
                  `String`. `r` is a reference to the value owned by `s`. Using `r` does not transfer \
                  ownership. When `r` goes out of scope it does not drop the `String` — `r` was never an \
@@ -126,7 +126,7 @@ fn without_transfer() -> SeedLesson {
         "Borrowing Without Ownership Transfer",
         vec![
             labelled(
-                "CONCEPT",
+                "THE IDEA",
                 "The difference between moving a value and borrowing it is the difference between \
                  handing someone your only key and letting them look through the window. One transfers \
                  responsibility; the other does not.",
@@ -143,13 +143,13 @@ fn without_transfer() -> SeedLesson {
                 "s2 = s1\n\n  ownership moves\n  s1 is no longer usable\n\n\ns2 = &s1\n\n  ownership does not move\n  s1 remains the owner\n  s2 merely borrows",
             ),
             labelled(
-                "EXPLANATION",
+                "LET'S BREAK IT DOWN",
                 "In the first program there is exactly one `String`. After `let s2 = s1;` it belongs to \
                  `s2`. `s1` is not empty and not invalid — it is disarmed. The compiler rejects the \
                  attempt to read it because the value it used to own now belongs to someone else.",
             ),
             labelled(
-                "EXPLANATION",
+                "LET'S BREAK IT DOWN",
                 "In the second program there is still exactly one `String`, owned by `s1`, and `s2` is a \
                  reference to it. Both names are usable, because only one of them is responsible for \
                  freeing anything. When the scope ends, `s2` disappears harmlessly and `s1` frees the \
@@ -170,7 +170,7 @@ fn dereferencing() -> SeedLesson {
         "Dereferencing",
         vec![
             labelled(
-                "CONCEPT",
+                "THE IDEA",
                 "`&` creates a reference. `*` goes the other way: it follows a reference back to the \
                  value it points at. One is the borrow; the other is how you use what you borrowed.",
             ),
@@ -188,7 +188,7 @@ fn dereferencing() -> SeedLesson {
                  explicit `*`.",
             ]),
             labelled(
-                "EXPLANATION",
+                "LET'S BREAK IT DOWN",
                 "Why does `{r}` work without the `*`? Because formatting and many operators work through \
                  a reference automatically: the `Display` implementation for `String` can be reached \
                  through `&String`, so the compiler inserts the dereference for you. This is called \

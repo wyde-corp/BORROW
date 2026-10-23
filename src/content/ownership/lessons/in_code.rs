@@ -25,13 +25,13 @@ fn ownership_and_assignment() -> SeedLesson {
         "Ownership and Assignment",
         vec![
             labelled(
-                "CONCEPT",
+                "THE IDEA",
                 "Assignment is not \"put the value in another variable\". It is \"hand the value over, or \
                  duplicate it, depending on the type\" — and if the variable already owned something, \
                  reassigning drops that something first.",
             ),
             labelled(
-                "EXPLANATION",
+                "LET'S BREAK IT DOWN",
                 "There are two separate questions hiding inside the word *assignment*, and beginners run \
                  them together. The first is what happens to the *new* value: does it copy, move, or \
                  clone? The second is what happens to the *old* value that the variable was already \
@@ -99,13 +99,13 @@ fn ownership_and_functions() -> SeedLesson {
         "Ownership and Functions",
         vec![
             labelled(
-                "CONCEPT",
+                "THE IDEA",
                 "Parameters are just bindings. A `String` parameter takes ownership; a `i32` parameter \
                  takes a copy. After the call, the first leaves you with nothing and the second leaves \
                  you with everything.",
             ),
             labelled(
-                "EXPLANATION",
+                "LET'S BREAK IT DOWN",
                 "This is where module 4 and module 5 collide, and the collision is instructive. In module \
                  4 you learned that `greet(name: &str)` borrows a string slice and hands back nothing. \
                  Now look at `consume(s: String)`. The parameter is declared as `String`, not `&String` — \
@@ -172,12 +172,12 @@ fn ownership_and_return_values() -> SeedLesson {
         "Ownership and Return Values",
         vec![
             labelled(
-                "CONCEPT",
+                "THE IDEA",
                 "Ownership moves out of functions exactly as it moves into them. A returned value is not \
                  a copy of what the function had — it *is* what the function had, handed back.",
             ),
             labelled(
-                "EXPLANATION",
+                "LET'S BREAK IT DOWN",
                 "A return is a move in the opposite direction. When a function returns a `String` it had \
                  ownership of, that value does not get duplicated on the way out; the caller simply \
                  becomes the owner. This is the mirror image of the call, and once you see it as a \
@@ -249,13 +249,13 @@ fn ownership_and_scope() -> SeedLesson {
         "Ownership and Scope",
         vec![
             labelled(
-                "CONCEPT",
+                "THE IDEA",
                 "Nested scopes are a scheduling tool. Values drop in reverse order of creation, innermost \
                  first, and a block is a way of saying *this thing is finished with now* rather than at \
                  some vague point later.",
             ),
             labelled(
-                "EXPLANATION",
+                "LET'S BREAK IT DOWN",
                 "Most languages treat a block as invisible — a place to put a temporary so the name does \
                  not clutter the function. Here a block is a scope with a definite end, and definite ends \
                  are meaningful. Entering a block can bring values into existence; leaving it guarantees \
@@ -310,13 +310,13 @@ fn dropping_values() -> SeedLesson {
         "Dropping Values",
         vec![
             labelled(
-                "CONCEPT",
+                "THE IDEA",
                 "Cleanup is automatic, deterministic, and nobody has to call it. When the owner goes out \
                  of scope the value is dropped — and if ownership moved, it is dropped by whoever ended \
                  up holding it.",
             ),
             labelled(
-                "EXPLANATION",
+                "LET'S BREAK IT DOWN",
                 "This is the moment the whole design pays off. You have not written a single `free`, you \
                  will never write one, and yet nothing leaks. The reason is that 'when the owner goes out \
                  of scope' is a fact the compiler determined long before the program ran, and it is a \
@@ -385,13 +385,13 @@ fn shadowing_vs_moving() -> SeedLesson {
         "Shadowing vs Moving",
         vec![
             labelled(
-                "CONCEPT",
+                "THE IDEA",
                 "Shadowing creates a *new binding with the same name*. Moving creates a *new binding that \
                  takes the value*. They look identical in the source and mean different things, and \
                  confusing the two causes errors that make no sense until you can tell them apart.",
             ),
             labelled(
-                "EXPLANATION",
+                "LET'S BREAK IT DOWN",
                 "Here is the trap. These two lines look like they do the same thing, and in a sense they \
                  do — both end with a name `s` owning a `String`. But the mechanism is completely \
                  different, and so are the consequences. In the first, the original `s` is still there \
@@ -465,13 +465,13 @@ fn ownership_with_collections() -> SeedLesson {
         "Ownership With Collections",
         vec![
             labelled(
-                "CONCEPT",
+                "THE IDEA",
                 "Nothing about this is special to `String`. `Vec<T>`, and every other growable or owned \
                  type, follows the same three rules, because the rules are about ownership and not about \
                  any particular type.",
             ),
             labelled(
-                "EXPLANATION",
+                "LET'S BREAK IT DOWN",
                 "It would be easy to come out of the last ten lessons thinking ownership is a `String` \
                  quirk with a workaround. It is not. A `Vec<T>` owns its buffer for exactly the same \
                  reason a `String` does, moves for exactly the same reason, and is dropped for exactly \

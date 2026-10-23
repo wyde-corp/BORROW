@@ -23,14 +23,14 @@ fn string_first_example() -> SeedLesson {
         "String: Our First Ownership Example",
         vec![
             labelled(
-                "CONCEPT",
+                "THE IDEA",
                 "`String` is the type that makes ownership visible. It owns heap memory whose size is not \
                  known until runtime, which means someone has to be responsible for freeing it. That \
                  someone is the owner. Watch what happens to two slightly different ways of saying \
                  `\"hello\"`.",
             ),
             labelled(
-                "EXPLANATION",
+                "LET'S BREAK IT DOWN",
                 "`\"hello\"` on its own is not a value with a size decided by your program — it is a \
                  chunk of text sitting inside your compiled binary. It will be there until the process \
                  exits, and nobody has to clean it up, because nothing was ever allocated at runtime. \
@@ -93,13 +93,13 @@ fn the_move() -> SeedLesson {
         "Move",
         vec![
             labelled(
-                "CONCEPT",
+                "THE IDEA",
                 "Assigning a `String` does not copy it. Ownership transfers. The old binding becomes \
                  unusable, and the new one is responsible for the bytes. This is the single behaviour that \
                  makes Rust's memory safety possible.",
             ),
             labelled(
-                "EXPLANATION",
+                "LET'S BREAK IT DOWN",
                 "Your variable did not disappear. Rust did not reach in and delete anything. The heap \
                  buffer is sitting in exactly the same place it was a microsecond ago, byte for byte. \
                  What happened is that responsibility for it moved from one name to another, and the old \
@@ -173,12 +173,12 @@ fn why_move_instead_of_copying() -> SeedLesson {
         "Why Rust Moves Instead of Copying",
         vec![
             labelled(
-                "CONCEPT",
+                "THE IDEA",
                 "The alternative to moving was copying everything, silently, on every assignment. That is \
                  a real engineering decision with a real cost, and Rust decided against it.",
             ),
             labelled(
-                "EXPLANATION",
+                "LET'S BREAK IT DOWN",
                 "Nobody designed moves to be confusing. Moves are the *result* of a much more boring \
                  argument about performance. If assignment silently duplicated every value, then the cost \
                  of an assignment would depend on how big the value was — and for a vector of a million \
@@ -243,13 +243,13 @@ fn copy_types() -> SeedLesson {
         "Copy Types",
         vec![
             labelled(
-                "CONCEPT",
+                "THE IDEA",
                 "Some types are cheap and safe to duplicate, so assignment copies them and both variables \
                  stay usable. This is not a property of \"primitives\" — it is a property of the type \
                  declaring that it implements `Copy`.",
             ),
             labelled(
-                "EXPLANATION",
+                "LET'S BREAK IT DOWN",
                 "If duplicating a value cannot cause a double free, cannot leak, and costs nothing \
                  measurable, then there is no safety reason to forbid making two of them. `5` copied into \
                  `y` is not two owners of one resource — it is two identical numbers. Nothing has to be \
@@ -323,13 +323,13 @@ fn clone_() -> SeedLesson {
         "Clone",
         vec![
             labelled(
-                "CONCEPT",
+                "THE IDEA",
                 "`clone()` asks for a second, independent, fully-owned value. It is explicit, it may be \
                  expensive, and for a `String` it means genuinely duplicating the bytes. That is a tool, \
                  not a mistake.",
             ),
             labelled(
-                "EXPLANATION",
+                "LET'S BREAK IT DOWN",
                 "Every design has a moment where it forces you to be explicit about something you would \
                  rather leave automatic, and this is Rust's. When you write `.clone()`, you are making a \
                  statement: *I intend for two owners of this kind of thing to exist, and I accept what \
@@ -406,13 +406,13 @@ fn move_vs_copy_vs_clone() -> SeedLesson {
         "Move vs Copy vs Clone",
         vec![
             labelled(
-                "CONCEPT",
+                "THE IDEA",
                 "Three outcomes for `let b = <something involving a>;`. One is decided by the type, one \
                  is decided by you. Once you can predict which is which from the left-hand side alone, you \
                  will never be surprised by an ownership error again.",
             ),
             labelled(
-                "EXPLANATION",
+                "LET'S BREAK IT DOWN",
                 "This is the single most useful thing to memorise in the module, and it is a decision \
                  procedure rather than a fact. Look at the type. Ask whether it implements `Copy`. If yes, \
                  you are done — it copied, both names are live, nothing else can have happened. If it does \
@@ -421,7 +421,7 @@ fn move_vs_copy_vs_clone() -> SeedLesson {
                  anything.",
             ),
             table(
-                &["Concept", "Trigger", "Original usable?", "New owned value?", "Cost"],
+                &["Idea", "Trigger", "Original usable?", "New owned value?", "Cost"],
                 &[
                     &["Copy", "implicit, type is `Copy`", "Yes — it is still whole", "Yes, trivially", "Fixed and tiny"],
                     &["Move", "implicit, type is not `Copy`", "No — it is disarmed", "Yes — it is the same value", "O(1), constant"],

@@ -26,7 +26,7 @@ fn the_duplicated_function() -> SeedLesson {
         "The Duplicated Function",
         vec![
             labelled(
-                "CONCEPT",
+                "THE IDEA",
                 "The media library needs the longest item — the biggest page count, the most words, \
                  the longest video. You write a function that returns the largest value in a list. It \
                  works for `i32`. It does not work for `f64`, so you write it again.",
@@ -61,7 +61,7 @@ fn main() {
 }"#,
             ),
             labelled(
-                "EXPLANATION",
+                "LET'S BREAK IT DOWN",
                 "The two functions are identical except for the type. That is a smell: any bug fixed \
                  in one has to be fixed in the other, and the next type — a `String`, a `Book`'s page \
                  count, a `u64` — needs a third copy. You have been writing this duplication-removal \
@@ -86,7 +86,7 @@ fn generic_functions() -> SeedLesson {
         "Generic Functions",
         vec![
             labelled(
-                "CONCEPT",
+                "THE IDEA",
                 "A generic function takes a type parameter in angle brackets, `fn largest<T>`, and \
                  uses `T` where a concrete type would go. A **bound** — `T: PartialOrd + Copy` — says \
                  what the function needs `T` to be able to do.",
@@ -131,7 +131,7 @@ fn main() {
 }"#,
             ),
             labelled(
-                "EXPLANATION",
+                "LET'S BREAK IT DOWN",
                 "`<T>` introduces a type parameter. `T: PartialOrd + Copy` is the bound: `PartialOrd` \
                  is the trait that provides `>`, and `Copy` is what lets `for &item` copy each element \
                  out. With that, one function replaces both copies. Call it with `&[i32]` and `T` is \
@@ -160,7 +160,7 @@ fn generic_types() -> SeedLesson {
         "Generic Structs and Enums",
         vec![
             labelled(
-                "CONCEPT",
+                "THE IDEA",
                 "Types can be generic too. `struct Point<T> { x: T, y: T }` describes a pair of \
                  whatever type you choose. And the reveal: `Option` and `Result` are just generic \
                  enums — you have been writing generic code since Module 07.",
@@ -198,7 +198,7 @@ fn main() {
 }"#,
             ),
             labelled(
-                "EXPLANATION",
+                "LET'S BREAK IT DOWN",
                 "Notice `x` and `y` must be the *same* `T`. A `Point` cannot have an `i32` x and an \
                  `f64` y — that needs two type parameters, the next lesson. The compiler infers `T` \
                  from the values you put in, so you rarely write `Point::<i32>` by hand.",
@@ -230,7 +230,7 @@ fn more_than_one() -> SeedLesson {
         "More Than One Parameter",
         vec![
             labelled(
-                "CONCEPT",
+                "THE IDEA",
                 "A type can take several type parameters. `struct Pair<T, U>` holds two values that may \
                  be different types, and `Result<T, E>` — which you know — is the two-parameter enum.",
             ),
@@ -266,7 +266,7 @@ fn main() {
 }"#,
             ),
             labelled(
-                "EXPLANATION",
+                "LET'S BREAK IT DOWN",
                 "`Pair<T, U>` lets `first` and `second` differ. `Pair { first: 1, second: String::from(...) }` \
                  is a `Pair<i32, String>`. The names `T` and `U` are arbitrary; what matters is that \
                  they are distinct, so the compiler can track each position's type separately.",
@@ -294,7 +294,7 @@ fn monomorphisation() -> SeedLesson {
         "Monomorphisation",
         vec![
             labelled(
-                "CONCEPT",
+                "THE IDEA",
                 "A generic function is not slower for being generic. When you compile, Rust fills in \
                  each concrete type and produces a separate ordinary function for each. This is called \
                  **monomorphisation**: 'one shape per type'.",
@@ -362,7 +362,7 @@ fn where_clauses() -> SeedLesson {
         "`where` Clauses",
         vec![
             labelled(
-                "CONCEPT",
+                "THE IDEA",
                 "When the bounds get long, they crowd the signature. A `where` clause moves them below \
                  it, which is the same meaning written more readably.",
             ),
@@ -406,7 +406,7 @@ fn main() {
 }"#,
             ),
             labelled(
-                "EXPLANATION",
+                "LET'S BREAK IT DOWN",
                 "The `where` clause says the same thing as `<T: PartialOrd + Copy>`, but the bounds \
                  line up under each other. With one bound the inline form is fine; with four, the \
                  `where` form is far easier to read. Both are common in real code, so recognise both.",
@@ -425,7 +425,7 @@ fn generics_in_methods() -> SeedLesson {
         "Generics in Methods",
         vec![
             labelled(
-                "CONCEPT",
+                "THE IDEA",
                 "An `impl` block for a generic type must declare the type parameter — `impl<T> Point<T>` \
                  — and a method can introduce its own. You can also write a plain `impl Point<f64>` for \
                  one concrete type.",
@@ -478,7 +478,7 @@ fn main() {
 }"#,
             ),
             labelled(
-                "EXPLANATION",
+                "LET'S BREAK IT DOWN",
                 "`impl<T> Point<T>` attaches `x` to every `Point`. `impl Point<f64>` attaches \
                  `distance_from_origin` only to `Point<f64>`, because that method needs floating-point \
                  maths. Calling it on `Point<i32>` would be an error — the method simply is not there.",

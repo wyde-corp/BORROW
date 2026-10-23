@@ -17,7 +17,7 @@ fn destructuring() -> SeedLesson {
         "Destructuring in `match`",
         vec![
             labelled(
-                "CONCEPT",
+                "THE IDEA",
                 "A pattern can take a struct apart field by field. You do not need to match a value \
                  and then read its fields with dots — the pattern binds them directly.",
             ),
@@ -68,7 +68,7 @@ fn main() {
 }"#,
             ),
             labelled(
-                "EXPLANATION",
+                "LET'S BREAK IT DOWN",
                 "Field order in a pattern is free and `..` stands in for the fields you do not mention. \
                  This works on enums too: an `OrderStatus::Preparing { since_minutes }` pattern is \
                  destructuring a variant. Patterns and construction are mirror images — you build \
@@ -89,7 +89,7 @@ fn common_mistakes() -> SeedLesson {
         "The Ten Common Mistakes",
         vec![
             labelled(
-                "CONCEPT",
+                "THE IDEA",
                 "These are the mistakes that survive long after the syntax is learned. Read them as a \
                  checklist against your own understanding.",
             ),
@@ -148,7 +148,7 @@ fn putting_it_together() -> SeedLesson {
         "Putting It All Together",
         vec![
             labelled(
-                "CONCEPT",
+                "THE IDEA",
                 "Here is the whole Pizza Order program as it stands: structs for the things made of \
                  parts, enums for the things that are one of a set, methods for behaviour, and a \
                  `match` to price a size and name a status.",
@@ -250,7 +250,7 @@ fn main() {
 }"#,
             ),
             labelled(
-                "EXPLANATION",
+                "LET'S BREAK IT DOWN",
                 "Trace the types, not the lines. `Size` and `OrderStatus` are enums — one of a set. \
                  `Topping`, `Pizza`, and `Order` are structs — several facts together. `Pizza` and \
                  `Order` are also composed: an order owns a list of pizzas, each owning its toppings. \

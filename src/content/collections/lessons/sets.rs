@@ -23,7 +23,7 @@ fn uniqueness() -> SeedLesson {
         "Uniqueness",
         vec![
             labelled(
-                "CONCEPT",
+                "THE IDEA",
                 "A playlist spans several genres, and you want the *distinct* ones. A `Vec` would \
                  happily hold \"Folk\" five times. A `HashSet` is a collection that ignores \
                  duplicates: add a value it already holds and nothing changes.",
@@ -47,7 +47,7 @@ fn main() {
 }"#,
             ),
             labelled(
-                "EXPLANATION",
+                "LET'S BREAK IT DOWN",
                 "Three inserts, two genres. The second `\"Folk\"` was already present, so the set \
                  ignored it and said nothing. The len is `2`. A set is the natural home for a \
                  question like 'which genres appear at all?'",
@@ -67,7 +67,7 @@ fn set_membership() -> SeedLesson {
         "`insert` and `contains`",
         vec![
             labelled(
-                "CONCEPT",
+                "THE IDEA",
                 "`insert` adds a value and tells you whether it was new. `contains` asks whether a \
                  value is present. Those two methods cover almost every set question a beginner has.",
             ),
@@ -101,7 +101,7 @@ fn main() {
 }"#,
             ),
             labelled(
-                "EXPLANATION",
+                "LET'S BREAK IT DOWN",
                 "`insert` returns a `bool`: `true` if the value was not already there, `false` if it \
                  was. That is how you can tell without a separate check. `contains` takes a value \
                  (or a borrowed form of it) and returns whether it is present, without changing \
@@ -129,7 +129,7 @@ fn iterating_a_set() -> SeedLesson {
         "Iterating a Set",
         vec![
             labelled(
-                "CONCEPT",
+                "THE IDEA",
                 "You can loop over a set, but like a `HashMap`, the order is not guaranteed. Each \
                  item is a reference, and the set is borrowed for the loop.",
             ),
@@ -170,7 +170,7 @@ fn main() {
 }"#,
             ),
             labelled(
-                "EXPLANATION",
+                "LET'S BREAK IT DOWN",
                 "`&genres` borrows; each `genre` is a `&&str` reference to an item the set owns. The \
                  loop reads and the set is usable afterwards. The `.into_iter().collect()` on the \
                  first line is a compact way to build a set from a list — the subject of lesson 25.",
@@ -189,7 +189,7 @@ fn set_operations() -> SeedLesson {
         "Set Operations",
         vec![
             labelled(
-                "CONCEPT",
+                "THE IDEA",
                 "Sets support the operations you remember from school: union (everything in either), \
                  intersection (only what is in both), and difference (what is in one but not the \
                  other). They answer real questions about two playlists.",
@@ -247,7 +247,7 @@ fn deduplicating() -> SeedLesson {
         "De-duplicating a `Vec`",
         vec![
             labelled(
-                "CONCEPT",
+                "THE IDEA",
                 "A common task: a list has duplicates and you want one of each. Collect the list into \
                  a `HashSet`, then collect the set back into a `Vec`. The duplicates collapse in the \
                  middle.",
@@ -282,7 +282,7 @@ fn main() {
 }"#,
             ),
             labelled(
-                "EXPLANATION",
+                "LET'S BREAK IT DOWN",
                 "`raw.into_iter().collect::<HashSet<_>>()` drains the list into a set, dropping the \
                  repeats. `set.into_iter().collect::<Vec<_>>()` drains the set into a list. If the \
                  order of the result matters, sort it afterwards — the set did not preserve it.",
@@ -302,7 +302,7 @@ fn set_ownership() -> SeedLesson {
         "Sets and Ownership",
         vec![
             labelled(
-                "CONCEPT",
+                "THE IDEA",
                 "A set owns its items, just as a `Vec` and a `HashMap` do. Inserting a `String` moves \
                  it in; membership checks borrow. The rules do not change because the container is a \
                  set.",
@@ -338,7 +338,7 @@ fn main() {
 }"#,
             ),
             labelled(
-                "EXPLANATION",
+                "LET'S BREAK IT DOWN",
                 "The ownership behaviour is identical to `Vec::push` and `HashMap::insert`: the \
                  container takes ownership. `contains` takes a borrowed form, so you do not need to \
                  rebuild a `String` to ask a question. If the same genre value is needed in several \

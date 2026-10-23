@@ -82,7 +82,7 @@ pub fn show(project: &Project, module: Option<&crate::models::Module>, unlocked:
             .collect();
         format!(
             r##"<section class="module-section">
-    <h2 class="section-heading">CONCEPTS PRACTICED</h2>
+    <h2 class="section-heading">WHAT YOU'LL PRACTICE</h2>
     <div class="chips">{chips}</div>
 </section>"##
         )

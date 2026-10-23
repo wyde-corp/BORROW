@@ -26,7 +26,7 @@ fn magic_strings() -> SeedLesson {
         "The Magic-String Problem",
         vec![
             labelled(
-                "CONCEPT",
+                "THE IDEA",
                 "An order moves through stages: placed, preparing, out for delivery, delivered, \
                  cancelled. The tempting way to store that is a `String`. Let us do it and see what \
                  the compiler cannot protect us from.",
@@ -44,14 +44,14 @@ fn magic_strings() -> SeedLesson {
 }"#,
             ),
             labelled(
-                "EXPLANATION",
+                "LET'S BREAK IT DOWN",
                 "This compiles and runs, and it prints `still waiting` even though the order is being \
                  prepared. The string `\"prepairing\"` is a typo, and nothing complained: to the \
                  compiler it is a perfectly good `String`, just a different one. Typos in string \
                  comparisons are invisible until a user notices.",
             ),
             labelled(
-                "EXPLANATION",
+                "LET'S BREAK IT DOWN",
                 "There is a second, larger problem. `String` can hold anything — `\"banana\"`, an \
                  empty string, a value from a form. The set of legal statuses is four or five \
                  strings, but the type allows infinitely many. Every function that accepts a status \
@@ -76,7 +76,7 @@ fn defining_an_enum() -> SeedLesson {
         "Defining an Enum",
         vec![
             labelled(
-                "CONCEPT",
+                "THE IDEA",
                 "An enum lists its possible values, called *variants*. Making a value picks exactly \
                  one variant, written `Size::Medium`. Only listed variants exist, so a misspelling is \
                  now a compile error rather than a silent bug.",
@@ -116,7 +116,7 @@ fn main() {
 }"#,
             ),
             labelled(
-                "EXPLANATION",
+                "LET'S BREAK IT DOWN",
                 "The variants are written with a leading capital because each is a type in its own \
                  right. You create a value with `Size::Large` — `Size` is the enum, `Large` is the \
                  variant. `#[derive(Debug)]` lets us print it while we are still learning; the next \
@@ -154,7 +154,7 @@ fn variant_data() -> SeedLesson {
         "Variants Can Carry Data",
         vec![
             labelled(
-                "CONCEPT",
+                "THE IDEA",
                 "Enum variants are not limited to names. A variant can hold data, and different \
                  variants can hold different shapes. `Preparing` needs to know how long the order has \
                  been underway; `Delivered` does not.",
@@ -191,7 +191,7 @@ fn main() {
 }"#,
             ),
             labelled(
-                "EXPLANATION",
+                "LET'S BREAK IT DOWN",
                 "Read `Preparing { since_minutes: u32 }` as a tiny anonymous struct bundled into the \
                  variant. `Placed` and `Delivered` hold nothing, like unit structs. The value is still \
                  exactly one variant at a time — you can never have a status that is both `Preparing` \
@@ -212,7 +212,7 @@ fn enums_vs_structs() -> SeedLesson {
         "Enums vs Structs",
         vec![
             labelled(
-                "CONCEPT",
+                "THE IDEA",
                 "Struct and enum answer two different questions. This lesson is the decision, stated \
                  once, because confusing them is the most common modelling mistake beginners make.",
             ),
@@ -258,7 +258,7 @@ fn option_is_an_enum() -> SeedLesson {
         "`Option` Is an Enum",
         vec![
             labelled(
-                "CONCEPT",
+                "THE IDEA",
                 "You have used `Option` and `.unwrap()` since the early modules. Here is the reveal: \
                  `Option` is not a language keyword. It is an ordinary enum with two variants, and \
                  you could have written it yourself.",
@@ -288,7 +288,7 @@ let missing: Option<u32> = None;"#,
 }"#,
             ),
             labelled(
-                "EXPLANATION",
+                "LET'S BREAK IT DOWN",
                 "Everything you know about enums now applies to `Option`. It is one of two variants. \
                  It can carry data (`Some`) or not (`None`). A function returning `Option<Topping>` is \
                  saying 'either I found a topping, or there is none' — the same 'exactly one of' idea \
@@ -309,7 +309,7 @@ fn methods_on_enums() -> SeedLesson {
         "Methods on Enums",
         vec![
             labelled(
-                "CONCEPT",
+                "THE IDEA",
                 "An enum can have an `impl` block exactly like a struct. Methods are a natural fit for \
                  a question like 'what is this status called in the interface?', because they can ask \
                  which variant the value is.",
@@ -335,7 +335,7 @@ fn methods_on_enums() -> SeedLesson {
                 ],
             ),
             labelled(
-                "EXPLANATION",
+                "LET'S BREAK IT DOWN",
                 "Notice `OrderStatus::Preparing { .. }` — the `..` ignores the data inside the variant \
                  because the label does not depend on it. This `match` is the tool the next lessons \
                  are about; here it is enough to see that a method can look at which variant it has.",

@@ -14,7 +14,7 @@ fn final_model() -> SeedLesson {
         "Final Mental Model",
         vec![
             labelled(
-                "CONCEPT",
+                "THE IDEA",
                 "One trait, one required method, and a toolbox built on top of it. That is the whole \
                  module, and the last abstraction in the course.",
             ),

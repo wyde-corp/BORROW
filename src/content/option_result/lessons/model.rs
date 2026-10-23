@@ -13,7 +13,7 @@ fn final_model() -> SeedLesson {
         "Final Mental Model",
         vec![
             labelled(
-                "CONCEPT",
+                "THE IDEA",
                 "Two types, one question each, and one operator that carries failure up the call \
                  stack. That is the whole module.",
             ),

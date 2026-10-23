@@ -24,7 +24,7 @@ fn the_manual_loop() -> SeedLesson {
         "The Loop You Keep Writing",
         vec![
             labelled(
-                "CONCEPT",
+                "THE IDEA",
                 "The Log Analyzer starts with a list of entries and a question: which ones are errors? \
                  Written by hand, that is an index, a check, a `push`, and a `Vec` you built yourself.",
             ),
@@ -48,7 +48,7 @@ fn the_manual_loop() -> SeedLesson {
 }"#,
             ),
             labelled(
-                "EXPLANATION",
+                "LET'S BREAK IT DOWN",
                 "This works. But notice how much of it is bookkeeping: the index `i`, the bounds check, \
                  the mutable result, the `push`. The actual intent is one sentence — 'take the messages \
                  of the error entries' — and none of that sentence is visible in the loop.",
@@ -73,7 +73,7 @@ fn what_an_iterator_is() -> SeedLesson {
         "What an Iterator Is",
         vec![
             labelled(
-                "CONCEPT",
+                "THE IDEA",
                 "Anything you can call `.next()` on until it runs out is an *iterator*. `next` returns \
                  `Option`: `Some(item)` while there is a next element, `None` when there is not.",
             ),
@@ -103,7 +103,7 @@ println!("{:?}", it.next());"#,
 }"#,
             ),
             labelled(
-                "EXPLANATION",
+                "LET'S BREAK IT DOWN",
                 "`Iterator` is a trait, and `next` is its one required method. Everything else you have \
                  seen — `map`, `filter`, `sum` — is a *provided* method built on `next`. That is why a \
                  `for` loop and a long chain do the same thing: they both end up calling `next` until \
@@ -124,7 +124,7 @@ fn three_ways() -> SeedLesson {
         "Three Ways to Iterate",
         vec![
             labelled(
-                "CONCEPT",
+                "THE IDEA",
                 "A collection gives you three iterators, and they yield different things: `iter()` \
                  borrows, `iter_mut()` borrows mutably, and `into_iter()` takes ownership.",
             ),
@@ -173,7 +173,7 @@ fn main() {
                 ],
             ),
             labelled(
-                "EXPLANATION",
+                "LET'S BREAK IT DOWN",
                 "Choose from what the body needs. Reading → `iter`. Changing → `iter_mut`. Taking the \
                  elements out for good → `into_iter`. This is exactly the borrow-versus-move decision \
                  from Modules 05 and 06, now spelled as three method names.",
@@ -193,7 +193,7 @@ fn for_desugared() -> SeedLesson {
         "The `for` Loop Desugared",
         vec![
             labelled(
-                "CONCEPT",
+                "THE IDEA",
                 "A `for` loop is not special syntax. It calls `into_iter` (or a trait method on the \
                  reference) and then calls `next` until it gets `None`. You can write it out by hand.",
             ),
@@ -218,7 +218,7 @@ fn for_desugared() -> SeedLesson {
 }"#,
             ),
             labelled(
-                "EXPLANATION",
+                "LET'S BREAK IT DOWN",
                 "Seeing this once is what makes iterator chains stop looking like magic. A chain such as \
                  `.filter(...).map(...).collect()` is also just `next` being called in a loop — filter \
                  calls `next` and skips, map calls `next` and transforms, collect calls `next` and \
@@ -239,7 +239,7 @@ fn adapters_versus_consumers() -> SeedLesson {
         "Adapters versus Consumers",
         vec![
             labelled(
-                "CONCEPT",
+                "THE IDEA",
                 "Iterator methods come in two kinds. **Adapters** (`map`, `filter`, `take`) take an \
                  iterator and return another, describing work. **Consumers** (`collect`, `sum`, `fold`) \
                  take an iterator and produce a final value, running the work.",
@@ -266,7 +266,7 @@ fn adapters_versus_consumers() -> SeedLesson {
 }"#,
             ),
             labelled(
-                "EXPLANATION",
+                "LET'S BREAK IT DOWN",
                 "`logs.iter()` gives an iterator. `.filter(...)` wraps it in another iterator that skips \
                  non-errors. `.map(...)` wraps that one to transform each remaining item. Only `.collect()` \
                  actually pulls elements through — it calls `next` until the source is exhausted, storing \
@@ -287,7 +287,7 @@ fn ranges_and_sources() -> SeedLesson {
         "Ranges and Sources",
         vec![
             labelled(
-                "CONCEPT",
+                "THE IDEA",
                 "Collections are not the only iterators. A range `0..n` is an iterator, and strings and \
                  vectors have adapters like `.chars()`, `.lines()`, and `.split()` that produce them.",
             ),
@@ -317,7 +317,7 @@ for line in text.____() {
 }"#,
             ),
             labelled(
-                "EXPLANATION",
+                "LET'S BREAK IT DOWN",
                 "`0..3` is an iterator of `0, 1, 2`. `.split_whitespace()` on a `&str` yields borrowed \
                  word slices — the same call you used to count words in Module 08, now understood as an \
                  iterator. Text is one of the richest sources, because parsing log lines is exactly \

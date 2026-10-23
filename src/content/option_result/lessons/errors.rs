@@ -24,7 +24,7 @@ fn one_error_type() -> SeedLesson {
         "One Error Type for the Program",
         vec![
             labelled(
-                "CONCEPT",
+                "THE IDEA",
                 "A program has several ways to fail. Instead of a different error type for each \
                  function, define one enum that lists them all, and return it everywhere.",
             ),
@@ -39,7 +39,7 @@ enum TodoError {
 }"#,
             ),
             labelled(
-                "EXPLANATION",
+                "LET'S BREAK IT DOWN",
                 "Each variant is a distinct failure: a task id that was not there, an empty title, a \
                  line that would not parse, and an underlying IO error. Because they live in one \
                  enum, every function in the program can return the same `Result<T, TodoError>`, and \
@@ -64,7 +64,7 @@ fn from_conversion() -> SeedLesson {
         "`From` and the `?` Conversion",
         vec![
             labelled(
-                "CONCEPT",
+                "THE IDEA",
                 "When `?` propagates an error whose type does not match the function's error type, it \
                  converts automatically — as long as a `From` conversion exists. Implementing \
                  `From<std::io::Error> for TodoError` is what lets file operations use `?` directly.",
@@ -116,7 +116,7 @@ fn main() {
 }"#,
             ),
             labelled(
-                "EXPLANATION",
+                "LET'S BREAK IT DOWN",
                 "Without the `From` implementation, `?` would complain that an `io::Error` cannot become \
                  a `TodoError`. With it, every `?` on an IO call converts silently. This is why the \
                  standard library's error types all ship `From` implementations: it is what makes `?` \
@@ -138,7 +138,7 @@ fn printing_an_error() -> SeedLesson {
         "Printing an Error",
         vec![
             labelled(
-                "CONCEPT",
+                "THE IDEA",
                 "`{:?}` (Debug) prints an error for a developer. `{}` needs the `Display` trait, which \
                  is how an error is shown to a user. Implementing `Display` — and the empty `Error` \
                  impl — makes your error behave like a standard one.",
@@ -188,7 +188,7 @@ fn main() {
 }"#,
             ),
             labelled(
-                "EXPLANATION",
+                "LET'S BREAK IT DOWN",
                 "`Display` turns the error into the sentence a user should see. The `impl \
                  std::error::Error for TodoError {}` line looks empty because it is: once a type is \
                  `Debug + Display`, it already satisfies the trait's requirements, so the impl adds \
@@ -216,7 +216,7 @@ fn errors_with_data() -> SeedLesson {
         "Errors That Carry Data",
         vec![
             labelled(
-                "CONCEPT",
+                "THE IDEA",
                 "A good error says what went wrong *and where*. `NotFound(u32)` carries the id; \
                  `Parse(String)` carries the offending line. The data is what turns a vague message \
                  into a specific one.",
@@ -253,7 +253,7 @@ fn main() {
 }"#,
             ),
             labelled(
-                "EXPLANATION",
+                "LET'S BREAK IT DOWN",
                 "`Parse(String)` keeps the input that failed, so the eventual message can quote it. A \
                  bare `Parse` variant with no data could only say 'a parse error happened'. The extra \
                  field is the difference between an error a user can act on and one they can only \
@@ -274,7 +274,7 @@ fn boxed_errors() -> SeedLesson {
         "`Box<dyn Error>`",
         vec![
             labelled(
-                "CONCEPT",
+                "THE IDEA",
                 "Sometimes you do not want to define an error enum — a small script, or a program that \
                  just reports whatever went wrong. `Box<dyn Error>` is a box that can hold *any* \
                  error, and `?` converts into it automatically.",
@@ -301,7 +301,7 @@ fn main() {
 }"#,
             ),
             labelled(
-                "EXPLANATION",
+                "LET'S BREAK IT DOWN",
                 "`Box<dyn Error>` means 'some error, we do not care which at compile time'. Any type \
                  that implements `Error` can be boxed into it, and `?` does the boxing for you. The \
                  trade is that you cannot `match` on the specific error later, because at compile time \
@@ -330,7 +330,7 @@ fn when_to_panic() -> SeedLesson {
         "When to Panic",
         vec![
             labelled(
-                "CONCEPT",
+                "THE IDEA",
                 "Not every problem is an error to return. A panic is for a bug: a state the program \
                  promised could never happen, or a broken assumption. Expected failures — a missing \
                  file, a bad input — are returned, not panicked.",
@@ -346,7 +346,7 @@ fn when_to_panic() -> SeedLesson {
                 ],
             ),
             labelled(
-                "EXPLANATION",
+                "LET'S BREAK IT DOWN",
                 "The dividing line is *who can do something about it*. If the program's caller or user \
                  can act on it, it is an error and belongs in a `Result`. If it indicates the code \
                  itself is wrong, a panic is honest — it fails loudly at the exact spot the invariant \
@@ -361,7 +361,7 @@ fn when_to_panic() -> SeedLesson {
 }"#,
             ),
             labelled(
-                "EXPLANATION",
+                "LET'S BREAK IT DOWN",
                 "This is the mistake in the other direction: an expected failure turned into a panic. If \
                  the user passes an id that is not in the list, the program crashes instead of saying \
                  'no such task'. `expect` is reserved for the cases the *program* controls, not the \

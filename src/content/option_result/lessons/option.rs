@@ -27,7 +27,7 @@ fn the_missing_task() -> SeedLesson {
         "The Missing Task",
         vec![
             labelled(
-                "CONCEPT",
+                "THE IDEA",
                 "The Todo CLI looks tasks up by id. Most of the time the id is there. Sometimes it is \
                  not, and the program has to do *something*. The interesting part is what.",
             ),
@@ -49,7 +49,7 @@ fn main() {
 }"#,
             ),
             labelled(
-                "EXPLANATION",
+                "LET'S BREAK IT DOWN",
                 "`find` returns `Option<&Task>`: `Some(&task)` when the id is present, `None` when it \
                  is not. Here id 2 exists, so it prints `Some(\"walk the dog\")`. Ask for id 7 and it \
                  prints `None`. That `Option` is the whole point: the type says 'there might not be a \
@@ -60,7 +60,7 @@ fn main() {
                 "find(2) ──→ Some(Task { id: 2, ... })\nfind(7) ──→ None",
             ),
             labelled(
-                "EXPLANATION",
+                "LET'S BREAK IT DOWN",
                 "The alternative you used to reach for is indexing or `unwrap`, which panics on a \
                  missing id. A to-do list is not a program where a missing id is a bug — it is an \
                  ordinary outcome. Panicking would take the whole program down over something the \
@@ -81,7 +81,7 @@ fn option_is_a_value() -> SeedLesson {
         "`Option` Is a Value",
         vec![
             labelled(
-                "CONCEPT",
+                "THE IDEA",
                 "`Option<T>` is an ordinary enum with two variants. You met it in Module 07; here is \
                  the definition again, because everything in this module follows from it.",
             ),
@@ -93,7 +93,7 @@ fn option_is_a_value() -> SeedLesson {
 }"#,
             ),
             labelled(
-                "EXPLANATION",
+                "LET'S BREAK IT DOWN",
                 "`Some` carries a value of type `T`; `None` carries nothing. A value of type \
                  `Option<Task>` is *either* one of those, never both and never something else. Because \
                  it is an enum, every tool from Module 07 works on it: `match`, `if let`, `let else`, \
@@ -137,7 +137,7 @@ fn reading_the_value() -> SeedLesson {
         "Getting the Value Out",
         vec![
             labelled(
-                "CONCEPT",
+                "THE IDEA",
                 "An `Option` is not a `Task`; to use what is inside, you open it. There are three \
                  shapes, and which you pick depends on how much the missing case matters.",
             ),
@@ -202,7 +202,7 @@ fn unwrap_and_expect() -> SeedLesson {
         "`unwrap` and `expect`",
         vec![
             labelled(
-                "CONCEPT",
+                "THE IDEA",
                 "`unwrap` pulls the value out of a `Some` — and panics if it is `None`. `expect` does \
                  the same but takes a message, so when it panics you at least know why.",
             ),
@@ -233,7 +233,7 @@ fn unwrap_and_expect() -> SeedLesson {
 }"#,
             ),
             labelled(
-                "EXPLANATION",
+                "LET'S BREAK IT DOWN",
                 "`expect` is `unwrap` with a better panic message. It is not safer — it still panics — \
                  but the message turns a mystery into a clue. Use it when you are certain the value is \
                  present and want the assumption written down.",
@@ -261,7 +261,7 @@ fn defaults() -> SeedLesson {
         "`unwrap_or` and `unwrap_or_else`",
         vec![
             labelled(
-                "CONCEPT",
+                "THE IDEA",
                 "When a missing value has a sensible substitute, `unwrap_or` gives the value if \
                  present and the substitute if not — no panic. `unwrap_or_else` is the same, but \
                  builds the substitute only when it is needed.",
@@ -294,7 +294,7 @@ println!("{title2}");"#,
 }"#,
             ),
             labelled(
-                "EXPLANATION",
+                "LET'S BREAK IT DOWN",
                 "`unwrap_or(\"(no title)\")` always computes its argument, then uses it if needed. \
                  `unwrap_or_else(|| ...)` runs the function only when the `Option` is `None`. When the \
                  substitute is cheap — a literal — the difference does not matter. When it allocates \
@@ -322,7 +322,7 @@ fn map_and_then() -> SeedLesson {
         "`map` and `and_then`",
         vec![
             labelled(
-                "CONCEPT",
+                "THE IDEA",
                 "`map` transforms the value inside an `Option` without opening it: `Some(x)` becomes \
                  `Some(f(x))`, and `None` stays `None`. `and_then` chains an operation that itself \
                  returns an `Option`.",
@@ -371,7 +371,7 @@ fn main() {
 }"#,
             ),
             labelled(
-                "EXPLANATION",
+                "LET'S BREAK IT DOWN",
                 "`map` wraps its result back in `Some`; if the function you pass returns an `Option`, \
                  you would get an `Option<Option<T>>`, which is a nuisance. `and_then` flattens it: \
                  the function returns an `Option`, and you get one level, not two. Use `map` for a \
@@ -392,7 +392,7 @@ fn question_mark_on_option() -> SeedLesson {
         "`?` on `Option`",
         vec![
             labelled(
-                "CONCEPT",
+                "THE IDEA",
                 "Inside a function that returns `Option`, the `?` operator opens an `Option` and, if \
                  it is `None`, returns `None` from the function immediately. It is `match` with the \
                  boring branch written for you.",
@@ -429,7 +429,7 @@ fn main() {
 }"#,
             ),
             labelled(
-                "EXPLANATION",
+                "LET'S BREAK IT DOWN",
                 "`?` is only allowed when the function returns the same kind of thing. Here the \
                  function returns `Option`, so `?` on an `Option` is legal — it returns `None` on \
                  absence. It cannot be used in `main` unless `main` also returns an `Option` (or \
@@ -461,7 +461,7 @@ fn none_into_error() -> SeedLesson {
         "Turning `None` into an Error",
         vec![
             labelled(
-                "CONCEPT",
+                "THE IDEA",
                 "`ok_or` converts an `Option` into a `Result`: present becomes `Ok`, missing becomes \
                  `Err` with the error you supply. `ok_or_else` is the lazy version. This is how you \
                  cross from 'might be missing' to 'this is a failure with a reason'.",
@@ -505,7 +505,7 @@ fn main() {
 }"#,
             ),
             labelled(
-                "EXPLANATION",
+                "LET'S BREAK IT DOWN",
                 "`find` gives `Option<&Task>`. `ok_or(TodoError::NotFound(id))` turns it into \
                  `Result<&Task, TodoError>`: `Some(task)` becomes `Ok(task)`, `None` becomes \
                  `Err(TodoError::NotFound(7))`. Now the missing case carries a reason, and the caller \

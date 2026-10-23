@@ -22,7 +22,7 @@ fn impl_trait_parameters() -> SeedLesson {
         "`impl Trait` Parameters",
         vec![
             labelled(
-                "CONCEPT",
+                "THE IDEA",
                 "`fn notify<T: Summary>(item: &T)` has a shorter alias in parameter position: `fn \
                  notify(item: &impl Summary)`. Same meaning, less angle-bracket noise.",
             ),
@@ -58,7 +58,7 @@ fn main() {
 }"#,
             ),
             labelled(
-                "EXPLANATION",
+                "LET'S BREAK IT DOWN",
                 "`&impl Summary` means 'a reference to some type that implements `Summary`'. The caller \
                  writes `notify(&book)` exactly as before. The difference from the generic form is \
                  cosmetic in this case, but it matters when you need the shorthand's limits — you \
@@ -79,7 +79,7 @@ fn mixed_shelf() -> SeedLesson {
         "The Mixed Shelf Problem",
         vec![
             labelled(
-                "CONCEPT",
+                "THE IDEA",
                 "A `Vec<Book>` holds books and a `Vec<Video>` holds videos, but a real shelf mixes them. \
                  A `Vec` holds one type, so no `Vec<Book>` can also hold a `Video` — even though both \
                  can be summarised.",
@@ -143,7 +143,7 @@ fn dyn_trait() -> SeedLesson {
         "`dyn Trait`",
         vec![
             labelled(
-                "CONCEPT",
+                "THE IDEA",
                 "`Box<dyn Summary>` is a box holding *any* value that implements `Summary`. A `Vec<Box<dyn \
                  Summary>>` can hold books, videos, and articles side by side, because every element is \
                  the same type: a boxed trait object.",
@@ -198,7 +198,7 @@ fn main() {
 }"#,
             ),
             labelled(
-                "EXPLANATION",
+                "LET'S BREAK IT DOWN",
                 "`dyn Summary` is a *trait object*: a value that can be any implementor of `Summary`, \
                  with the concrete type erased. `Box::new(book)` moves the book onto the heap and hands \
                  back a `Box<dyn Summary>`. Inside the loop, `item.summarise()` finds the right method \
@@ -226,7 +226,7 @@ fn static_vs_dynamic() -> SeedLesson {
         "Static vs Dynamic Dispatch",
         vec![
             labelled(
-                "CONCEPT",
+                "THE IDEA",
                 "When you call a trait method on a generic or `impl Trait` value, the compiler knows the \
                  concrete type and can call the method directly — *static* dispatch. On a `dyn Trait`, \
                  it cannot, so it looks the method up in a table at run time — *dynamic* dispatch. Both \
@@ -262,7 +262,7 @@ fn notify_dyn(item: &dyn Summary) {
                 ],
             ),
             labelled(
-                "EXPLANATION",
+                "LET'S BREAK IT DOWN",
                 "Static dispatch knows the type, so it can inline and optimise. Dynamic dispatch knows \
                  only the trait, so it keeps a table (a vtable) and jumps through it. For a mixed shelf \
                  that is exactly what you want; for a hot loop over one type, the generic version is \
@@ -293,7 +293,7 @@ fn choosing_dispatch() -> SeedLesson {
         "Choosing",
         vec![
             labelled(
-                "CONCEPT",
+                "THE IDEA",
                 "The rule is small: use generics or `impl Trait` when all the values are the same type; \
                  use `dyn Trait` when they are not. Everything else is a refinement.",
             ),
@@ -332,7 +332,7 @@ fn main() {
 }"#,
             ),
             labelled(
-                "EXPLANATION",
+                "LET'S BREAK IT DOWN",
                 "The same `book` can be passed to either. `notify` is generic and monomorphised; \
                  `notify_any` takes a trait object. When you have a `Vec<Book>` the generic form is \
                  natural; when you have a `Vec<Box<dyn Summary>>` the dynamic form is the only one that \
