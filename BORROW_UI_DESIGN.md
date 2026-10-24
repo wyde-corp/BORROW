@@ -470,38 +470,66 @@ or a simple bottom navigation.
 
 # 11. Homepage
 
-The homepage should immediately explain the product.
+The homepage **is** the download page. One screen, one action: get the app.
 
-Suggested structure:
+Direction: **"gilded CRT"** — a dark umber void (starfield + film grain) with
+Renaissance art duotoned to the palette. Luxury restraint: generous space,
+hairline gold rules, letter-spaced small caps. Executed like a product page,
+not a fan page.
 
 ```text
 ┌─────────────────────────────────────────────────────────────┐
-│ BORROW_                            Learn  Progress           │
 │                                                             │
+│  BORROW_                                                    │
+│  ラストの遠回りを、やめよう。                                  │
 │                                                             │
-│        LEARN RUST                                           │
-│        WITHOUT THE 700-PAGE DETOUR.                         │
+│  LEARN RUST                       ┌───────────────────────┐ │
+│  WITHOUT THE                      │ ● ● ●  creation_of_  │ │
+│  700-PAGE DETOUR.                 │  adam.dpt — 1512      │ │
+│                                   │  [duotone Michelangelo│ │
+│  Short lessons. Real practice.     │   hands — public      │ │
+│  A native desktop trainer for      │   domain]             │ │
+│  macOS, Windows & Linux.           └───────────────────────┘ │
+│  ──────────── ◆ ────────────            caption (credit)     │
+│  ▢ AVAILABLE NOW                                         │
+│  [ Download for macOS ]   ← the one CTA, OS-aware            │
+│  Also for Windows · Linux                                   │
+│  V2.1 · MACOS · WINDOWS · LINUX · FREE                      │
 │                                                             │
-│        Short lessons. Real practice. Small projects.        │
-│        Learn the fundamentals by actually writing Rust.      │
-│                                                             │
-│        [ START LEARNING ]                                    │
-│                                                             │
-│                                                             │
-│        10 MODULES     40+ EXERCISES     5 PROJECTS           │
-│                                                             │
+│  ───────────────────────────────────────────────────────────│
+│  BORROW_ · GitHub · wyde industries · MMXXVI                 │
 └─────────────────────────────────────────────────────────────┘
 ```
 
-The hero should be visually interesting but not enormous.
+## Type
 
-Avoid generic SaaS hero layouts with:
+- Display: **Cormorant Garamond** (roman caps; the Renaissance voice).
+- Body / UI: **IBM Plex Mono**.
+- Outlier: **VT323**, exactly two slots — the wordmark underscore and the
+  AVAILABLE NOW badge (the two "live" blinking signals).
+- JP tagline: Noto Serif JP (subset), the display serif's Japanese companion.
+  No pixel fonts.
 
-- giant gradients
-- floating 3D objects
-- stock illustrations
+## Color discipline
 
-Instead use typography, geometric shapes, subtle grid patterns, and carefully placed accent colors.
+- Gold (`--gold`) owns **all ornament**: hairline frames, rules, small caps.
+- Orange (`--accent`) is reserved for **the download CTA and the two live
+  signals** — nothing else may be orange.
+- Ivory text on umber-black. Palette lives in `site/tokens.css` (OKLCH).
+
+## Rules
+
+- **One CTA.** OS-aware label + direct-asset href via download-widget; falls
+  back to the GitHub releases page. Mobile (< 960px) gets a sticky bottom bar
+  and the art becomes a dimmed backdrop behind the text.
+- **No sections beyond hero + one-line footer.** No tickers, no guestbook, no
+  hit counter, no PRO pitch, no related links.
+- **Window chrome only on the art plate** — thin gold titlebar, hollow gold
+  dots. It is a framed painting, not a fake OS.
+- **Motion**: one entrance reveal, the two blinks, a CTA hover lift.
+  `prefers-reduced-motion` honored everywhere.
+- Art asset: `site/assets/creation-of-adam-duotone.jpg` (960w variant for
+  mobile) — public domain, processed to a 4-stop gold gradient map + grain.
 
 ---
 

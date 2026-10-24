@@ -1,0 +1,9 @@
+{
+  "scanned": "2026-10-24",
+  "framework": "none — plain static HTML/CSS/JS; site/ is the Netlify publish root (netlify.toml base=site, no build step)",
+  "fonts": "Google Fonts CDN — Cormorant Garamond (display), IBM Plex Mono (body), VT323 (outlier), Noto Serif JP 400 text-subset (JP display companion)",
+  "palette": "OKLCH custom properties in site/tokens.css — gilded-CRT custom theme (paper oklch(16.2% 0.008 67), accent oklch(70.5% 0.193 39), gold oklch(73.9% 0.101 84))",
+  "motion": "no motion library — vanilla JS (starfield canvas, IntersectionObserver); prefers-reduced-motion honored",
+  "spacing": "4pt named scale --space-3xs…--space-3xl (site/tokens.css)",
+  "entry": "site/index.html → site/style.css (@import tokens.css) + site/main.js + site/download-widget.js (synced copy of tools/download-widget/)"
+}

@@ -1,0 +1,66 @@
+/* BORROW_ landing — design tokens (gilded CRT · custom Hallmark theme)
+   Palette roles: gold = all ornament · orange = the one CTA + live signals · everything else recedes. */
+
+:root {
+  /* paper / ink */
+  --bg: oklch(16.2% 0.008 67);
+  --surface: oklch(19.7% 0.007 78);
+  --elevated: oklch(22% 0.009 75);
+  --border: oklch(31% 0.011 85);
+  --border-strong: oklch(45.3% 0.018 77);
+  --text: oklch(94.7% 0.01 82);
+  --muted: oklch(71% 0.017 74);
+
+  /* accent — reserved: the download CTA + the two live blinking signals */
+  --accent: oklch(70.5% 0.193 39);
+  --accent-hover: oklch(76% 0.175 40);
+  --on-accent: oklch(17.3% 0.029 50);
+  --focus: oklch(71% 0.21 39);
+
+  /* ornament */
+  --gold: oklch(73.9% 0.101 84);
+  --gold-dim: oklch(57% 0.065 83);
+  --rule: color-mix(in oklch, var(--gold) 30%, transparent);
+  --rule-strong: color-mix(in oklch, var(--gold) 48%, transparent);
+
+  /* type */
+  --font-display: "Cormorant Garamond", "Noto Serif JP", "Hiragino Mincho ProN", "Yu Mincho", serif;
+  --font-body: "IBM Plex Mono", "Menlo", "Consolas", monospace;
+  --font-retro: "VT323", "Courier New", monospace;
+  --font-jp: "Cormorant Garamond", "Noto Serif JP", "Hiragino Mincho ProN", "Yu Mincho", serif;
+
+  /* 4pt spacing scale */
+  --space-3xs: 0.125rem;
+  --space-2xs: 0.25rem;
+  --space-xs: 0.5rem;
+  --space-sm: 0.75rem;
+  --space-md: 1rem;
+  --space-lg: 1.5rem;
+  --space-xl: 2.5rem;
+  --space-2xl: 4rem;
+  --space-3xl: 6rem;
+
+  /* type scale (1.25 major third) */
+  --text-xs: 0.68rem;
+  --text-sm: 0.8rem;
+  --text-base: 0.95rem;
+  --text-md: 1.2rem;
+
+  /* motion */
+  --ease-out: cubic-bezier(0.16, 1, 0.3, 1);
+  --ease-in: cubic-bezier(0.7, 0, 0.84, 0);
+  --ease-in-out: cubic-bezier(0.65, 0, 0.35, 1);
+  --dur-micro: 120ms;
+  --dur-short: 220ms;
+  --dur-long: 420ms;
+
+  /* structure */
+  --page-w: 1180px;
+  --page-gutter: clamp(1rem, 4vw, 2.5rem);
+
+  /* z */
+  --z-base: 1;
+  --z-raised: 10;
+  --z-sticky: 200;
+  --z-grain: 300;
+}
