@@ -13,7 +13,7 @@
 /* ---------- base ---------- */
 *, *::before, *::after { box-sizing: border-box; }
 
-html { overflow-x: clip; }
+html { overflow-x: clip; scroll-behavior: smooth; }
 body {
   margin: 0;
   overflow-x: clip;
@@ -83,6 +83,7 @@ body::after {
 
 /* ---------- hero — Split Studio diptych ---------- */
 .hero {
+  position: relative;
   isolation: isolate;
   display: grid;
   grid-template-columns: minmax(0, 7fr) minmax(0, 5.2fr);
@@ -349,6 +350,334 @@ body::after {
 }
 .cta--compact { padding: 0.55rem 1.1rem; font-size: var(--text-sm); }
 
+/* ---------- explore link — the hero's quiet second action ---------- */
+.explore-link {
+  display: inline-block;
+  font-weight: 500;
+  font-size: var(--text-sm);
+  letter-spacing: 0.14em;
+  line-height: 1;
+  color: var(--gold);
+  text-decoration: none;
+  white-space: nowrap;
+  border-bottom: 1px solid var(--rule-strong);
+  padding-bottom: var(--space-3xs);
+  transition: color var(--dur-micro) var(--ease-out),
+              border-color var(--dur-micro) var(--ease-out);
+}
+.explore-link:hover { color: var(--text); border-color: var(--gold); }
+.explore-link:active { color: var(--muted); }
+
+/* ---------- section shell — label stacked above heading, always ---------- */
+.section {
+  padding-block: var(--space-3xl);
+  border-top: 1px solid var(--rule);
+}
+.section-head { max-width: 65ch; }
+.section-label {
+  margin: 0 0 var(--space-md);
+  font-weight: 500;
+  font-size: var(--text-xs);
+  letter-spacing: 0.24em;
+  text-transform: uppercase;
+  color: var(--gold-dim);
+}
+.section-title {
+  margin: 0;
+  font-family: var(--font-display);
+  font-weight: 600;
+  font-size: clamp(2rem, 3vw + 0.5rem, 2.9rem);
+  line-height: 1.06;
+  overflow-wrap: anywhere;
+}
+.section-lede {
+  margin: var(--space-md) 0 0;
+  max-width: 62ch;
+  font-size: var(--text-base);
+  line-height: 1.65;
+  color: var(--muted);
+}
+.section code,
+.value-copy code,
+.hero-sub code {
+  font-family: var(--font-body);
+  font-size: 0.92em;
+  color: var(--gold);
+}
+
+/* ---------- the specimen plate — editorial frame, museum label ---------- */
+.showcase .section-head { margin-bottom: var(--space-xl); }
+
+.specimen {
+  margin: 0;
+  border: 1px solid var(--rule-strong);
+  background: var(--surface);
+}
+.specimen-label {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: space-between;
+  align-items: baseline;
+  gap: var(--space-md);
+  padding: var(--space-2xs) var(--space-sm);
+  background: var(--elevated);
+  border-bottom: 1px solid var(--rule);
+  font-size: var(--text-xs);
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--muted);
+}
+.specimen-label span:last-child { color: var(--gold-dim); }
+.specimen img {
+  display: block;
+  width: 100%;
+  height: auto;
+}
+.specimen figcaption {
+  padding: var(--space-sm) var(--space-md);
+  border-top: 1px solid var(--rule);
+  font-size: var(--text-sm);
+  line-height: 1.55;
+  color: var(--muted);
+}
+.specimen--lead { margin-bottom: 0; }
+
+.showcase-lead {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 15rem);
+  gap: var(--space-lg);
+  align-items: start;
+  margin-bottom: var(--space-lg);
+}
+
+/* plate legend — technical margin notes beside the lead specimen */
+.plate-legend {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-lg);
+}
+.plate-legend li {
+  border-top: 1px solid var(--rule);
+  padding-top: var(--space-sm);
+}
+.plate-key {
+  display: block;
+  font-weight: 500;
+  font-size: var(--text-xs);
+  letter-spacing: 0.16em;
+  color: var(--gold);
+}
+.plate-desc {
+  display: block;
+  margin-top: var(--space-2xs);
+  font-size: var(--text-sm);
+  line-height: 1.55;
+  color: var(--muted);
+}
+
+.specimen-row {
+  display: grid;
+  grid-template-columns: minmax(0, 1.15fr) minmax(0, 1fr);
+  gap: var(--space-lg);
+}
+
+/* ---------- stats strip — numerals and rules, no cards ---------- */
+.stats {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  padding-block: var(--space-xl);
+  border-block: 1px solid var(--rule-strong);
+}
+.stat {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-xs);
+  padding-inline: var(--space-xl);
+  min-width: 0;
+}
+.stat:first-child { padding-inline-start: 0; }
+.stat + .stat { border-inline-start: 1px solid var(--rule); }
+.stat-num {
+  font-family: var(--font-display);
+  font-weight: 600;
+  font-size: clamp(2.6rem, 5vw, 3.9rem);
+  line-height: 1;
+  letter-spacing: 0.01em;
+  font-variant-numeric: tabular-nums;
+  color: var(--gold);
+}
+.stat-label {
+  font-size: var(--text-xs);
+  letter-spacing: 0.2em;
+  color: var(--muted);
+}
+
+/* ---------- three value rows — definition-list editorial, not cards ---------- */
+.values { padding-block: var(--space-2xl) var(--space-3xl); }
+.value-list {
+  list-style: none;
+  margin: var(--space-xl) 0 0;
+  padding: 0;
+}
+.value {
+  display: grid;
+  grid-template-columns: minmax(0, 4fr) minmax(0, 7fr);
+  gap: var(--space-xl);
+  align-items: start;
+  padding-block: var(--space-lg);
+  border-top: 1px solid var(--rule);
+}
+.value:last-child { border-bottom: 1px solid var(--rule); }
+.value-name {
+  margin: 0;
+  font-family: var(--font-display);
+  font-weight: 600;
+  font-size: clamp(1.35rem, 1.6vw, 1.7rem);
+  line-height: 1.15;
+  letter-spacing: 0.03em;
+}
+.value-num {
+  display: block;
+  margin-bottom: var(--space-xs);
+  font-family: var(--font-body);
+  font-weight: 500;
+  font-size: var(--text-xs);
+  letter-spacing: 0.2em;
+  color: var(--gold-dim);
+}
+.value-copy {
+  margin: 0;
+  max-width: 65ch;
+  font-size: var(--text-base);
+  line-height: 1.7;
+  color: var(--muted);
+}
+
+/* ---------- curriculum path — a threaded timeline, two columns ---------- */
+.path {
+  list-style: none;
+  margin: var(--space-xl) 0 0;
+  padding: 0;
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  column-gap: var(--space-2xl);
+}
+.path-item {
+  position: relative;
+  display: flex;
+  align-items: baseline;
+  gap: var(--space-md);
+  padding: var(--space-sm) 0 var(--space-sm) var(--space-md);
+  border-bottom: 1px solid var(--rule);
+  border-inline-start: 1px solid var(--rule);
+}
+.path-item--last { border-bottom: none; }
+.path-num {
+  position: relative;
+  flex: none;
+  font-weight: 500;
+  font-size: var(--text-sm);
+  letter-spacing: 0.1em;
+  font-variant-numeric: tabular-nums;
+  color: var(--gold);
+}
+.path-num::before {
+  content: "";
+  position: absolute;
+  left: calc(-1 * var(--space-md) - 3.5px);
+  top: 0.45em;
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  border: 1px solid var(--gold-dim);
+  background: var(--bg);
+}
+.path-item--last .path-num::before {
+  background: var(--gold);
+  border-color: var(--gold);
+}
+.path-name {
+  font-family: var(--font-display);
+  font-weight: 600;
+  font-size: 1.3rem;
+  line-height: 1.2;
+  color: var(--text);
+}
+
+/* ---------- pricing — two panels in one frame, no checkout on this page ---------- */
+.price-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  margin-top: var(--space-xl);
+  border: 1px solid var(--rule-strong);
+}
+.price-tier { padding: var(--space-xl); min-width: 0; }
+.price-tier--pro {
+  border-inline-start: 1px solid var(--rule);
+  background: var(--surface);
+}
+.price-amount {
+  margin: 0;
+  font-family: var(--font-display);
+  font-weight: 600;
+  font-size: clamp(2.6rem, 4vw, 3.6rem);
+  line-height: 1;
+  color: var(--gold);
+}
+.price-currency { font-size: 0.55em; vertical-align: 0.45em; }
+.price-per {
+  font-family: var(--font-body);
+  font-weight: 400;
+  font-size: var(--text-sm);
+  letter-spacing: 0.1em;
+  color: var(--muted);
+}
+.price-what {
+  margin: var(--space-md) 0 0;
+  font-weight: 500;
+  font-size: var(--text-base);
+  letter-spacing: 0.04em;
+  color: var(--text);
+}
+.price-note {
+  margin: var(--space-xs) 0 0;
+  max-width: 45ch;
+  font-size: var(--text-sm);
+  line-height: 1.65;
+  color: var(--muted);
+}
+.price-fine {
+  margin: var(--space-md) 0 0;
+  font-size: var(--text-xs);
+  letter-spacing: 0.06em;
+  color: var(--gold-dim);
+}
+
+/* ---------- final CTA ---------- */
+.final {
+  border-top: 1px solid var(--rule-strong);
+  padding-block: var(--space-3xl) var(--space-2xl);
+}
+.final-title {
+  margin: 0;
+  font-family: var(--font-display);
+  font-weight: 600;
+  font-size: clamp(2.1rem, 3.4vw, 3.1rem);
+  line-height: 1.08;
+  overflow-wrap: anywhere;
+}
+.final-sub {
+  margin: var(--space-lg) 0;
+  max-width: 55ch;
+  font-size: var(--text-base);
+  line-height: 1.65;
+  color: var(--muted);
+}
+.final-meta { margin-top: var(--space-md); }
+
 /* ---------- one orchestrated entrance ---------- */
 .reveal {
   opacity: 0;
@@ -380,6 +709,7 @@ body::after {
   .hero {
     grid-template-columns: 1fr;
     min-height: 78dvh;
+    align-items: start;
   }
   .hero-art {
     position: absolute;
@@ -408,6 +738,21 @@ body::after {
   }
   .hero-copy { padding-block: var(--space-lg); }
 
+  /* new sections stack to a single column */
+  .section { padding-block: var(--space-2xl); }
+  .showcase-lead { grid-template-columns: 1fr; }
+  .specimen-row { grid-template-columns: 1fr; }
+  .value {
+    grid-template-columns: 1fr;
+    gap: var(--space-sm);
+  }
+  .path { grid-template-columns: 1fr; }
+  .price-grid { grid-template-columns: 1fr; }
+  .price-tier--pro {
+    border-inline-start: none;
+    border-top: 1px solid var(--rule);
+  }
+
   .sticky-cta.is-visible { display: flex; }
   .page:has(.sticky-cta.is-visible) { padding-bottom: 4.5rem; }
 }
@@ -416,10 +761,16 @@ body::after {
 @media (max-width: 40rem) {
   .hero-title { font-size: clamp(2.3rem, 11vw, 2.9rem); }
   .hero-actions { gap: var(--space-sm); }
+  .section { padding-block: var(--space-xl); }
+  .stat { padding-inline: var(--space-xs); }
+  .stat-label { letter-spacing: 0.16em; }
+  .price-tier { padding: var(--space-lg); }
+  .specimen-label { letter-spacing: 0.1em; }
 }
 
 /* ---------- reduced motion: everything settles instantly, blinks go solid ---------- */
 @media (prefers-reduced-motion: reduce) {
+  html { scroll-behavior: auto; }
   .reveal,
   .reveal--late {
     animation: reveal-reduced 150ms linear forwards;

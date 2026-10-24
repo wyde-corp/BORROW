@@ -97,10 +97,9 @@
     linux: "Download for Linux",
   };
 
-  const cta = document.getElementById("hero-cta");
+  const ctas = document.querySelectorAll(".js-cta");
   const stickyCta = document.getElementById("sticky-cta");
-  const stickyCtaLink = document.getElementById("sticky-cta-link");
-  const heroVersion = document.getElementById("hero-version");
+  const versionEls = document.querySelectorAll("#hero-version, [data-borrow-version]");
   const osStatus = document.getElementById("os-status");
 
   function isMobile() {
@@ -110,6 +109,14 @@
   function setLabel(el, text) {
     const label = el && el.querySelector(".cta-label");
     if (label) label.textContent = text;
+  }
+
+  function setAllLabels(text) {
+    ctas.forEach((el) => setLabel(el, text));
+  }
+
+  function setAllHrefs(href) {
+    ctas.forEach((el) => { el.href = href; });
   }
 
   const PLATFORMS = { macos: "macOS", windows: "Windows", linux: "Linux" };
@@ -135,8 +142,8 @@
     const detectedOS = e && e.detail ? e.detail.detectedOS : null;
     const releasesPage = links.page || "https://github.com/wyde-corp/BORROW/releases/latest";
 
-    if (links.version && heroVersion) {
-      heroVersion.textContent = links.version;
+    if (links.version) {
+      versionEls.forEach((el) => { el.textContent = links.version; });
     }
 
     let primaryKey = null;
@@ -145,20 +152,16 @@
     else if (detectedOS === "linux") primaryKey = "linux";
 
     if (primaryKey) {
-      const label = LABELS[primaryKey];
-      setLabel(cta, label);
-      setLabel(stickyCtaLink, label);
-      if (links[primaryKey]) {
-        cta.href = links[primaryKey];
-        if (stickyCtaLink) stickyCtaLink.href = links[primaryKey];
-      }
+      setAllLabels(LABELS[primaryKey]);
+      if (links[primaryKey]) setAllHrefs(links[primaryKey]);
       renderAltRow(primaryKey, links, releasesPage);
     } else if (isMobile()) {
       // no desktop OS here — point everyone at the releases page, honestly
-      setLabel(cta, "Get the desktop app");
-      setLabel(stickyCtaLink, "Get the app");
-      cta.href = releasesPage;
-      if (stickyCtaLink) stickyCtaLink.href = releasesPage;
+      ctas.forEach((el) => setLabel(
+        el,
+        el.classList.contains("cta--compact") ? "Get the app" : "Get the desktop app"
+      ));
+      setAllHrefs(releasesPage);
       renderAltRow(null, links, releasesPage);
       if (osStatus) osStatus.textContent = "BORROW_ is a desktop app for macOS, Windows, and Linux.";
     }

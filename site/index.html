@@ -4,11 +4,12 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
   <title>BORROW_ — Learn Rust without the 700-page detour</title>
-  <meta name="description" content="borrow_ is a lightweight Rust fundamentals trainer for macOS, Windows, and Linux. Short lessons. Real practice. Small projects. Modules 1–3 free.">
+  <meta name="description" content="A native desktop trainer for Rust fundamentals. Short lessons, interactive exercises, and the real Rust compiler — for macOS, Windows, and Linux. Modules 1–3 free.">
   <meta property="og:title" content="BORROW_ — Learn Rust without the 700-page detour">
-  <meta property="og:description" content="Short lessons. Real practice. Small projects. A desktop Rust trainer backed by the real compiler.">
+  <meta property="og:description" content="A native desktop trainer for Rust fundamentals. Short lessons, interactive exercises, and the real Rust compiler.">
   <meta property="og:type" content="website">
   <meta property="og:url" content="https://borrowchecker.site/">
+  <meta property="og:image" content="https://borrowchecker.site/assets/creation-of-adam-duotone.jpg">
   <link rel="canonical" href="https://borrowchecker.site/">
   <meta name="theme-color" content="#0F0E0C">
   <link rel="icon" type="image/png" href="assets/borrow-512.png">
@@ -43,14 +44,14 @@
 
         <h1 class="hero-title reveal" style="--i: 2" id="hero-title">LEARN RUST<br><span class="title-gold">WITHOUT THE<br>700-PAGE DETOUR.</span></h1>
 
-        <p class="hero-sub reveal" style="--i: 3">Short lessons. Real practice. A native desktop trainer for macOS, Windows&nbsp;&amp; Linux.</p>
+        <p class="hero-sub reveal" style="--i: 3">A native desktop trainer for Rust fundamentals. Learn through short lessons, interactive exercises, and the real Rust compiler — not another wall of documentation.</p>
 
         <div class="orn-rule reveal" style="--i: 4" aria-hidden="true"></div>
 
         <div class="hero-actions reveal" style="--i: 5">
           <p class="badge" role="status"><span class="badge-dot" aria-hidden="true"></span>AVAILABLE NOW</p>
 
-          <a class="cta" id="hero-cta" data-borrow-dl="macos"
+          <a class="cta js-cta" data-borrow-dl="macos"
              href="https://github.com/wyde-corp/BORROW/releases/latest">
             <span class="cta-label">Download for macOS</span>
           </a>
@@ -62,6 +63,8 @@
           </p>
 
           <p class="hero-meta">v<span id="hero-version">0.1.0-rc.1</span> · macOS · Windows · Linux · FREE</p>
+
+          <a class="explore-link" href="#curriculum">EXPLORE THE CURRICULUM <span aria-hidden="true">↓</span></a>
         </div>
 
         <p class="visually-hidden" id="os-status" role="status" aria-live="polite"></p>
@@ -83,6 +86,141 @@
       </figure>
 
     </section>
+
+    <!-- ============ PRODUCT SHOWCASE — the specimen plate ============ -->
+    <section class="section showcase" aria-labelledby="showcase-title">
+      <header class="section-head">
+        <p class="section-label">SPECIMEN</p>
+        <h2 class="section-title" id="showcase-title">The application, unretouched.</h2>
+        <p class="section-lede">Real screens from the desktop app — a lesson, the playground mid-diagnosis, your training map. Nothing staged, nothing redrawn.</p>
+      </header>
+
+      <div class="showcase-lead">
+        <figure class="specimen specimen--lead">
+          <div class="specimen-label"><span>borrow_ — lesson</span><span>lesson 05 / 25 · variables &amp; types</span></div>
+          <img src="assets/plate-lesson.png" width="845" height="986" loading="lazy"
+               alt="A borrow_ lesson: the Type Inference concept, a compiled Rust example with type annotations, then a Fill the Gaps exercise with a CHECK button.">
+          <figcaption>Every lesson pairs short prose with code that already compiled — and ends with something you have to write yourself.</figcaption>
+        </figure>
+
+        <ol class="plate-legend" aria-label="what a lesson is made of">
+          <li>
+            <span class="plate-key">i — FILL THE GAPS</span>
+            <span class="plate-desc">graded the moment you check</span>
+          </li>
+          <li>
+            <span class="plate-key">ii — RUN IN PLAYGROUND</span>
+            <span class="plate-desc">from wherever you’re reading</span>
+          </li>
+          <li>
+            <span class="plate-key">iii — EXPLANATION</span>
+            <span class="plate-desc">what happened, in plain language</span>
+          </li>
+        </ol>
+      </div>
+
+      <div class="specimen-row">
+        <figure class="specimen">
+          <div class="specimen-label"><span>borrow_ — playground</span><span>rustc · diagnostics</span></div>
+          <img src="assets/plate-playground.png" width="845" height="880" loading="lazy"
+               alt="The playground with a typo in the code — line 4 highlighted, and rustc’s own explanation of error E0425 rendered below.">
+          <figcaption>Run against real <code>rustc</code>: the failing line is highlighted, and the compiler answers in its own words.</figcaption>
+        </figure>
+
+        <figure class="specimen">
+          <div class="specimen-label"><span>borrow_ — dashboard</span><span>training map</span></div>
+          <img src="assets/plate-dashboard.png" width="845" height="952" loading="lazy"
+               alt="The dashboard training map: a continue card, per-module progress bars, lesson counts, and XP.">
+          <figcaption>A training map, not an analytics panel — exactly where you left off, and what’s next.</figcaption>
+        </figure>
+      </div>
+    </section>
+
+    <!-- ============ STATS STRIP ============ -->
+    <section class="stats" aria-label="curriculum statistics">
+      <div class="stat"><span class="stat-num">11</span><span class="stat-label">MODULES</span></div>
+      <div class="stat"><span class="stat-num">284</span><span class="stat-label">LESSONS</span></div>
+      <div class="stat"><span class="stat-num">528</span><span class="stat-label">EXERCISES</span></div>
+    </section>
+
+    <!-- ============ THREE VALUE PROPOSITIONS ============ -->
+    <section class="section values" aria-labelledby="values-title">
+      <header class="section-head">
+        <p class="section-label">APPROACH</p>
+        <h2 class="section-title" id="values-title">What makes it different.</h2>
+      </header>
+
+      <ol class="value-list">
+        <li class="value">
+          <p class="value-name"><span class="value-num" aria-hidden="true">01</span> LEARN BY DOING.</p>
+          <p class="value-copy">Short, structured lessons built from interactive blocks — fill the gap, step through, guess then run. The 528 exercises are checked the moment you press CHECK, with an explanation every time, not just a grade.</p>
+        </li>
+        <li class="value">
+          <p class="value-name"><span class="value-num" aria-hidden="true">02</span> LEARN FROM THE REAL COMPILER.</p>
+          <p class="value-copy">Run Rust with <code>rustc</code> itself and read structured diagnostics — error code, exact line, the compiler’s own explanation. Every code example in every lesson was compiled before it shipped.</p>
+        </li>
+        <li class="value">
+          <p class="value-name"><span class="value-num" aria-hidden="true">03</span> LEARN ON YOUR TERMS.</p>
+          <p class="value-copy">A native desktop app, not a tab. Lessons are bundled — they open on a plane. Progress lives on your machine first and syncs across your devices when you’re back online.</p>
+        </li>
+      </ol>
+    </section>
+
+    <!-- ============ CURRICULUM PATH ============ -->
+    <section class="section curriculum" id="curriculum" aria-labelledby="curriculum-title">
+      <header class="section-head">
+        <p class="section-label">CURRICULUM</p>
+        <h2 class="section-title" id="curriculum-title">The path, in order.</h2>
+        <p class="section-lede">Eleven modules, each unlocking the next. You finish one before the next opens — the same discipline the compiler enforces.</p>
+      </header>
+
+      <ol class="path">
+        <li class="path-item"><span class="path-num">01</span><span class="path-name">Getting Started</span></li>
+        <li class="path-item"><span class="path-num">02</span><span class="path-name">Variables &amp; Types</span></li>
+        <li class="path-item"><span class="path-num">03</span><span class="path-name">Control Flow</span></li>
+        <li class="path-item"><span class="path-num">04</span><span class="path-name">Functions</span></li>
+        <li class="path-item"><span class="path-num">05</span><span class="path-name">Ownership</span></li>
+        <li class="path-item"><span class="path-num">06</span><span class="path-name">Borrowing</span></li>
+        <li class="path-item"><span class="path-num">07</span><span class="path-name">Structs &amp; Enums</span></li>
+        <li class="path-item"><span class="path-num">08</span><span class="path-name">Collections</span></li>
+        <li class="path-item"><span class="path-num">09</span><span class="path-name">Option &amp; Result</span></li>
+        <li class="path-item"><span class="path-num">10</span><span class="path-name">Generics &amp; Traits</span></li>
+        <li class="path-item path-item--last"><span class="path-num">11</span><span class="path-name">Iterators</span></li>
+      </ol>
+    </section>
+
+    <!-- ============ PRICING ============ -->
+    <section class="section pricing" aria-labelledby="pricing-title">
+      <header class="section-head">
+        <p class="section-label">PRICING</p>
+        <h2 class="section-title" id="pricing-title">Free to start. Five dollars to continue.</h2>
+      </header>
+
+      <div class="price-grid">
+        <div class="price-tier">
+          <p class="price-amount">FREE</p>
+          <p class="price-what">Modules 1–3 — forever.</p>
+          <p class="price-note">Getting Started, Variables &amp; Types, and Control Flow, with every lesson and exercise. No card, no trial clock.</p>
+        </div>
+        <div class="price-tier price-tier--pro">
+          <p class="price-amount"><span class="price-currency">$</span>5<span class="price-per">/ month</span></p>
+          <p class="price-what">BORROW Pro — Modules 4–11.</p>
+          <p class="price-note">The rest of the curriculum, from Ownership to Iterators. Subscribe inside the app; cancel any time.</p>
+        </div>
+      </div>
+      <p class="price-fine">Checkout opens from the app in your browser — there is nothing to buy on this page.</p>
+    </section>
+
+    <!-- ============ FINAL CTA ============ -->
+    <section class="section final" aria-labelledby="final-title">
+      <h2 class="final-title" id="final-title">Short lessons. The real compiler.<br><span class="title-gold">On your own desktop.</span></h2>
+      <p class="final-sub">Three modules free in one download. Decide about the other eight later.</p>
+      <a class="cta js-cta" data-borrow-dl="macos"
+         href="https://github.com/wyde-corp/BORROW/releases/latest">
+        <span class="cta-label">Download for macOS</span>
+      </a>
+      <p class="hero-meta final-meta">v<span data-borrow-version>0.1.0-rc.1</span> · macOS · Windows · Linux · FREE</p>
+    </section>
   </main>
 
   <!-- ============ FOOTER — inline rule, single line ============ -->
@@ -101,7 +239,7 @@
 <!-- mobile-only sticky download bar -->
 <aside class="sticky-cta" id="sticky-cta" hidden>
   <span class="sticky-note">Free · desktop app</span>
-  <a class="cta cta--compact" id="sticky-cta-link" data-borrow-dl="macos"
+  <a class="cta cta--compact js-cta" data-borrow-dl="macos"
      href="https://github.com/wyde-corp/BORROW/releases/latest">
     <span class="cta-label">Download</span>
   </a>
