@@ -65,7 +65,7 @@ async function ensureCustomer(ctx: ActionCtx, userId: Id<"users">): Promise<stri
   return created.customer_id;
 }
 
-/** Opens hosted checkout for the $5/month product. */
+/** Opens hosted checkout for the $20/month product. */
 export const checkout = httpAction(async (ctx: ActionCtx, request: Request) => {
   const userId = await currentUser(ctx, request);
   if (!userId) return json({ error: "unauthorized" }, 401);

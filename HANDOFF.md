@@ -35,7 +35,7 @@ desktop target, 82 in the web target), CI green on Linux, macOS and Windows.
 | **Dashboard** | continue card, module list with bars, overall XP (phase 3 complete) |
 | **Progress** | totals, stats grid, curriculum (phase 3 complete) |
 | **Playground** | Rust editor with line numbers and tree-sitter colouring, RUN in all eight states, console, diagnostics with jump-to-line, ⌘/CTRL+ENTER, RESET, cancel a run in flight |
-| **Auth & payments** | login gate (Google/GitHub via loopback PKCE), opaque sessions, $5/month Bachs paywall on modules 4–11 with a 7-day grace, progress sync — see SETUP.md and its section below |
+| **Auth & payments** | login gate (Google/GitHub via loopback PKCE), opaque sessions, $20/month Bachs paywall on modules 4–11 with a 7-day grace, progress sync — see SETUP.md and its section below |
 | **Five widgets** | gap-fill, step-through, dispatch, pipeline, guess-then-run — all interactive, per-line highlighting included |
 | Design system | `borrow.theme.json`, generated from `static/style.css` |
 | Database | migrations, seeding, `block_on` for local queries |
@@ -209,7 +209,7 @@ dev-dependency.
 
 ## Auth, payments & sync (desktop)
 
-Sign-in and the $5/month subscription. The backend is a Convex deployment —
+Sign-in and the $20/month subscription. The backend is a Convex deployment —
 HTTP actions only, every secret in its env vars — and the desktop is a thin
 client. **SETUP.md is the source of truth for configuration and the e2e
 checklist**; this section is only the shape and the traps.

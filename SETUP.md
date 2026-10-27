@@ -1,6 +1,6 @@
 # BORROW_ — auth & payments setup
 
-One-time steps to make sign-in and the $5/month subscription work, then the
+One-time steps to make sign-in and the $20/month subscription work, then the
 day-to-day dev loop. Work top to bottom; each step says how to verify it.
 
 ## 0. Prerequisites
@@ -54,7 +54,7 @@ bachs whoami            # must say sandbox
 1. Create the product — dashboard (<https://app.bachs.io> → Products) or
    CLI (`bachs products create --help` for the current flags):
    - Name: **BORROW Pro**
-   - Price: **5.00 USD**, billing cycle: **monthly** (cadence is immutable
+   - Price: **20.00 USD**, billing cycle: **monthly** (cadence is immutable
      after creation — get it right the first time)
    - Copy the `prod_…` id.
 2. Copy a **sandbox API key** (`sk_sandbox_…`) from the dashboard's API keys
@@ -111,7 +111,7 @@ Keep the dev deployment on sandbox — it stays your test-card playground.
    bachs login                  # live session; bachs whoami must say live
    ```
 
-   - Recreate the product in live (5.00 USD, monthly — cadence is immutable;
+   - Recreate the product in live (20.00 USD, monthly — cadence is immutable;
      the sandbox product id does not exist in live). Copy the new `prod_…`.
    - Copy a **live API key** (`sk_live_…`) from the dashboard.
    - Register a **live webhook endpoint** pointing at the *prod* deployment:
@@ -147,7 +147,7 @@ Keep the dev deployment on sandbox — it stays your test-card playground.
 
 5. **Verify with a real card** — sandbox test cards do not work in live.
    Run the step-7 checklist against prod: sign in, module 4 paywall, one real
-   $5 charge, unlock within ~2 s, MANAGE BILLING opens the portal, and the
+   $20 charge, unlock within ~2 s, MANAGE BILLING opens the portal, and the
    Bachs dashboard shows the webhook delivery succeeding. A failed delivery
    shows there first.
 
@@ -191,7 +191,7 @@ Actions → Variables) and refuses to build if any is missing.
 1. **Login** — first launch shows the gate; Google and GitHub both land on
    Home; ACCOUNT shows the address you signed in with.
 2. **Gating** — with no subscription, module 4 opens the paywall (SUBSCRIBE
-   — $5/MONTH); modules 1–3 work normally.
+   — $20/MONTH); modules 1–3 work normally.
 3. **Pay** — hosted checkout opens in the browser. Sandbox cards: any card
    succeeds except the declines (`4000000000000002` etc.). The paywall
    screen unlocks within ~2 seconds of payment (webhook → entitlement

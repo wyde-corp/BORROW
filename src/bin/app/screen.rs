@@ -63,7 +63,7 @@ pub enum Screen {
     Progress,
     /// The code editor and its console.
     Playground,
-    /// The $5/month paywall, reached from a locked module.
+    /// The $20/month paywall, reached from a locked module.
     Upgrade,
     /// Signed-in identity: plan status, billing, sign out.
     Account,
@@ -1231,7 +1231,7 @@ impl AppView {
                     .text_size(px(13.))
                     .text_color(theme.muted_foreground)
                     .text_align(TextAlign::Center)
-                    .child("Modules 1–3 are free. Premium unlocks modules 4–11 for $5/month."),
+                    .child("Modules 1–3 are free. Premium unlocks modules 4–11 for $20/month."),
             )
             .child(buttons)
             .child(status);
@@ -1305,7 +1305,7 @@ impl AppView {
                                 .text_size(px(34.))
                                 .font_weight(FontWeight::BOLD)
                                 .text_color(theme.foreground)
-                                .child("$5"),
+                                .child("$20"),
                         )
                         .child(
                             div()
@@ -1374,7 +1374,7 @@ impl AppView {
                     .label(if checkout_pending {
                         "WAITING FOR PAYMENT…"
                     } else {
-                        "SUBSCRIBE — $5/MONTH"
+                        "SUBSCRIBE — $20/MONTH"
                     });
             if checkout_pending {
                 subscribe_button = subscribe_button.loading(true);
@@ -1649,7 +1649,7 @@ impl AppView {
             ]))
             .child(section(theme, "PREMIUM", &[
                 ("Modules 1\u{2013}3", "Free with an account."),
-                ("Modules 4\u{2013}11", "Included with Premium — $5/month, cancelled any time from the billing portal."),
+                ("Modules 4\u{2013}11", "Included with Premium — $20/month, cancelled any time from the billing portal."),
                 ("After cancelling", "Access runs to the end of the paid period, then a 7-day grace window before the modules lock."),
             ]))
             .child(section(theme, "ACCOUNT & SYNC", &[
